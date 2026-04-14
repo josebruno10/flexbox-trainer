@@ -9,15 +9,42 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
   "browser": "./dist/web/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "flexboxTrainer",
+          "title": "FlexBox Trainer",
+          "icon": "resources/flexbox-trainer.svg"
+        }
+      ]
+    },
+    "views": {
+      "flexboxTrainer": [
+        {
+          "type": "webview",
+          "id": "flexbox-trainer.sidebar",
+          "name": "Desafio"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "flexbox-trainer.iniciar",
         "title": "FlexBox Trainer: Iniciar"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "FlexBox Trainer",
+      "properties": {
+        "flexboxTrainer.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "URL base da API de torneio para avaliar tentativas (exemplo: https://api.seudominio.com)."
+        }
+      }
+    }
   },
   "scripts": {
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
