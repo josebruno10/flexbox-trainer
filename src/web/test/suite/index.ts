@@ -1,30 +1,30 @@
-// Imports mocha for the browser, defining the `mocha` global.
-require('mocha/mocha');
+// Importa o mocha para o ambiente web e define o global `mocha`.
+require("mocha/mocha");
 
 export function run(): Promise<void> {
+  return new Promise((concluir, falhar) => {
+    mocha.setup({
+      ui: "tdd",
+      reporter: undefined,
+    });
 
-	return new Promise((c, e) => {
-		mocha.setup({
-			ui: 'tdd',
-			reporter: undefined
-		});
+    // Inclui todos os arquivos da pasta que terminam com `.test`.
+    const importarTodos = (contexto: __WebpackModuleApi.RequireContext) =>
+      contexto.keys().forEach(contexto);
+    importarTodos(require.context(".", true, /\.test$/));
 
-		// Bundles all files in the current directory matching `*.test`
-		const importAll = (r: __WebpackModuleApi.RequireContext) => r.keys().forEach(r);
-		importAll(require.context('.', true, /\.test$/));
-
-		try {
-			// Run the mocha test
-			mocha.run(failures => {
-				if (failures > 0) {
-					e(new Error(`${failures} tests failed.`));
-				} else {
-					c();
-				}
-			});
-		} catch (err) {
-			console.error(err);
-			e(err);
-		}
-	});
+    try {
+      // Executa os testes.
+      mocha.run((falhas: number) => {
+        if (falhas > 0) {
+          falhar(new Error(`${falhas} testes falharam.`));
+        } else {
+          concluir();
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      falhar(err);
+    }
+  });
 }

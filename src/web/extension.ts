@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
-type Block = {
+// Bloco visual desenhado no canvas do desafio alvo.
+type Bloco = {
   id: number;
   x: number;
   y: number;
@@ -9,38 +10,52 @@ type Block = {
   color: string;
 };
 
-type Challenge = {
+// Desafio completo enviado para a sidebar.
+type Desafio = {
   challengeId: string;
   seed: number;
+  titulo: string;
   width: number;
   height: number;
-  blocks: Block[];
+  blocks: Bloco[];
 };
 
-type VerifyAttemptMessage = {
-  type: "verifyAttempt";
-  payload: {
-    html: string;
-    css: string;
-    elapsedMs: number;
-    challengeId: string;
-    seed: number;
-  };
+// Resultado final da tentativa (mock local ou API real).
+type ResultadoAvaliacao = {
+  precision: number;
+  score: number;
+  source: "mock-local" | "api" | "api-error" | "missing-files";
+  error?: string;
 };
 
-type ReadyMessage = {
-  type: "ready";
+// Snapshot dos arquivos do aluno detectados na workspace.
+type ResumoWorkspace = {
+  caminhoHtml: string;
+  caminhoCss: string;
+  textoHtml: string;
+  textoCss: string;
+  htmlPreview: string;
+  temArquivoHtml: boolean;
+  temArquivoCss: boolean;
 };
 
-type WebviewMessage = VerifyAttemptMessage | ReadyMessage;
+// Mensagens que o Webview pode enviar para a extensão.
+type MensagemRecebidaBarraLateral =
+  | { type: "pronto" }
+  | { type: "novoDesafio" }
+  | { type: "atualizarPreview" }
+  | { type: "solicitarVerificacao" };
 
 export function activate(context: vscode.ExtensionContext) {
-  const sidebarProvider = new FlexBoxTrainerSidebarProvider();
+  // Este método roda quando a extensão é ativada pelo VS Code.
+
+  // Estrutura principal: provider da barra lateral.
+  const provedor = new ProvedorBarraLateralFlexBox();
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      FlexBoxTrainerSidebarProvider.viewType,
-      sidebarProvider,
+      ProvedorBarraLateralFlexBox.viewType,
+      provedor,
       {
         webviewOptions: {
           retainContextWhenHidden: true,
@@ -49,18 +64,20 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   );
 
+  // Atualiza preview ao salvar index.html/style.css.
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {
-      if (isRelevantTrainingDocument(document)) {
-        void sidebarProvider.refreshWorkspacePreview();
+      if (ehDocumentoDeTreino(document)) {
+        void provedor.atualizarPreviewWorkspace();
       }
     }),
   );
 
+  // Comando de entrada da extensão.
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.iniciar", async () => {
-      sidebarProvider.startNewChallenge();
-      await sidebarProvider.refreshWorkspacePreview();
+      provedor.iniciarNovoDesafio();
+      await provedor.atualizarPreviewWorkspace();
       await vscode.commands.executeCommand(
         "workbench.view.extension.flexboxTrainer",
       );
@@ -71,36 +88,414 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-async function evaluateAttempt(payload: VerifyAttemptMessage["payload"]) {
+class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
+  // ID da view lateral definida no package.json.
+  public static readonly viewType = "flexbox-trainer.sidebar";
+
+  // Referência para a webview ativa (quando aberta na lateral).
+  private visualizacaoWebview?: vscode.WebviewView;
+
+  // Estado principal da sessão atual de treino.
+  private desafioAtual: Desafio = criarDesafioBase();
+
+  // Estado atual dos arquivos HTML/CSS que o aluno está editando.
+  private resumoWorkspaceAtual: ResumoWorkspace = criarResumoWorkspaceVazio();
+
+  // Último resultado de avaliação calculado.
+  private avaliacaoAtual?: ResultadoAvaliacao;
+
+  // Marca o início da tentativa para cálculo de tempo/score.
+  private inicioTentativaMs = Date.now();
+
+  public resolveWebviewView(
+    visualizacaoWebview: vscode.WebviewView,
+  ): void | Thenable<void> {
+    // Este método é chamado quando o painel lateral é aberto/carregado.
+    this.visualizacaoWebview = visualizacaoWebview;
+    visualizacaoWebview.webview.options = { enableScripts: true };
+
+    // Injeta HTML/CSS/JS da sidebar.
+    visualizacaoWebview.webview.html = this.obterHtmlWebview(
+      visualizacaoWebview.webview,
+    );
+
+    // Canal de entrada: recebe comandos do JavaScript da sidebar.
+    visualizacaoWebview.webview.onDidReceiveMessage(
+      (mensagem: MensagemRecebidaBarraLateral) => {
+        if (mensagem.type === "pronto") {
+          // Webview sinaliza que carregou e pode receber dados iniciais.
+          void this.atualizarPreviewWorkspace();
+          this.enviarEstado();
+          return;
+        }
+
+        if (mensagem.type === "novoDesafio") {
+          // Reinicia o treino com novo desafio e timer zerado.
+          this.iniciarNovoDesafio();
+          void this.atualizarPreviewWorkspace();
+          return;
+        }
+
+        if (mensagem.type === "atualizarPreview") {
+          // Releitura manual dos arquivos do aluno.
+          void this.atualizarPreviewWorkspace();
+          return;
+        }
+
+        if (mensagem.type === "solicitarVerificacao") {
+          // Dispara o fluxo de avaliação da tentativa.
+          void this.avaliarWorkspaceAtual();
+        }
+      },
+      undefined,
+    );
+
+    void this.atualizarPreviewWorkspace();
+  }
+
+  public iniciarNovoDesafio(): void {
+    // TODO: aqui entra o gerador procedural completo.
+    this.desafioAtual = criarDesafioBase();
+    this.avaliacaoAtual = undefined;
+    this.inicioTentativaMs = Date.now();
+    this.enviarEstado();
+  }
+
+  public async atualizarPreviewWorkspace(): Promise<void> {
+    // TODO: aqui pode evoluir para múltiplos arquivos e projetos por nível.
+    this.resumoWorkspaceAtual = await lerResumoWorkspace();
+    this.enviarEstado();
+  }
+
+  private async avaliarWorkspaceAtual(): Promise<void> {
+    // Guard clause: sem index.html e style.css não há como avaliar.
+    if (
+      !this.resumoWorkspaceAtual.temArquivoHtml ||
+      !this.resumoWorkspaceAtual.temArquivoCss
+    ) {
+      this.avaliacaoAtual = {
+        precision: 0,
+        score: 0,
+        source: "missing-files",
+        error: "Abra ou crie index.html e style.css na pasta do projeto.",
+      };
+      this.enviarEstado();
+      return;
+    }
+
+    this.avaliacaoAtual = await avaliarTentativa({
+      // O conteúdo é lido diretamente dos arquivos da workspace.
+      html: this.resumoWorkspaceAtual.textoHtml,
+      css: this.resumoWorkspaceAtual.textoCss,
+      elapsedMs: Date.now() - this.inicioTentativaMs,
+      challengeId: this.desafioAtual.challengeId,
+      seed: this.desafioAtual.seed,
+    });
+
+    this.enviarEstado();
+  }
+
+  private enviarEstado(): void {
+    // Ponto único de sincronização de estado extensão -> webview.
+    if (!this.visualizacaoWebview) {
+      return;
+    }
+
+    this.visualizacaoWebview.webview.postMessage({
+      type: "dadosDesafio",
+      payload: {
+        ...this.desafioAtual,
+        tempoAtualMs: Date.now() - this.inicioTentativaMs,
+      },
+    });
+
+    this.visualizacaoWebview.webview.postMessage({
+      type: "dadosWorkspace",
+      payload: this.resumoWorkspaceAtual,
+    });
+
+    if (this.avaliacaoAtual) {
+      this.visualizacaoWebview.webview.postMessage({
+        type: "resultadoAvaliacao",
+        payload: this.avaliacaoAtual,
+      });
+    }
+  }
+
+  private obterHtmlWebview(webview: vscode.Webview): string {
+    const codigoNonce = criarNonce();
+
+    // HTML inline da sidebar (mantido em um único arquivo para facilitar estudo inicial).
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src 'nonce-${codigoNonce}';">
+  <title>FlexBox Trainer</title>
+  <style>
+    :root {
+      --bg: #06070a;
+      --panel: #0f1218;
+      --line: #252d3d;
+      --ink: #ecf4ff;
+      --muted: #97a7c2;
+      --accent: #55c97a;
+      --accent-soft: #1b3926;
+      --ok: #31e89c;
+      --danger: #ff5562;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "JetBrains Mono", monospace;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #132033 0%, var(--bg) 52%);
+    }
+
+    .aplicacao { display: grid; gap: 10px; padding: 12px; }
+    .cartao { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 10px; }
+    .titulo { margin: 0; font-size: 16px; }
+    .subtitulo { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .titulo-cartao { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+    canvas { width: 100%; display: block; background: #ffffff; border: 1px solid var(--line); border-radius: 10px; }
+    .lista { font-size: 12px; line-height: 1.45; color: var(--muted); }
+    .visualizacao { width: 100%; height: 240px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--accent);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    button.secondary { color: var(--ink); background: var(--accent-soft); }
+
+    .resultado { padding: 10px; border-radius: 10px; background: #121722; border: 1px solid var(--line); font-size: 12px; color: var(--muted); min-height: 56px; }
+    .resultado.ok { color: var(--ok); }
+    .resultado.danger { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <main class="aplicacao">
+    <section class="cartao">
+      <h1 class="titulo">FlexBox Trainer</h1>
+      <p class="subtitulo">Estrutura base para evoluir o projeto por etapas.</p>
+      <div class="acoes">
+        <button id="botaoNovoDesafio">Novo desafio</button>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <p class="titulo-cartao">Desafio alvo</p>
+      <canvas id="canvasAlvo" width="720" height="420"></canvas>
+      <div class="lista" id="metaDesafio" style="margin-top: 8px;"></div>
+      <div class="lista" id="listaBlocos" style="margin-top: 8px;"></div>
+    </section>
+
+    <section class="cartao">
+      <p class="titulo-cartao">Arquivos detectados</p>
+      <div class="lista" id="listaWorkspace">Aguardando arquivos do projeto...</div>
+      <div class="acoes">
+        <button id="botaoAtualizarPreview" class="secondary">Atualizar preview</button>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <p class="titulo-cartao">Preview do aluno</p>
+      <iframe id="quadroPreview" class="visualizacao" sandbox></iframe>
+      <div class="acoes">
+        <button id="botaoVerificar">Verificar</button>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <p class="titulo-cartao">Resultado</p>
+      <div class="resultado" id="caixaResultado">Nenhuma verificação ainda.</div>
+    </section>
+  </main>
+
+  <script nonce="${codigoNonce}">
+    // API do VS Code para comunicação com a extensão.
+    const vscode = acquireVsCodeApi();
+
+    // Referências dos elementos da interface.
+    const canvasAlvo = document.getElementById('canvasAlvo');
+    const listaBlocos = document.getElementById('listaBlocos');
+    const metaDesafio = document.getElementById('metaDesafio');
+    const listaWorkspace = document.getElementById('listaWorkspace');
+    const quadroPreview = document.getElementById('quadroPreview');
+    const caixaResultado = document.getElementById('caixaResultado');
+
+    // Solicita novo desafio para a extensão.
+    document.getElementById('botaoNovoDesafio').addEventListener('click', () => {
+      vscode.postMessage({ type: 'novoDesafio' });
+    });
+
+    // Solicita releitura dos arquivos HTML/CSS do aluno.
+    document.getElementById('botaoAtualizarPreview').addEventListener('click', () => {
+      vscode.postMessage({ type: 'atualizarPreview' });
+    });
+
+    // Solicita avaliação da tentativa atual.
+    document.getElementById('botaoVerificar').addEventListener('click', () => {
+      vscode.postMessage({ type: 'solicitarVerificacao' });
+    });
+
+    function desenharDesafio(desafio) {
+      // Ajusta o canvas para o tamanho real do desafio.
+      canvasAlvo.width = desafio.width;
+      canvasAlvo.height = desafio.height;
+
+      const contexto = canvasAlvo.getContext('2d');
+      contexto.clearRect(0, 0, canvasAlvo.width, canvasAlvo.height);
+
+      // Desenha todos os blocos do desafio alvo.
+      desafio.blocks.forEach((bloco) => {
+        contexto.fillStyle = bloco.color;
+        contexto.fillRect(bloco.x, bloco.y, bloco.width, bloco.height);
+      });
+
+      metaDesafio.innerHTML = '<div><strong>Titulo:</strong> ' + desafio.titulo + '</div>'
+        + '<div><strong>Seed:</strong> ' + desafio.seed + '</div>'
+        + '<div><strong>Tempo:</strong> ' + Math.floor((desafio.tempoAtualMs || 0) / 1000) + 's</div>';
+
+      listaBlocos.innerHTML = desafio.blocks
+        .map((bloco) => '<div>#' + bloco.id + ' | ' + bloco.width + 'x' + bloco.height + ' | ' + bloco.color + '</div>')
+        .join('');
+    }
+
+    function renderizarWorkspace(resumoWorkspace) {
+      // Mostra quais arquivos foram detectados na pasta do aluno.
+      const htmlInfo = resumoWorkspace.temArquivoHtml
+        ? '<strong>' + resumoWorkspace.caminhoHtml + '</strong>'
+        : 'Nenhum <strong>index.html</strong> encontrado';
+      const cssInfo = resumoWorkspace.temArquivoCss
+        ? '<strong>' + resumoWorkspace.caminhoCss + '</strong>'
+        : 'Nenhum <strong>style.css</strong> encontrado';
+
+      listaWorkspace.innerHTML = '<div>' + htmlInfo + '</div><div>' + cssInfo + '</div>';
+      // Renderiza o HTML/CSS do aluno em sandbox para preview.
+      quadroPreview.srcdoc = resumoWorkspace.htmlPreview;
+    }
+
+    function renderizarResultado(resultado) {
+      // Estado sem avaliação ainda.
+      if (!resultado) {
+        caixaResultado.textContent = 'Nenhuma verificação ainda.';
+        caixaResultado.className = 'resultado';
+        return;
+      }
+
+      // Falha por ausência dos arquivos de treino.
+      if (resultado.source === 'missing-files') {
+        caixaResultado.textContent = resultado.error || 'Crie index.html e style.css para verificar.';
+        caixaResultado.className = 'resultado danger';
+        return;
+      }
+
+      // Falha de comunicação/retorno da API.
+      if (resultado.source === 'api-error') {
+        caixaResultado.textContent = 'Erro na API: ' + (resultado.error || 'erro desconhecido');
+        caixaResultado.className = 'resultado danger';
+        return;
+      }
+
+      caixaResultado.textContent = 'Precisao: ' + resultado.precision.toFixed(2) + '% | Score: ' + resultado.score + ' | Fonte: ' + resultado.source;
+      caixaResultado.className = 'resultado ok';
+    }
+
+    // Canal de saída da extensão -> webview.
+    window.addEventListener('message', (event) => {
+      const mensagem = event.data;
+
+      if (mensagem.type === 'dadosDesafio') {
+        desenharDesafio(mensagem.payload);
+      }
+
+      if (mensagem.type === 'dadosWorkspace') {
+        renderizarWorkspace(mensagem.payload);
+      }
+
+      if (mensagem.type === 'resultadoAvaliacao') {
+        renderizarResultado(mensagem.payload);
+      }
+    });
+
+    // Handshake inicial para a extensão enviar estado.
+    vscode.postMessage({ type: 'pronto' });
+  </script>
+</body>
+</html>`;
+  }
+}
+
+function criarDesafioBase(): Desafio {
+  const seed = Math.floor(Math.random() * 1000000);
+
+  // Estrutura essencial: fundo + algumas áreas para o aluno replicar com Flexbox.
+  const blocks: Bloco[] = [
+    { id: 1, x: 0, y: 0, width: 720, height: 420, color: "#e6e6e6" },
+    { id: 2, x: 24, y: 24, width: 672, height: 36, color: "#0a0a0a" },
+    { id: 3, x: 24, y: 86, width: 440, height: 210, color: "#f6851f" },
+    { id: 4, x: 52, y: 118, width: 150, height: 146, color: "#b72a2a" },
+    { id: 5, x: 496, y: 98, width: 176, height: 30, color: "#c42525" },
+    { id: 6, x: 496, y: 148, width: 176, height: 30, color: "#c42525" },
+    { id: 7, x: 496, y: 198, width: 176, height: 30, color: "#c42525" },
+    { id: 8, x: 24, y: 330, width: 672, height: 66, color: "#55c97a" },
+  ];
+
+  return {
+    // challengeId e seed serão úteis para torneio/ranking.
+    challengeId: `challenge-${seed}`,
+    seed,
+    titulo: "Desafio base",
+    width: 720,
+    height: 420,
+    blocks,
+  };
+}
+
+type TentativaPayload = {
+  // Conteúdo que representa a tentativa atual do aluno.
+  html: string;
+  css: string;
+  elapsedMs: number;
+  challengeId: string;
+  seed: number;
+};
+
+async function avaliarTentativa(
+  payload: TentativaPayload,
+): Promise<ResultadoAvaliacao> {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
   const apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
 
+  // Estrutura essencial: mock local até a API final ficar pronta.
   if (!apiBaseUrl) {
-    const precision = createDeterministicMockPrecision(
+    // Modo desenvolvimento: retorna resultado determinístico sem backend.
+    const precision = criarPrecisaoMockDeterministica(
       payload.html,
       payload.css,
     );
-    return {
-      precision,
-      score: Math.round(precision * timeFactor(payload.elapsedMs)),
-      source: "mock-local",
-    };
+    const score = Math.round(precision * fatorTempo(payload.elapsedMs));
+    return { precision, score, source: "mock-local" };
   }
 
   try {
+    // Modo produção: envia tentativa para API do torneio.
     const response = await fetch(`${apiBaseUrl}/evaluate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        challengeId: payload.challengeId,
-        seed: payload.seed,
-        html: payload.html,
-        css: payload.css,
-        elapsedMs: payload.elapsedMs,
-        algorithmVersion: "v1",
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -120,900 +515,158 @@ async function evaluateAttempt(payload: VerifyAttemptMessage["payload"]) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido";
-    return {
-      precision: 0,
-      score: 0,
-      source: "api-error",
-      error: message,
-    };
+    return { precision: 0, score: 0, source: "api-error", error: message };
   }
 }
 
-function createChallenge(): Challenge {
-  const seed = Math.floor(Math.random() * 1000000);
-  const random = mulberry32(seed);
-  const width = 640;
-  const height = 360;
-  const colors = ["#0d3b66", "#f4d35e", "#ee964b", "#f95738", "#1b998b"];
+function criarResumoWorkspaceVazio(): ResumoWorkspace {
+  // Estado inicial quando ainda não há arquivos detectados.
+  return {
+    caminhoHtml: "index.html",
+    caminhoCss: "style.css",
+    textoHtml: "",
+    textoCss: "",
+    htmlPreview: montarDocumentoPreview("", ""),
+    temArquivoHtml: false,
+    temArquivoCss: false,
+  };
+}
 
-  const blocks: Block[] = [];
-  const count = 4;
+async function lerResumoWorkspace(): Promise<ResumoWorkspace> {
+  // Lê os dois arquivos padrão do treino.
+  const documentoHtml = await lerDocumentoDeTreino("index.html");
+  const documentoCss = await lerDocumentoDeTreino("style.css");
 
-  for (let i = 0; i < count; i += 1) {
-    const blockWidth = 90 + Math.floor(random() * 160);
-    const blockHeight = 50 + Math.floor(random() * 140);
-    const x = Math.floor(random() * (width - blockWidth));
-    const y = Math.floor(random() * (height - blockHeight));
-
-    blocks.push({
-      id: i + 1,
-      x,
-      y,
-      width: blockWidth,
-      height: blockHeight,
-      color: colors[i % colors.length],
-    });
-  }
+  const textoHtml = documentoHtml?.getText() ?? "";
+  const textoCss = documentoCss?.getText() ?? "";
 
   return {
-    challengeId: `challenge-${seed}`,
-    seed,
-    width,
-    height,
-    blocks,
+    caminhoHtml: documentoHtml?.uri.fsPath ?? "index.html",
+    caminhoCss: documentoCss?.uri.fsPath ?? "style.css",
+    textoHtml,
+    textoCss,
+    htmlPreview: montarDocumentoPreview(textoHtml, textoCss),
+    temArquivoHtml: Boolean(documentoHtml),
+    temArquivoCss: Boolean(documentoCss),
   };
 }
 
-function mulberry32(seed: number): () => number {
-  let t = seed;
-  return () => {
-    t += 0x6d2b79f5;
-    let x = Math.imul(t ^ (t >>> 15), t | 1);
-    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function createDeterministicMockPrecision(html: string, css: string): number {
-  const normalized = `${html.trim()}|${css.trim()}`;
-  let hash = 0;
-  for (let i = 0; i < normalized.length; i += 1) {
-    hash = (hash * 31 + normalized.charCodeAt(i)) >>> 0;
-  }
-
-  return 40 + (hash % 6000) / 100;
-}
-
-function timeFactor(elapsedMs: number): number {
-  const elapsedSeconds = elapsedMs / 1000;
-  const limitSeconds = 300;
-  return Math.max(0.5, 1 - elapsedSeconds / limitSeconds);
-}
-
-function getWebviewHtml(webview: vscode.Webview, challenge: Challenge): string {
-  const nonce = createNonce();
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-  <title>FlexBox Trainer</title>
-  <style>
-    :root {
-      --bg: #f8f7f3;
-      --panel: #fffdf8;
-      --line: #d6d2c6;
-      --ink: #1f2933;
-      --muted: #52606d;
-      --accent: #127681;
-      --ok: #207561;
-      --danger: #b42318;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: radial-gradient(circle at top right, #efece0 0%, var(--bg) 45%);
-      min-height: 100vh;
-    }
-
-    .app {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 12px;
-      padding: 12px;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 12px;
-    }
-
-    h2 {
-      margin: 0 0 10px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    .preview-wrap {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-      background: #ffffff;
-    }
-
-    canvas {
-      width: 100%;
-      display: block;
-      background: #ffffff;
-    }
-
-    .meta {
-      margin-top: 10px;
-      max-height: 180px;
-      overflow: auto;
-      font-size: 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px;
-      background: #fff;
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px;
-      font-family: Consolas, monospace;
-      font-size: 12px;
-      resize: vertical;
-      background: #fff;
-      color: var(--ink);
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    button {
-      border: 0;
-      border-radius: 8px;
-      padding: 8px 12px;
-      cursor: pointer;
-      color: #fff;
-      background: var(--accent);
-      font-weight: 600;
-    }
-
-    button.secondary {
-      background: #6b7280;
-    }
-
-    .status {
-      margin-top: 8px;
-      font-size: 12px;
-      color: var(--muted);
-      min-height: 18px;
-    }
-
-    .ok { color: var(--ok); }
-    .danger { color: var(--danger); }
-
-    iframe {
-      width: 100%;
-      height: 360px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <main class="app">
-    <section class="panel">
-      <h2>Desafio Alvo</h2>
-      <div class="preview-wrap">
-        <canvas id="targetCanvas" width="${challenge.width}" height="${challenge.height}"></canvas>
-      </div>
-      <div class="meta" id="metaList"></div>
-    </section>
-
-    <section class="panel">
-      <h2>Solução do Usuário</h2>
-      <div class="row">
-        <textarea id="htmlInput"><div class="container"><div class="item a"></div><div class="item b"></div><div class="item c"></div></div></textarea>
-        <textarea id="cssInput">* { box-sizing: border-box; margin: 0; }
-.container { display: flex; gap: 12px; width: 100%; height: 100%; padding: 16px; }
-.item { flex: 1; min-height: 120px; }
-.a { background: #0d3b66; }
-.b { background: #f4d35e; }
-.c { background: #ee964b; }</textarea>
-      </div>
-      <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
-      <div class="actions">
-        <button id="renderBtn" class="secondary">Renderizar</button>
-        <button id="verifyBtn">Verificar</button>
-      </div>
-      <div class="status" id="status"></div>
-    </section>
-  </main>
-
-  <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
-    const targetCanvas = document.getElementById('targetCanvas');
-    const metaList = document.getElementById('metaList');
-    const htmlInput = document.getElementById('htmlInput');
-    const cssInput = document.getElementById('cssInput');
-    const previewFrame = document.getElementById('previewFrame');
-    const renderBtn = document.getElementById('renderBtn');
-    const verifyBtn = document.getElementById('verifyBtn');
-    const status = document.getElementById('status');
-
-    let currentChallenge = null;
-    const startedAt = Date.now();
-
-    function setStatus(message, mode) {
-      status.textContent = message;
-      status.className = 'status';
-      if (mode) {
-        status.classList.add(mode);
-      }
-    }
-
-    function drawChallenge(challenge) {
-      currentChallenge = challenge;
-      const ctx = targetCanvas.getContext('2d');
-      ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-
-      for (const block of challenge.blocks) {
-        ctx.fillStyle = block.color;
-        ctx.fillRect(block.x, block.y, block.width, block.height);
-      }
-
-      metaList.innerHTML = challenge.blocks.map((block) => {
-        return '<div>#' + block.id + ' | cor: ' + block.color + ' | w: ' + block.width + ' | h: ' + block.height + '</div>';
-      }).join('');
-    }
-
-    function renderUserSolution() {
-      const html = htmlInput.value;
-      const css = cssInput.value;
-      const src = '<!doctype html><html><head><style>html, body { width: 100%; height: 100%; margin: 0; }' + css + '</style></head><body>' + html + '</body></html>';
-      previewFrame.srcdoc = src;
-      setStatus('Preview atualizado.', '');
-    }
-
-    renderBtn.addEventListener('click', renderUserSolution);
-
-    verifyBtn.addEventListener('click', () => {
-      if (!currentChallenge) {
-        setStatus('Desafio ainda nao carregado.', 'danger');
-        return;
-      }
-
-      setStatus('Enviando tentativa para avaliacao...', '');
-
-      vscode.postMessage({
-        type: 'verifyAttempt',
-        payload: {
-          challengeId: currentChallenge.challengeId,
-          seed: currentChallenge.seed,
-          html: htmlInput.value,
-          css: cssInput.value,
-          elapsedMs: Date.now() - startedAt
-        }
-      });
-    });
-
-    window.addEventListener('message', (event) => {
-      const message = event.data;
-
-      if (message.type === 'challengeData') {
-        drawChallenge(message.payload);
-        renderUserSolution();
-        setStatus('Desafio carregado. Monte seu layout e clique em Verificar.', '');
-      }
-
-      if (message.type === 'evaluationResult') {
-        const result = message.payload;
-        if (result.source === 'api-error') {
-          setStatus('Falha na API: ' + (result.error || 'erro desconhecido'), 'danger');
-          return;
-        }
-
-        setStatus('Precisao: ' + result.precision.toFixed(2) + '% | Score: ' + result.score + ' | Fonte: ' + result.source, 'ok');
-      }
-    });
-
-    vscode.postMessage({ type: 'ready' });
-  </script>
-</body>
-</html>`;
-}
-
-function createNonce(): string {
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let text = "";
-  for (let i = 0; i < 32; i += 1) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-
-  return text;
-}
-
-type WorkspaceSnapshot = {
-  htmlPath: string;
-  cssPath: string;
-  htmlText: string;
-  cssText: string;
-  previewHtml: string;
-  hasHtmlFile: boolean;
-  hasCssFile: boolean;
-};
-
-type SidebarReadyMessage = {
-  type: "ready";
-};
-
-type SidebarRefreshMessage = {
-  type: "refreshPreview";
-};
-
-type SidebarNewChallengeMessage = {
-  type: "newChallenge";
-};
-
-type SidebarVerifyMessage = {
-  type: "verifyRequest";
-};
-
-type SidebarIncomingMessage =
-  | SidebarReadyMessage
-  | SidebarRefreshMessage
-  | SidebarNewChallengeMessage
-  | SidebarVerifyMessage;
-
-class FlexBoxTrainerSidebarProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "flexbox-trainer.sidebar";
-
-  private webviewView?: vscode.WebviewView;
-
-  private currentChallenge: Challenge = createChallenge();
-
-  private currentWorkspace: WorkspaceSnapshot = createEmptyWorkspaceSnapshot();
-
-  private currentEvaluation:
-    | {
-        precision: number;
-        score: number;
-        source: string;
-        error?: string;
-      }
-    | undefined;
-
-  public resolveWebviewView(
-    webviewView: vscode.WebviewView,
-  ): void | Thenable<void> {
-    this.webviewView = webviewView;
-    webviewView.webview.options = {
-      enableScripts: true,
-    };
-    webviewView.webview.html = this.getWebviewHtml(webviewView.webview);
-
-    webviewView.webview.onDidReceiveMessage(
-      (message: SidebarIncomingMessage) => {
-        if (message.type === "ready") {
-          void this.refreshWorkspacePreview();
-          this.pushState();
-          return;
-        }
-
-        if (message.type === "newChallenge") {
-          this.startNewChallenge();
-          void this.refreshWorkspacePreview();
-          return;
-        }
-
-        if (message.type === "refreshPreview") {
-          void this.refreshWorkspacePreview();
-          return;
-        }
-
-        if (message.type === "verifyRequest") {
-          void this.evaluateCurrentWorkspace();
-        }
-      },
-      undefined,
-    );
-
-    void this.refreshWorkspacePreview();
-  }
-
-  public startNewChallenge(): void {
-    this.currentChallenge = createChallenge();
-    this.currentEvaluation = undefined;
-    this.pushState();
-  }
-
-  public async refreshWorkspacePreview(): Promise<void> {
-    this.currentWorkspace = await readWorkspaceSnapshot();
-    this.pushState();
-  }
-
-  private async evaluateCurrentWorkspace(): Promise<void> {
-    if (
-      !this.currentWorkspace.hasHtmlFile ||
-      !this.currentWorkspace.hasCssFile
-    ) {
-      this.currentEvaluation = {
-        precision: 0,
-        score: 0,
-        source: "missing-files",
-        error: "Abra ou crie index.html e style.css na pasta do projeto.",
-      };
-      this.pushState();
-      return;
-    }
-
-    this.currentEvaluation = await evaluateAttempt({
-      html: this.currentWorkspace.htmlText,
-      css: this.currentWorkspace.cssText,
-      elapsedMs: 0,
-      challengeId: this.currentChallenge.challengeId,
-      seed: this.currentChallenge.seed,
-    });
-
-    this.pushState();
-  }
-
-  private pushState(): void {
-    if (!this.webviewView) {
-      return;
-    }
-
-    this.webviewView.webview.postMessage({
-      type: "challengeData",
-      payload: this.currentChallenge,
-    });
-
-    this.webviewView.webview.postMessage({
-      type: "workspacePreview",
-      payload: this.currentWorkspace,
-    });
-
-    if (this.currentEvaluation) {
-      this.webviewView.webview.postMessage({
-        type: "evaluationResult",
-        payload: this.currentEvaluation,
-      });
-    }
-  }
-
-  private getWebviewHtml(webview: vscode.Webview): string {
-    const nonce = createNonce();
-
-    return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-  <title>FlexBox Trainer</title>
-  <style>
-    :root {
-      --bg: #f5f4ef;
-      --panel: #fffdf8;
-      --panel-strong: #ffffff;
-      --line: #dad5c8;
-      --ink: #1f2933;
-      --muted: #5d6975;
-      --accent: #127681;
-      --accent-soft: #d7f1ef;
-      --ok: #1f7a58;
-      --danger: #b42318;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: linear-gradient(180deg, #f8f7f3 0%, var(--bg) 100%);
-    }
-
-    .app {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .eyebrow {
-      margin: 0;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    h1 {
-      margin: 4px 0 0;
-      font-size: 18px;
-    }
-
-    .subtitle {
-      margin: 4px 0 0;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.4;
-    }
-
-    .stack {
-      display: grid;
-      gap: 10px;
-    }
-
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--panel);
-      padding: 10px;
-      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
-    }
-
-    .card-title {
-      margin: 0 0 8px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: 0;
-      border-radius: 999px;
-      padding: 8px 12px;
-      cursor: pointer;
-      color: #fff;
-      background: var(--accent);
-      font-weight: 700;
-      font-size: 12px;
-    }
-
-    button.secondary {
-      color: var(--ink);
-      background: var(--accent-soft);
-    }
-
-    canvas {
-      width: 100%;
-      display: block;
-      background: #ffffff;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-    }
-
-    .list,
-    .status {
-      font-size: 12px;
-      line-height: 1.45;
-      color: var(--muted);
-    }
-
-    .status strong {
-      color: var(--ink);
-    }
-
-    .preview {
-      width: 100%;
-      height: 240px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #fff;
-    }
-
-    .result {
-      padding: 10px;
-      border-radius: 10px;
-      background: #fff;
-      border: 1px solid var(--line);
-      font-size: 12px;
-      color: var(--muted);
-      min-height: 56px;
-    }
-
-    .result.ok { color: var(--ok); }
-    .result.danger { color: var(--danger); }
-  </style>
-</head>
-<body>
-  <main class="app">
-    <header class="header">
-      <div>
-        <p class="eyebrow">FlexBox Trainer</p>
-        <h1>Treino lateral de layout</h1>
-        <p class="subtitle">Abra <strong>index.html</strong> e <strong>style.css</strong> no seu projeto. A extensão lê esses arquivos e mostra o preview aqui.</p>
-      </div>
-      <div class="actions">
-        <button id="newChallengeBtn">Novo desafio</button>
-      </div>
-    </header>
-
-    <section class="card">
-      <p class="card-title">Desafio alvo</p>
-      <canvas id="targetCanvas" width="640" height="360"></canvas>
-      <div class="list" id="blocksList" style="margin-top: 10px;"></div>
-    </section>
-
-    <section class="card">
-      <p class="card-title">Arquivos detectados</p>
-      <div class="list" id="workspaceList">Aguardando arquivos do projeto...</div>
-    </section>
-
-    <section class="card">
-      <p class="card-title">Preview do aluno</p>
-      <iframe id="previewFrame" class="preview" sandbox></iframe>
-      <div class="actions" style="margin-top: 10px;">
-        <button id="refreshPreviewBtn" class="secondary">Atualizar preview</button>
-        <button id="verifyBtn">Verificar</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <p class="card-title">Resultado</p>
-      <div class="result" id="resultBox">Nenhuma verificação ainda.</div>
-    </section>
-  </main>
-
-  <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
-    const targetCanvas = document.getElementById('targetCanvas');
-    const blocksList = document.getElementById('blocksList');
-    const workspaceList = document.getElementById('workspaceList');
-    const previewFrame = document.getElementById('previewFrame');
-    const resultBox = document.getElementById('resultBox');
-    const newChallengeBtn = document.getElementById('newChallengeBtn');
-    const refreshPreviewBtn = document.getElementById('refreshPreviewBtn');
-    const verifyBtn = document.getElementById('verifyBtn');
-
-    let currentChallenge = null;
-    let currentWorkspace = null;
-
-    function drawChallenge(challenge) {
-      currentChallenge = challenge;
-      const ctx = targetCanvas.getContext('2d');
-      ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-
-      challenge.blocks.forEach((block) => {
-        ctx.fillStyle = block.color;
-        ctx.fillRect(block.x, block.y, block.width, block.height);
-      });
-
-      blocksList.innerHTML = challenge.blocks
-        .map((block) => '<div>#' + block.id + ' | cor ' + block.color + ' | ' + block.width + 'x' + block.height + '</div>')
-        .join('');
-    }
-
-    function renderWorkspace(snapshot) {
-      currentWorkspace = snapshot;
-      const htmlInfo = snapshot.hasHtmlFile
-        ? '<strong>' + snapshot.htmlPath + '</strong>'
-        : 'Nenhum <strong>index.html</strong> encontrado';
-      const cssInfo = snapshot.hasCssFile
-        ? '<strong>' + snapshot.cssPath + '</strong>'
-        : 'Nenhum <strong>style.css</strong> encontrado';
-
-      workspaceList.innerHTML = '<div>' + htmlInfo + '</div><div>' + cssInfo + '</div>';
-      previewFrame.srcdoc = snapshot.previewHtml;
-    }
-
-    function renderResult(result) {
-      if (!result) {
-        resultBox.textContent = 'Nenhuma verificação ainda.';
-        resultBox.className = 'result';
-        return;
-      }
-
-      if (result.source === 'missing-files') {
-        resultBox.textContent = result.error || 'Crie index.html e style.css para verificar.';
-        resultBox.className = 'result danger';
-        return;
-      }
-
-      if (result.source === 'api-error') {
-        resultBox.textContent = 'Erro na API: ' + (result.error || 'erro desconhecido');
-        resultBox.className = 'result danger';
-        return;
-      }
-
-      resultBox.textContent = 'Precisao: ' + result.precision.toFixed(2) + '% | Score: ' + result.score + ' | Fonte: ' + result.source;
-      resultBox.className = 'result ok';
-    }
-
-    newChallengeBtn.addEventListener('click', () => {
-      vscode.postMessage({ type: 'newChallenge' });
-    });
-
-    refreshPreviewBtn.addEventListener('click', () => {
-      vscode.postMessage({ type: 'refreshPreview' });
-    });
-
-    verifyBtn.addEventListener('click', () => {
-      vscode.postMessage({ type: 'verifyRequest' });
-    });
-
-    window.addEventListener('message', (event) => {
-      const message = event.data;
-
-      if (message.type === 'challengeData') {
-        drawChallenge(message.payload);
-      }
-
-      if (message.type === 'workspacePreview') {
-        renderWorkspace(message.payload);
-      }
-
-      if (message.type === 'evaluationResult') {
-        renderResult(message.payload);
-      }
-    });
-
-    vscode.postMessage({ type: 'ready' });
-  </script>
-</body>
-</html>`;
-  }
-}
-
-function createEmptyWorkspaceSnapshot(): WorkspaceSnapshot {
-  return {
-    htmlPath: "index.html",
-    cssPath: "style.css",
-    htmlText: "",
-    cssText: "",
-    previewHtml: buildPreviewDocument("", ""),
-    hasHtmlFile: false,
-    hasCssFile: false,
-  };
-}
-
-async function readWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  const htmlDocument = await readTrainingDocument("index.html");
-  const cssDocument = await readTrainingDocument("style.css");
-
-  const htmlText = htmlDocument?.getText() ?? "";
-  const cssText = cssDocument?.getText() ?? "";
-
-  return {
-    htmlPath: htmlDocument?.uri.fsPath ?? "index.html",
-    cssPath: cssDocument?.uri.fsPath ?? "style.css",
-    htmlText,
-    cssText,
-    previewHtml: buildPreviewDocument(htmlText, cssText),
-    hasHtmlFile: Boolean(htmlDocument),
-    hasCssFile: Boolean(cssDocument),
-  };
-}
-
-async function readTrainingDocument(
-  fileName: "index.html" | "style.css",
+async function lerDocumentoDeTreino(
+  nomeArquivo: "index.html" | "style.css",
 ): Promise<vscode.TextDocument | undefined> {
-  const openDocument = vscode.workspace.textDocuments.find((document) =>
-    isTrainingFile(document, fileName),
+  // 1) prioriza arquivos já abertos no editor.
+  const documentoAberto = vscode.workspace.textDocuments.find((document) =>
+    ehArquivoDeTreino(document, nomeArquivo),
   );
 
-  if (openDocument) {
-    return openDocument;
+  if (documentoAberto) {
+    return documentoAberto;
   }
 
-  const foundFiles = await vscode.workspace.findFiles(
-    `**/${fileName}`,
+  // 2) se não estiver aberto, procura no projeto.
+  const arquivosEncontrados = await vscode.workspace.findFiles(
+    `**/${nomeArquivo}`,
     "**/node_modules/**",
     1,
   );
 
-  if (foundFiles.length === 0) {
+  if (arquivosEncontrados.length === 0) {
     return undefined;
   }
 
-  return vscode.workspace.openTextDocument(foundFiles[0]);
+  // 3) abre em memória sem abrir aba visual para o usuário.
+  return vscode.workspace.openTextDocument(arquivosEncontrados[0]);
 }
 
-function isTrainingFile(
+function ehArquivoDeTreino(
   document: vscode.TextDocument,
-  fileName: "index.html" | "style.css",
+  nomeArquivo: "index.html" | "style.css",
 ): boolean {
-  const normalizedPath = document.uri.fsPath.replace(/\\/g, "/").toLowerCase();
-  return normalizedPath.endsWith(`/${fileName}`);
+  const caminhoNormalizado = document.uri.fsPath
+    .replace(/\\/g, "/")
+    .toLowerCase();
+  return caminhoNormalizado.endsWith(`/${nomeArquivo}`);
 }
 
-function isRelevantTrainingDocument(document: vscode.TextDocument): boolean {
+function ehDocumentoDeTreino(document: vscode.TextDocument): boolean {
   return (
-    isTrainingFile(document, "index.html") ||
-    isTrainingFile(document, "style.css")
+    ehArquivoDeTreino(document, "index.html") ||
+    ehArquivoDeTreino(document, "style.css")
   );
 }
 
-function buildPreviewDocument(htmlText: string, cssText: string): string {
+function montarDocumentoPreview(htmlText: string, cssText: string): string {
+  // Mensagem padrão quando o aluno ainda não criou os arquivos de treino.
   if (!htmlText.trim() && !cssText.trim()) {
     return `<!doctype html>
 <html lang="pt-BR">
-<body style="margin:0; display:grid; place-items:center; height:100vh; font-family:Segoe UI, sans-serif; color:#52606d; background:#fff;">
+<body style="margin:0; display:grid; place-items:center; height:100vh; font-family:'JetBrains Mono', monospace; color:#52606d; background:#fff;">
   Crie os arquivos index.html e style.css para ver o preview.
 </body>
 </html>`;
   }
 
-  const sanitizedHtml =
+  const htmlSanitizado =
     htmlText.trim() || '<div class="empty">Sem HTML detectado</div>';
-  const styleTag = `<style>html, body { width: 100%; height: 100%; margin: 0; } ${cssText}</style>`;
+  const tagEstilo = `<style>html, body { width: 100%; height: 100%; margin: 0; } ${cssText}</style>`;
 
-  if (sanitizedHtml.toLowerCase().includes("<html")) {
-    if (sanitizedHtml.toLowerCase().includes("</head>")) {
-      return sanitizedHtml.replace("</head>", `${styleTag}</head>`);
+  // Se o HTML já é documento completo, injeta CSS nele.
+  if (htmlSanitizado.toLowerCase().includes("<html")) {
+    if (htmlSanitizado.toLowerCase().includes("</head>")) {
+      return htmlSanitizado.replace("</head>", `${tagEstilo}</head>`);
     }
 
-    if (sanitizedHtml.toLowerCase().includes("<body")) {
-      return sanitizedHtml.replace("<body", `<body>${styleTag}`);
+    if (htmlSanitizado.toLowerCase().includes("<body")) {
+      return htmlSanitizado.replace("<body", `<body>${tagEstilo}`);
     }
 
-    return sanitizedHtml;
+    return htmlSanitizado;
   }
 
+  // Se o HTML é parcial, monta documento mínimo completo.
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  ${styleTag}
+  ${tagEstilo}
 </head>
 <body>
-  ${sanitizedHtml}
+  ${htmlSanitizado}
 </body>
 </html>`;
+}
+
+function criarPrecisaoMockDeterministica(html: string, css: string): number {
+  // Hash simples para gerar precisão estável (mesmo input -> mesmo resultado).
+  const textoNormalizado = `${html.trim()}|${css.trim()}`;
+  let hash = 0;
+  for (let i = 0; i < textoNormalizado.length; i += 1) {
+    hash = (hash * 31 + textoNormalizado.charCodeAt(i)) >>> 0;
+  }
+
+  return 40 + (hash % 6000) / 100;
+}
+
+function fatorTempo(elapsedMs: number): number {
+  // Penalidade leve por tempo; nunca abaixo de 50% do fator.
+  const elapsedSeconds = elapsedMs / 1000;
+  const limiteSegundos = 300;
+  return Math.max(0.5, 1 - elapsedSeconds / limiteSegundos);
+}
+
+function criarNonce(): string {
+  // Nonce para Content Security Policy do script da webview.
+  const caracteresPossiveis =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let texto = "";
+  for (let i = 0; i < 32; i += 1) {
+    texto += caracteresPossiveis.charAt(
+      Math.floor(Math.random() * caracteresPossiveis.length),
+    );
+  }
+
+  return texto;
 }
 
 export function deactivate() {}
