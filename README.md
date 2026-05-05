@@ -1,65 +1,164 @@
-# flexbox-trainer README
+# FlexBox Trainer
 
-This is the README for your extension "flexbox-trainer". After writing up a brief description, we recommend including the following sections.
+Extensão do VS Code criada para treinar recriação de layouts com Flexbox. O objetivo do projeto é permitir que o aluno edite arquivos normais da workspace, veja um preview imediato e receba uma avaliação da tentativa pela interface lateral da extensão.
 
-## Features
+## Visão Geral
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+O projeto foi pensado para ser estudado e evoluído em grupo. A base atual já separa a responsabilidade entre entrada da extensão, provider da sidebar, serviços de domínio, montagem da webview e tipos compartilhados.
 
-For example if there is an image subfolder under your extension project workspace:
+Em termos simples, o fluxo é este:
 
-\!\[feature X\]\(images/feature-x.png\)
+1. A extensão ativa no VS Code.
+2. A barra lateral é registrada como uma Webview View.
+3. A webview mostra o desafio, lê o workspace e exibe o preview.
+4. O usuário edita `index.html` e `style.css` no editor normal.
+5. A extensão lê esses arquivos, monta o preview e envia os dados para a sidebar.
+6. A tentativa é enviada para a avaliação local ou para a API configurada.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Arquitetura
 
-## Requirements
+A estrutura foi dividida em camadas para deixar o código mais fácil de entender e manter.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### 1. Entrada da extensão
 
-## Extension Settings
+[src/web/extension.ts](src/web/extension.ts) é o ponto de entrada. Ele registra a sidebar, observa salvamentos de arquivos de treino e expõe o comando principal da extensão.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+### 2. Provider da sidebar
 
-For example:
+[src/web/provider/provedor-barra-lateral.ts](src/web/provider/provedor-barra-lateral.ts) concentra o estado da tela lateral. Ele:
 
-This extension contributes the following settings:
+- cria novos desafios;
+- escuta mensagens vindas da webview;
+- lê o estado atual da workspace;
+- dispara a avaliação da tentativa;
+- envia dados de volta para a interface.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### 3. Serviços de domínio
 
-## Known Issues
+Os serviços ficam em [src/web/services](src/web/services) e isolam regras específicas:
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- [desafio.ts](src/web/services/desafio.ts): cria o desafio base e define os blocos alvo.
+- [workspace.ts](src/web/services/workspace.ts): encontra `index.html` e `style.css`, lê os arquivos e monta o HTML de preview.
+- [avaliacao.ts](src/web/services/avaliacao.ts): avalia a tentativa usando mock local ou API externa.
 
-## Release Notes
+### 4. Webview
 
-Users appreciate release notes as you update your extension.
+[src/web/webview/html.ts](src/web/webview/html.ts) monta o HTML da barra lateral. Ele define a interface, o canvas do desafio, o iframe do preview e a comunicação com a extensão via `postMessage`.
 
-### 1.0.0
+### 5. Tipos compartilhados
 
-Initial release of ...
+[src/web/types.ts](src/web/types.ts) define os tipos usados entre a extensão, os serviços e a webview. Isso evita duplicação de estrutura e deixa os contratos mais claros.
 
-### 1.0.1
+### 6. Testes
 
-Fixed issue #.
+[src/web/test/suite/index.ts](src/web/test/suite/index.ts) e [src/web/test/suite/extension.test.ts](src/web/test/suite/extension.test.ts) preparam a execução dos testes automatizados da extensão.
 
-### 1.1.0
+## Estrutura de Arquivos
 
-Added features X, Y, and Z.
+### Arquivos principais do projeto
 
----
+- [package.json](package.json): define nome, scripts, dependências, comando da extensão e configuração exposta no VS Code.
+- [webpack.config.js](webpack.config.js): empacota o código da extensão para web.
+- [tsconfig.json](tsconfig.json): configura o TypeScript do projeto.
+- [eslint.config.mjs](eslint.config.mjs): regras de lint.
+- [CHANGELOG.md](CHANGELOG.md): histórico de mudanças.
+- [.vscode/](.vscode): configuração de desenvolvimento do workspace.
+- [resources/](resources): ícones e recursos visuais da extensão.
 
-## Working with Markdown
+### Código da extensão
 
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
+- [src/web/extension.ts](src/web/extension.ts): inicialização da extensão e registro dos eventos principais.
+- [src/web/provider/provedor-barra-lateral.ts](src/web/provider/provedor-barra-lateral.ts): orquestra o estado da sidebar.
+- [src/web/services/desafio.ts](src/web/services/desafio.ts): cria desafios iniciais.
+- [src/web/services/workspace.ts](src/web/services/workspace.ts): lê arquivos do aluno e cria o preview.
+- [src/web/services/avaliacao.ts](src/web/services/avaliacao.ts): calcula a avaliação local ou chama a API.
+- [src/web/webview/html.ts](src/web/webview/html.ts): gera a interface da webview.
+- [src/web/types.ts](src/web/types.ts): tipos compartilhados.
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+### Testes
 
-## For more information
+- [src/web/test/suite/index.ts](src/web/test/suite/index.ts): bootstrap do conjunto de testes.
+- [src/web/test/suite/extension.test.ts](src/web/test/suite/extension.test.ts): testes iniciais do comportamento da extensão.
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+### Documentação
 
-**Enjoy!**
+- [README.md](README.md): documentação geral do projeto.
+- [docs/diario-de-bordo.md](docs/diario-de-bordo.md): modelo do diário de bordo da equipe.
+- [docs/diario-de-bordo/fluxo-git-github.md](docs/diario-de-bordo/fluxo-git-github.md): fluxo de trabalho do trio com Git e GitHub.
+
+## Como o Fluxo Funciona
+
+1. O usuário executa o comando da extensão ou abre a aba lateral.
+2. A sidebar é renderizada por um provider do VS Code.
+3. O provider injeta o HTML da webview.
+4. A webview pede o estado atual com uma mensagem `pronto`.
+5. A extensão lê os arquivos `index.html` e `style.css` da workspace.
+6. O preview é montado e enviado para o iframe da interface.
+7. O usuário clica em verificar.
+8. A tentativa é avaliada e o resultado aparece na lateral.
+
+## Arquivos que o Aluno Deve Editar
+
+O projeto foi pensado para que o aluno trabalhe em arquivos normais da workspace, principalmente:
+
+- `index.html`
+- `style.css`
+
+O preview da webview usa esses arquivos como base para simular o resultado visual do layout em construção.
+
+## Configuração
+
+### Requisito
+
+- VS Code 1.110.0 ou superior.
+
+### Configuração da API
+
+A extensão lê a configuração `flexboxTrainer.apiBaseUrl`.
+
+- Se estiver vazia, a avaliação usa mock local.
+- Se receber uma URL, a extensão tenta enviar a tentativa para `POST /evaluate`.
+
+## Scripts
+
+- `npm run compile-web`: compila a extensão.
+- `npm run watch-web`: compila em modo observação.
+- `npm test`: executa os testes da extensão.
+- `npm run run-in-browser`: abre a extensão no navegador para desenvolvimento.
+- `npm run lint`: executa o lint do projeto.
+
+## Papel de Cada Parte
+
+- Entrada da extensão: inicia tudo e registra eventos do VS Code.
+- Provider: segura estado e coordena mensagens.
+- Serviços: concentram regras de negócio e acesso à workspace.
+- Webview: desenha a interface e conversa com a extensão.
+- Tipos: padronizam os dados trafegados entre as camadas.
+
+## Evolução Prevista
+
+O projeto já está organizado para crescer com segurança. As próximas evoluções naturais são:
+
+- desafio procedural mais completo;
+- integração real com a API do torneio;
+- captura visual da solução do aluno;
+- testes mais específicos para cada serviço.
+
+## Resumo Rápido
+
+Se você quiser entender o projeto na ordem mais fácil, leia assim:
+
+1. [package.json](package.json)
+2. [src/web/extension.ts](src/web/extension.ts)
+3. [src/web/provider/provedor-barra-lateral.ts](src/web/provider/provedor-barra-lateral.ts)
+4. [src/web/types.ts](src/web/types.ts)
+5. [src/web/services/desafio.ts](src/web/services/desafio.ts)
+6. [src/web/services/workspace.ts](src/web/services/workspace.ts)
+7. [src/web/services/avaliacao.ts](src/web/services/avaliacao.ts)
+8. [src/web/webview/html.ts](src/web/webview/html.ts)
+9. [src/web/test/suite/index.ts](src/web/test/suite/index.ts)
+10. [src/web/test/suite/extension.test.ts](src/web/test/suite/extension.test.ts)
+
+## Observação
+
+Este README foi escrito para servir como guia de estudo do projeto e também como documentação para novos integrantes da equipe.
