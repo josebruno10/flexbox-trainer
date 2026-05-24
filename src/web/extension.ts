@@ -5,7 +5,7 @@ import { ehDocumentoDeTreino } from "./services/workspace";
 // ponto de entrada da extensão.
 export function activate(context: vscode.ExtensionContext) {
   // instancia o provider que controla a sidebar.
-  const provedor = new ProvedorBarraLateralFlexBox();
+  const provedor = new ProvedorBarraLateralFlexBox(context.extensionUri);
 
   // registra a view lateral da extensão.
   context.subscriptions.push(

@@ -15,12 +15,21 @@ export type Desafio = {
   width: number;
   height: number;
   blocks: Bloco[];
+  captureWidth?: number;
+  captureHeight?: number;
 };
 
 export type ResultadoAvaliacao = {
   precision: number;
   score: number;
-  source: "mock-local" | "api" | "api-error" | "missing-files";
+  source:
+    | "mock-local"
+    | "servidor"
+    | "api-error"
+    | "missing-files"
+    | "config-missing"
+    | "capture-error"
+    | "folder-error";
   error?: string;
 };
 
@@ -40,10 +49,24 @@ export type TentativaPayload = {
   elapsedMs: number;
   challengeId: string;
   seed: number;
+  imagemBase64?: string;
+  codigoPasta?: string;
+};
+
+export type ConfiguracaoServidor = {
+  apiBaseUrl: string;
+  apiToken: string;
+  dinamicaId: string;
+  userId: number;
+  teamId: number;
+  captureWidth: number;
+  captureHeight: number;
 };
 
 export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
   | { type: "novoDesafio" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao" };
+  | { type: "solicitarVerificacao" }
+  | { type: "imagemCapturada"; imagemBase64: string }
+  | { type: "erroCaptura"; error: string };

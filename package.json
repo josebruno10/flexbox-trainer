@@ -42,6 +42,36 @@
           "type": "string",
           "default": "",
           "description": "URL base da API de torneio para avaliar tentativas (exemplo: https://api.seudominio.com)."
+        },
+        "flexboxTrainer.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Token opcional para autenticar as requisições na API do torneio."
+        },
+        "flexboxTrainer.dinamicaId": {
+          "type": "string",
+          "default": "",
+          "description": "Código da dinâmica do torneio informado pelo professor (exemplo: KOTI)."
+        },
+        "flexboxTrainer.userId": {
+          "type": "number",
+          "default": 0,
+          "description": "Identificador numérico do aluno no servidor do torneio."
+        },
+        "flexboxTrainer.teamId": {
+          "type": "number",
+          "default": 0,
+          "description": "Identificador numérico da equipe no servidor do torneio."
+        },
+        "flexboxTrainer.captureWidth": {
+          "type": "number",
+          "default": 960,
+          "description": "Largura da imagem capturada para envio ao servidor."
+        },
+        "flexboxTrainer.captureHeight": {
+          "type": "number",
+          "default": 540,
+          "description": "Altura da imagem capturada para envio ao servidor."
         }
       }
     }
@@ -57,19 +87,22 @@
     "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
   },
   "devDependencies": {
-    "@types/vscode": "^1.110.0",
-    "@types/mocha": "^10.0.10",
     "@types/assert": "^1.5.11",
-    "eslint": "^9.39.3",
-    "typescript-eslint": "^8.56.1",
-    "mocha": "^11.7.5",
-    "typescript": "^5.9.3",
-    "@vscode/test-web": "^0.0.80",
-    "ts-loader": "^9.5.4",
-    "webpack": "^5.105.3",
-    "webpack-cli": "^6.0.1",
+    "@types/mocha": "^10.0.10",
+    "@types/vscode": "^1.110.0",
     "@types/webpack-env": "^1.18.8",
+    "@vscode/test-web": "^0.0.80",
     "assert": "^2.1.0",
-    "process": "^0.11.10"
+    "eslint": "^9.39.3",
+    "mocha": "^11.7.5",
+    "process": "^0.11.10",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "webpack": "^5.105.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
   }
 }

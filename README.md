@@ -13,7 +13,7 @@ Em termos simples, o fluxo é este:
 3. A webview mostra o desafio, lê o workspace e exibe o preview.
 4. O usuário edita `index.html` e `style.css` no editor normal.
 5. A extensão lê esses arquivos, monta o preview e envia os dados para a sidebar.
-6. A tentativa é enviada para a avaliação local ou para a API configurada.
+6. A tentativa é enviada para a avaliação local ou, quando configurada, para o servidor oficial do torneio.
 
 ## Arquitetura
 
@@ -40,6 +40,7 @@ Os serviços ficam em [src/web/services](src/web/services) e isolam regras espec
 - [desafio.ts](src/web/services/desafio.ts): cria o desafio base e define os blocos alvo.
 - [workspace.ts](src/web/services/workspace.ts): encontra `index.html` e `style.css`, lê os arquivos e monta o HTML de preview.
 - [avaliacao.ts](src/web/services/avaliacao.ts): avalia a tentativa usando mock local ou API externa.
+- [servidor.ts](src/web/services/servidor.ts): lê a configuração do servidor e faz as chamadas `POST /pasta` e `POST /salvarConteudo`.
 
 ### 4. Webview
 
@@ -72,7 +73,9 @@ Os serviços ficam em [src/web/services](src/web/services) e isolam regras espec
 - [src/web/services/desafio.ts](src/web/services/desafio.ts): cria desafios iniciais.
 - [src/web/services/workspace.ts](src/web/services/workspace.ts): lê arquivos do aluno e cria o preview.
 - [src/web/services/avaliacao.ts](src/web/services/avaliacao.ts): calcula a avaliação local ou chama a API.
+- [src/web/services/servidor.ts](src/web/services/servidor.ts): integra com as rotas oficiais do torneio.
 - [src/web/webview/html.ts](src/web/webview/html.ts): gera a interface da webview.
+- [src/web/webview/app.ts](src/web/webview/app.ts): controla a interface do lado do navegador e captura a imagem do preview.
 - [src/web/types.ts](src/web/types.ts): tipos compartilhados.
 
 ### Testes
@@ -94,8 +97,11 @@ Os serviços ficam em [src/web/services](src/web/services) e isolam regras espec
 4. A webview pede o estado atual com uma mensagem `pronto`.
 5. A extensão lê os arquivos `index.html` e `style.css` da workspace.
 6. O preview é montado e enviado para o iframe da interface.
-7. O usuário clica em verificar.
-8. A tentativa é avaliada e o resultado aparece na lateral.
+7. A extensão cria a pasta do aluno na dinâmica usando `POST /pasta`.
+8. O usuário clica em verificar.
+9. A webview captura o preview com `html2canvas` nas dimensões configuradas.
+10. A imagem é enviada ao servidor com `POST /salvarConteudo`.
+11. A nota volta e aparece na lateral.
 
 ## Arquivos que o Aluno Deve Editar
 
@@ -114,10 +120,12 @@ O preview da webview usa esses arquivos como base para simular o resultado visua
 
 ### Configuração da API
 
-A extensão lê a configuração `flexboxTrainer.apiBaseUrl`.
+A extensão lê as configurações `flexboxTrainer.apiBaseUrl`, `flexboxTrainer.apiToken`, `flexboxTrainer.dinamicaId`, `flexboxTrainer.userId`, `flexboxTrainer.teamId`, `flexboxTrainer.captureWidth` e `flexboxTrainer.captureHeight`.
 
 - Se estiver vazia, a avaliação usa mock local.
-- Se receber uma URL, a extensão tenta enviar a tentativa para `POST /evaluate`.
+- Se receber a URL e os dados mínimos, a extensão cria a pasta do aluno em `POST /pasta`.
+- Depois, ao verificar, envia a imagem do preview para `POST /salvarConteudo`.
+- O tamanho padrão de captura usado no projeto é `960x540`.
 
 ## Scripts
 

@@ -1,15 +1,18 @@
-import * as vscode from "vscode";
 import { ResultadoAvaliacao, TentativaPayload } from "../types";
+import {
+  enviarImagemDaTentativa,
+  lerConfiguracaoServidor,
+  temConfiguracaoServidorMinima,
+} from "./servidor";
 
 // avalia tentativa usando mock local ou api externa.
 export async function avaliarTentativa(
   payload: TentativaPayload,
 ): Promise<ResultadoAvaliacao> {
-  const config = vscode.workspace.getConfiguration("flexboxTrainer");
-  const apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
+  const configuracao = lerConfiguracaoServidor();
 
   // sem api: retorno local para não bloquear estudo/desenvolvimento.
-  if (!apiBaseUrl) {
+  if (!configuracao.apiBaseUrl) {
     return {
       precision: criarPrecisaoMock(payload.html, payload.css),
       score: 0,
@@ -17,27 +20,40 @@ export async function avaliarTentativa(
     };
   }
 
-  try {
-    const response = await fetch(`${apiBaseUrl}/evaluate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = (await response.json()) as {
-      precision: number;
-      score: number;
-    };
-
+  if (!temConfiguracaoServidorMinima(configuracao)) {
     return {
-      precision: data.precision,
-      score: data.score,
-      source: "api",
+      precision: 0,
+      score: 0,
+      source: "config-missing",
+      error:
+        "Preencha apiBaseUrl, dinamicaId, userId e teamId nas configurações da extensão.",
     };
+  }
+
+  if (!payload.codigoPasta) {
+    return {
+      precision: 0,
+      score: 0,
+      source: "folder-error",
+      error: "O código da pasta do aluno ainda não foi criado no servidor.",
+    };
+  }
+
+  if (!payload.imagemBase64) {
+    return {
+      precision: 0,
+      score: 0,
+      source: "capture-error",
+      error: "A imagem do preview ainda não foi capturada.",
+    };
+  }
+
+  try {
+    return await enviarImagemDaTentativa(
+      configuracao,
+      payload.codigoPasta,
+      payload.imagemBase64,
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido";
