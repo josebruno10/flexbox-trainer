@@ -1,5 +1,3 @@
-import html2canvas from "html2canvas";
-
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
 };
@@ -43,8 +41,7 @@ type ResultadoAvaliacaoRecebido = {
 type MensagemDaExtensao =
   | { type: "dadosDesafio"; payload: DesafioRecebido }
   | { type: "dadosWorkspace"; payload: ResumoWorkspaceRecebido }
-  | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido }
-  | { type: "capturarPreview"; largura: number; altura: number };
+  | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido };
 
 const vscode = acquireVsCodeApi();
 
@@ -133,7 +130,8 @@ function renderizarResultado(
     resultado.source === "missing-files" ||
     resultado.source === "config-missing" ||
     resultado.source === "capture-error" ||
-    resultado.source === "folder-error"
+    resultado.source === "folder-error" ||
+    resultado.source === "servidor-sem-nota"
   ) {
     caixaResultado.textContent =
       resultado.error || "Erro ao verificar a tentativa.";
@@ -155,33 +153,6 @@ function renderizarResultado(
     resultado.source;
 }
 
-async function capturarPreview(largura: number, altura: number): Promise<void> {
-  try {
-    const documentoPreview = quadroPreview.contentDocument;
-
-    if (!documentoPreview?.body) {
-      throw new Error("Preview ainda não carregou.");
-    }
-
-    const canvas = await html2canvas(documentoPreview.body, {
-      backgroundColor: "#ffffff",
-      scale: 1,
-      width: largura,
-      height: altura,
-      windowWidth: largura,
-      windowHeight: altura,
-      useCORS: true,
-    });
-
-    const imagemBase64 = canvas.toDataURL("image/png");
-    vscode.postMessage({ type: "imagemCapturada", imagemBase64 });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Erro desconhecido";
-    vscode.postMessage({ type: "erroCaptura", error: message });
-  }
-}
-
 window.addEventListener(
   "message",
   (event: MessageEvent<MensagemDaExtensao>) => {
@@ -197,10 +168,6 @@ window.addEventListener(
 
     if (mensagem.type === "resultadoAvaliacao") {
       renderizarResultado(mensagem.payload);
-    }
-
-    if (mensagem.type === "capturarPreview") {
-      void capturarPreview(mensagem.largura, mensagem.altura);
     }
   },
 );

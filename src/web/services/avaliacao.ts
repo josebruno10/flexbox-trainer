@@ -1,6 +1,6 @@
 import { ResultadoAvaliacao, TentativaPayload } from "../types";
 import {
-  enviarImagemDaTentativa,
+  enviarConteudoDaTentativa,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
 } from "./servidor";
@@ -39,20 +39,12 @@ export async function avaliarTentativa(
     };
   }
 
-  if (!payload.imagemBase64) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "capture-error",
-      error: "A imagem do preview ainda não foi capturada.",
-    };
-  }
-
   try {
-    return await enviarImagemDaTentativa(
+    return await enviarConteudoDaTentativa(
       configuracao,
       payload.codigoPasta,
-      payload.imagemBase64,
+      payload.html,
+      payload.css,
     );
   } catch (error) {
     const message =

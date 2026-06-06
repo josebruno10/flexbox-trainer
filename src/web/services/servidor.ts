@@ -29,65 +29,142 @@ export function temConfiguracaoServidorMinima(
 export async function criarPastaDoAluno(
   configuracao: ConfiguracaoServidor,
 ): Promise<string> {
-  const resposta = await fetch(`${configuracao.apiBaseUrl}/pasta`, {
+  const rotaCriarPasta = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
+
+  const resposta = await fetch(rotaCriarPasta, {
     method: "POST",
     headers: montarCabecalhos(configuracao),
-    body: JSON.stringify({
-      dinamicaId: configuracao.dinamicaId,
-      userId: configuracao.userId,
-      teamId: configuracao.teamId,
-    }),
   });
 
   if (!resposta.ok) {
-    throw new Error(`Falha ao criar pasta: HTTP ${resposta.status}`);
+    const detalhe = await extrairDetalheDeErro(resposta);
+    throw new Error(`Falha ao criar pasta: ${detalhe}`);
   }
 
-  const dados = (await resposta.json()) as { codigoPasta?: string };
+  const dados = (await resposta.json()) as unknown;
+  const codigoPasta = extrairCodigoPasta(dados);
 
-  if (!dados.codigoPasta) {
+  if (!codigoPasta) {
     throw new Error("A API não retornou o código da pasta.");
   }
 
-  return dados.codigoPasta;
+  return codigoPasta;
 }
 
-export async function enviarImagemDaTentativa(
+export async function enviarConteudoDaTentativa(
   configuracao: ConfiguracaoServidor,
   codigoPasta: string,
-  imagemBase64: string,
+  html: string,
+  css: string,
 ): Promise<ResultadoAvaliacao> {
-  const resposta = await fetch(`${configuracao.apiBaseUrl}/salvarConteudo`, {
+  const formulario = new URLSearchParams();
+  formulario.set("code_pasta", codigoPasta);
+  formulario.set("tipo", "ambos");
+  formulario.set("index_conteudo", html);
+  formulario.set("style_conteudo", css);
+
+  const resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
     method: "POST",
-    headers: montarCabecalhos(configuracao),
-    body: JSON.stringify({
-      codigoPasta,
-      imagem: imagemBase64,
+    headers: montarCabecalhos(configuracao, {
+      "Content-Type": "application/x-www-form-urlencoded",
     }),
+    body: formulario.toString(),
   });
 
   if (!resposta.ok) {
-    throw new Error(`Falha ao enviar imagem: HTTP ${resposta.status}`);
+    const detalhe = await extrairDetalheDeErro(resposta);
+    throw new Error(`Falha ao enviar conteúdo: ${detalhe}`);
   }
 
-  const dados = (await resposta.json()) as { nota?: number };
+  const dados = (await resposta.json()) as {
+    message?: string;
+    nota?: number;
+    score?: number;
+    precisao?: number;
+    precision?: number;
+  };
 
-  if (typeof dados.nota !== "number") {
-    throw new Error("A API não retornou a nota da submissão.");
+  const nota = dados.nota ?? dados.score ?? dados.precisao ?? dados.precision;
+
+  if (typeof nota !== "number") {
+    return {
+      precision: 0,
+      score: 0,
+      source: "servidor-sem-nota",
+      error:
+        dados.message ||
+        "Conteúdo salvo, mas a API não retornou nota/precisão nesta rota.",
+    };
   }
 
   return {
-    precision: dados.nota,
-    score: dados.nota,
+    precision: nota,
+    score: nota,
     source: "servidor",
   };
 }
 
+async function extrairDetalheDeErro(response: Response): Promise<string> {
+  const fallback = `HTTP ${response.status}`;
+
+  try {
+    const dados = (await response.json()) as {
+      detail?: unknown;
+      message?: string;
+    };
+
+    if (typeof dados.message === "string" && dados.message.trim()) {
+      return dados.message;
+    }
+
+    if (typeof dados.detail === "string" && dados.detail.trim()) {
+      return dados.detail;
+    }
+
+    if (Array.isArray(dados.detail) && dados.detail.length > 0) {
+      return JSON.stringify(dados.detail[0]);
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function extrairCodigoPasta(dados: unknown): string | undefined {
+  if (typeof dados === "string" && dados.trim()) {
+    return dados;
+  }
+
+  if (!dados || typeof dados !== "object") {
+    return undefined;
+  }
+
+  const resposta = dados as Record<string, unknown>;
+  const candidatos = [
+    resposta.codigoPasta,
+    resposta.codigo_pasta,
+    resposta.codPasta,
+    resposta.cod_pasta,
+    resposta.pastaCodigo,
+    resposta.codigo,
+  ];
+
+  const encontrado = candidatos.find(
+    (valor): valor is string =>
+      typeof valor === "string" && valor.trim().length > 0,
+  );
+
+  return encontrado;
+}
+
 function montarCabecalhos(
   configuracao: ConfiguracaoServidor,
+  overrides?: Record<string, string>,
 ): Record<string, string> {
   const cabecalhos: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(overrides ?? {}),
   };
 
   if (configuracao.apiToken) {

@@ -25,6 +25,7 @@ export type ResultadoAvaliacao = {
   source:
     | "mock-local"
     | "servidor"
+    | "servidor-sem-nota"
     | "api-error"
     | "missing-files"
     | "config-missing"
@@ -49,7 +50,6 @@ export type TentativaPayload = {
   elapsedMs: number;
   challengeId: string;
   seed: number;
-  imagemBase64?: string;
   codigoPasta?: string;
 };
 
@@ -67,6 +67,4 @@ export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
   | { type: "novoDesafio" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao" }
-  | { type: "imagemCapturada"; imagemBase64: string }
-  | { type: "erroCaptura"; error: string };
+  | { type: "solicitarVerificacao" };

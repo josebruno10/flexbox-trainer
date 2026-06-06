@@ -36,12 +36,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private codigoPastaAluno?: string;
 
-  private capturaPendente?: {
-    resolve: (imagemBase64: string) => void;
-    reject: (erro: Error) => void;
-    timeoutId: ReturnType<typeof setTimeout>;
-  };
-
   private preparandoPasta: Promise<void> = Promise.resolve();
 
   public constructor(extensionUri: vscode.Uri) {
@@ -80,15 +74,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         if (mensagem.type === "solicitarVerificacao") {
           void this.verificarTentativaAtual();
           return;
-        }
-
-        if (mensagem.type === "imagemCapturada") {
-          this.processarImagemCapturada(mensagem.imagemBase64);
-          return;
-        }
-
-        if (mensagem.type === "erroCaptura") {
-          this.processarErroCaptura(mensagem.error);
         }
       },
       undefined,
@@ -148,25 +133,17 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      const imagemBase64 = await this.capturarImagemDoPreview();
-
       this.avaliacaoAtual = await avaliarTentativa({
         html: this.resumoWorkspaceAtual.textoHtml,
         css: this.resumoWorkspaceAtual.textoCss,
         elapsedMs: Date.now() - this.inicioTentativaMs,
         challengeId: this.desafioAtual.challengeId,
         seed: this.desafioAtual.seed,
-        imagemBase64,
         codigoPasta: this.codigoPastaAluno,
       });
 
       this.enviarEstado();
     } catch (error) {
-      if (this.avaliacaoAtual?.source === "capture-error") {
-        this.enviarEstado();
-        return;
-      }
-
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";
       this.avaliacaoAtual = {
@@ -201,64 +178,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       };
       this.enviarEstado();
     }
-  }
-
-  private capturarImagemDoPreview(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (!this.visualizacaoWebview) {
-        reject(new Error("A barra lateral ainda não foi inicializada."));
-        return;
-      }
-
-      if (this.capturaPendente) {
-        clearTimeout(this.capturaPendente.timeoutId);
-        this.capturaPendente.reject(
-          new Error("Uma captura anterior foi interrompida."),
-        );
-      }
-
-      const timeoutId = setTimeout(() => {
-        if (this.capturaPendente) {
-          this.capturaPendente = undefined;
-          reject(new Error("Tempo esgotado ao capturar o preview."));
-        }
-      }, 15000);
-
-      this.capturaPendente = { resolve, reject, timeoutId };
-
-      void this.visualizacaoWebview.webview.postMessage({
-        type: "capturarPreview",
-        largura: this.desafioAtual.captureWidth ?? 960,
-        altura: this.desafioAtual.captureHeight ?? 540,
-      });
-    });
-  }
-
-  private processarImagemCapturada(imagemBase64: string): void {
-    if (!this.capturaPendente) {
-      return;
-    }
-
-    clearTimeout(this.capturaPendente.timeoutId);
-    this.capturaPendente.resolve(imagemBase64);
-    this.capturaPendente = undefined;
-  }
-
-  private processarErroCaptura(mensagem: string): void {
-    if (!this.capturaPendente) {
-      return;
-    }
-
-    clearTimeout(this.capturaPendente.timeoutId);
-    this.capturaPendente.reject(new Error(mensagem));
-    this.capturaPendente = undefined;
-    this.avaliacaoAtual = {
-      precision: 0,
-      score: 0,
-      source: "capture-error",
-      error: mensagem,
-    };
-    this.enviarEstado();
   }
 
   private enviarEstado(): void {
