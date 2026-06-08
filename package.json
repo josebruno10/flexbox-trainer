@@ -1,5 +1,6 @@
 {
   "name": "flexbox-trainer",
+  "publisher": "josebruno10",
   "displayName": "FlexBox Trainer",
   "description": "Treinador de recriação de layouts com FlexBox para o VS Code",
   "version": "0.0.1",
@@ -57,7 +58,7 @@
         },
         "flexboxTrainer.authSiteUrl": {
           "type": "string",
-          "default": "",
+          "default": "https://kevyngreenn.github.io/authserviceflexbox/",
           "description": "URL pública do site externo de autenticação que será aberto no navegador padrão."
         },
         "flexboxTrainer.apiBaseUrl": {

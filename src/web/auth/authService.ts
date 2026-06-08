@@ -4,17 +4,6 @@ import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
 type ModoAutenticacao = "login" | "register";
 
-type UsuarioApi = {
-  id?: number;
-  nome?: string;
-  email?: string;
-  token_gmail?: string;
-  tokenGmail?: string;
-  turma?: number;
-  periodo?: number;
-  url_image_perfil?: string;
-};
-
 type ResultadoUsuario = {
   id?: number;
   nome: string;
@@ -119,7 +108,7 @@ export class AuthService implements vscode.Disposable {
     }
 
     const callbackBase = vscode.Uri.parse(
-      `${vscode.env.uriScheme}://flexbox-trainer/auth/callback`,
+      `${vscode.env.uriScheme}://${this.context.extension.id}/auth/callback`,
     );
     const callbackExterno = await vscode.env.asExternalUri(callbackBase);
     const url = new URL(urlSiteAutenticacao);
@@ -137,17 +126,13 @@ export class AuthService implements vscode.Disposable {
   public async processarCallback(uri: vscode.Uri): Promise<void> {
     const parametros = new URLSearchParams(uri.query || uri.fragment);
     const email = sanitizarTexto(parametros.get("email"));
-    const tokenGmail = sanitizarTexto(
-      parametros.get("token_gmail") ??
-        parametros.get("tokenGmail") ??
-        parametros.get("token"),
-    );
+    const tokenGmail = email;
     const nome = sanitizarTexto(
       parametros.get("nome") ?? parametros.get("name"),
     );
     const remember = lerBooleano(parametros.get("remember"));
 
-    if (!email || !tokenGmail) {
+    if (!email) {
       throw new Error(
         "O retorno da autenticação está incompleto. Tente fazer login novamente.",
       );
@@ -158,12 +143,6 @@ export class AuthService implements vscode.Disposable {
     if (!usuario) {
       throw new Error(
         "Não foi possível localizar sua conta na API do IFMS. Verifique seu cadastro.",
-      );
-    }
-
-    if (usuario.tokenGmail !== tokenGmail) {
-      throw new Error(
-        "O token informado não confere com a conta cadastrada. Faça login novamente.",
       );
     }
 
@@ -331,9 +310,7 @@ function normalizarUsuario(dados: unknown): ResultadoUsuario | undefined {
       valorTexto(registro.nome_completo),
   );
   const email = sanitizarTexto(valorTexto(registro.email));
-  const tokenGmail = sanitizarTexto(
-    valorTexto(registro.token_gmail) ?? valorTexto(registro.tokenGmail),
-  );
+  const tokenGmail = email;
   const id =
     valorNumero(registro.id) ??
     valorNumero(registro.usuario_id) ??
@@ -387,11 +364,11 @@ function valorNumero(valor: unknown): number | undefined {
   return undefined;
 }
 
-function sanitizarTexto(valor: string | undefined): string {
+function sanitizarTexto(valor: string | null | undefined): string {
   return valor ? valor.trim() : "";
 }
 
-function lerBooleano(valor: string | null): boolean {
+function lerBooleano(valor: string | null | undefined): boolean {
   if (!valor) {
     return false;
   }
