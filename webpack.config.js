@@ -20,6 +20,7 @@ const webExtensionConfig = {
     extension: "./src/web/extension.ts",
     "test/suite/index": "./src/web/test/suite/index.ts",
     "webview/app": "./src/web/webview/app.ts",
+    "webview/loginPage": "./src/web/webview/loginPage.ts",
   },
   output: {
     filename: "[name].js",

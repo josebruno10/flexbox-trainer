@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 
-// gera html da sidebar com interface mínima para estudo.
 export function obterHtmlWebview(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
+  nomeUsuario?: string,
 ): string {
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
@@ -33,11 +33,36 @@ export function obterHtmlWebview(
       margin-bottom: 10px;
     }
 
+    .cabecalho {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
     .titulo {
-      margin: 0 0 8px;
+      margin: 0;
       font-size: 13px;
       color: #9fb4d1;
       text-transform: uppercase;
+    }
+
+    .status-auth {
+      border: 1px solid #2a3140;
+      border-radius: 8px;
+      background: rgba(76, 186, 114, 0.08);
+      padding: 8px 10px;
+      color: #c6d2e4;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .status-auth strong {
+      display: block;
+      color: #e8edf5;
+      margin-bottom: 2px;
     }
 
     canvas {
@@ -88,7 +113,11 @@ export function obterHtmlWebview(
 </head>
 <body>
   <section class="bloco">
-    <h2 class="titulo">FlexBox Trainer</h2>
+    <div class="cabecalho">
+      <h2 class="titulo">FlexBox Trainer</h2>
+      <button id="botaoSair" class="secundario">Sair</button>
+    </div>
+    <div class="status-auth" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
     <div class="acoes">
       <button id="botaoNovoDesafio">Novo desafio</button>
     </div>
@@ -124,4 +153,144 @@ export function obterHtmlWebview(
   <script src="${scriptUri}"></script>
 </body>
 </html>`;
+}
+
+export function obterHtmlAutenticacao(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+): string {
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "loginPage.js"),
+  );
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src ${webview.cspSource};">
+  <title>FlexBox Trainer - Autenticação</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        radial-gradient(circle at top left, rgba(100, 181, 246, 0.22), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(76, 186, 114, 0.18), transparent 30%),
+        #08111d;
+      color: #e8edf5;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    .cartao {
+      width: min(100%, 360px);
+      border: 1px solid rgba(159, 180, 209, 0.18);
+      border-radius: 24px;
+      background: rgba(10, 18, 29, 0.94);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #7f93ab;
+      font-size: 11px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    .descricao {
+      margin: 12px 0 18px;
+      color: #c2d0df;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .status {
+      min-height: 44px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(159, 180, 209, 0.14);
+      color: #cfe3f2;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .acoes {
+      display: grid;
+      gap: 10px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button.primario {
+      background: linear-gradient(135deg, #4cba72, #7de2a4);
+      color: #08111d;
+    }
+
+    button.secundario {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e8edf5;
+      border: 1px solid rgba(159, 180, 209, 0.18);
+    }
+
+    .meta {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #8ea4bc;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main class="cartao">
+    <p class="eyebrow">FlexBox Trainer</p>
+    <h1>Torne sua experiência melhor 🚀</h1>
+    <p class="descricao">Crie uma conta ou faça login para usar esta extensão.</p>
+    <div class="status" id="statusAutenticacao">Você precisa criar uma conta ou fazer login para usar esta extensão.</div>
+    <div class="acoes">
+      <button id="botaoCriarConta" class="primario">Criar Conta</button>
+      <button id="botaoFazerLogin" class="secundario">Fazer Login</button>
+      <button id="botaoRevalidar" class="secundario">Tentar novamente</button>
+      <button id="botaoSair" class="secundario">Sair</button>
+    </div>
+    <div class="meta">A validação é feita com a API do IFMS e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
+  </main>
+  <script src="${scriptUri}"></script>
+</body>
+</html>`;
+}
+
+function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

@@ -31,6 +31,18 @@
     },
     "commands": [
       {
+        "command": "flexbox-trainer.login",
+        "title": "FlexBox Trainer: Fazer Login"
+      },
+      {
+        "command": "flexbox-trainer.criarConta",
+        "title": "FlexBox Trainer: Criar Conta"
+      },
+      {
+        "command": "flexbox-trainer.logout",
+        "title": "FlexBox Trainer: Sair"
+      },
+      {
         "command": "flexbox-trainer.iniciar",
         "title": "FlexBox Trainer: Iniciar"
       }
@@ -38,6 +50,16 @@
     "configuration": {
       "title": "FlexBox Trainer",
       "properties": {
+        "flexboxTrainer.authApiBaseUrl": {
+          "type": "string",
+          "default": "https://ifms.pro.br:6005",
+          "description": "URL base da API do IFMS usada para cadastro, login e validação de sessão."
+        },
+        "flexboxTrainer.authSiteUrl": {
+          "type": "string",
+          "default": "",
+          "description": "URL pública do site externo de autenticação que será aberto no navegador padrão."
+        },
         "flexboxTrainer.apiBaseUrl": {
           "type": "string",
           "default": "",

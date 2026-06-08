@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
+import { AuthService } from "../auth/authService";
+import { LoginProvider } from "../auth/loginProvider";
 import {
   Desafio,
+  EstadoAutenticacao,
   MensagemRecebidaBarraLateral,
   ResumoWorkspace,
   ResultadoAvaliacao,
@@ -16,13 +19,16 @@ import {
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
 } from "../services/servidor";
-import { obterHtmlWebview } from "../webview/html";
+import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
 
-// provider responsável por gerenciar estado e comunicação da sidebar.
 export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public static readonly viewType = "flexbox-trainer.sidebar";
 
   private readonly extensionUri: vscode.Uri;
+
+  private readonly authService: AuthService;
+
+  private readonly loginProvider: LoginProvider;
 
   private visualizacaoWebview?: vscode.WebviewView;
 
@@ -38,8 +44,25 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private preparandoPasta: Promise<void> = Promise.resolve();
 
-  public constructor(extensionUri: vscode.Uri) {
+  private estadoAutenticacao: EstadoAutenticacao;
+
+  public constructor(extensionUri: vscode.Uri, authService: AuthService) {
     this.extensionUri = extensionUri;
+    this.authService = authService;
+    this.loginProvider = new LoginProvider(authService);
+    this.estadoAutenticacao = authService.getEstadoAtual();
+
+    this.authService.onDidChangeEstado((estado) => {
+      this.estadoAutenticacao = estado;
+      this.renderizarWebviewAtual();
+
+      if (estado.status === "authenticated") {
+        this.iniciarNovoDesafio();
+        void this.atualizarPreviewWorkspace();
+      }
+
+      this.enviarEstado();
+    });
   }
 
   public resolveWebviewView(
@@ -47,16 +70,41 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   ): void | Thenable<void> {
     this.visualizacaoWebview = visualizacaoWebview;
     visualizacaoWebview.webview.options = { enableScripts: true };
-    visualizacaoWebview.webview.html = obterHtmlWebview(
-      visualizacaoWebview.webview,
-      this.extensionUri,
-    );
+    this.renderizarWebviewAtual();
 
     visualizacaoWebview.webview.onDidReceiveMessage(
       (mensagem: MensagemRecebidaBarraLateral) => {
         if (mensagem.type === "pronto") {
-          void this.atualizarPreviewWorkspace();
           this.enviarEstado();
+
+          if (this.authService.isAutenticado()) {
+            void this.atualizarPreviewWorkspace();
+          }
+
+          return;
+        }
+
+        if (mensagem.type === "abrirLogin") {
+          void this.loginProvider.abrirLogin();
+          return;
+        }
+
+        if (mensagem.type === "abrirCadastro") {
+          void this.loginProvider.abrirCadastro();
+          return;
+        }
+
+        if (mensagem.type === "revalidarSessao") {
+          void this.loginProvider.revalidarSessao();
+          return;
+        }
+
+        if (mensagem.type === "logout") {
+          void this.loginProvider.sair();
+          return;
+        }
+
+        if (!this.authService.isAutenticado()) {
           return;
         }
 
@@ -73,17 +121,22 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
         if (mensagem.type === "solicitarVerificacao") {
           void this.verificarTentativaAtual();
-          return;
         }
       },
       undefined,
     );
 
-    this.preparandoPasta = this.prepararPastaDoAluno();
-    void this.atualizarPreviewWorkspace();
+    if (this.authService.isAutenticado()) {
+      this.preparandoPasta = this.prepararPastaDoAluno();
+      void this.atualizarPreviewWorkspace();
+    }
   }
 
   public iniciarNovoDesafio(): void {
+    if (!this.authService.isAutenticado()) {
+      return;
+    }
+
     const configuracao = lerConfiguracaoServidor();
 
     this.desafioAtual = {
@@ -99,11 +152,19 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   public async atualizarPreviewWorkspace(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      return;
+    }
+
     this.resumoWorkspaceAtual = await lerResumoWorkspace();
     this.enviarEstado();
   }
 
   private async verificarTentativaAtual(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      return;
+    }
+
     try {
       if (
         !this.resumoWorkspaceAtual.temArquivoHtml ||
@@ -157,6 +218,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   private async prepararPastaDoAluno(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      this.codigoPastaAluno = undefined;
+      return;
+    }
+
     const configuracao = lerConfiguracaoServidor();
 
     if (!temConfiguracaoServidorMinima(configuracao)) {
@@ -186,6 +252,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
 
     this.visualizacaoWebview.webview.postMessage({
+      type: "estadoAutenticacao",
+      payload: this.estadoAutenticacao,
+    });
+
+    if (!this.authService.isAutenticado()) {
+      return;
+    }
+
+    this.visualizacaoWebview.webview.postMessage({
       type: "dadosDesafio",
       payload: {
         ...this.desafioAtual,
@@ -204,5 +279,25 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         payload: this.avaliacaoAtual,
       });
     }
+  }
+
+  private renderizarWebviewAtual(): void {
+    if (!this.visualizacaoWebview) {
+      return;
+    }
+
+    if (this.authService.isAutenticado()) {
+      this.visualizacaoWebview.webview.html = obterHtmlWebview(
+        this.visualizacaoWebview.webview,
+        this.extensionUri,
+        this.authService.getSessaoAtual()?.displayName,
+      );
+      return;
+    }
+
+    this.visualizacaoWebview.webview.html = obterHtmlAutenticacao(
+      this.visualizacaoWebview.webview,
+      this.extensionUri,
+    );
   }
 }
