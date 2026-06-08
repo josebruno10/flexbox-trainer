@@ -17,7 +17,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       handleUri: async (uri: vscode.Uri) => {
-        if (uri.path !== "/auth/callback") {
+        // Correção: Usa includes para evitar bugs com barras no final (trailing slashes)
+        if (!uri.path.includes("/auth/callback")) {
           return;
         }
 
@@ -27,12 +28,12 @@ export async function activate(context: vscode.ExtensionContext) {
             "workbench.view.extension.flexboxTrainer",
           );
           vscode.window.showInformationMessage(
-            "Autenticação concluída com sucesso.",
+            "Autenticação concluída com sucesso. Bem-vindo!",
           );
         } catch (error) {
           const mensagem =
             error instanceof Error ? error.message : "Falha na autenticação.";
-          void vscode.window.showErrorMessage(mensagem);
+          void vscode.window.showErrorMessage("Erro no Login: " + mensagem);
         }
       },
     }),

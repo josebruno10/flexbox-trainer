@@ -125,24 +125,45 @@ export class AuthService implements vscode.Disposable {
 
   public async processarCallback(uri: vscode.Uri): Promise<void> {
     const parametros = new URLSearchParams(uri.query || uri.fragment);
-    const email = sanitizarTexto(parametros.get("email"));
-    const tokenGmail = email;
+    const email = sanitizarTexto(parametros.get("email")).toLowerCase();
+    const tokenGmail = sanitizarTexto(
+      parametros.get("token_gmail") ?? parametros.get("tokenGmail") ?? parametros.get("senha"),
+    );
     const nome = sanitizarTexto(
       parametros.get("nome") ?? parametros.get("name"),
     );
     const remember = lerBooleano(parametros.get("remember"));
 
-    if (!email) {
+    if (!email || !tokenGmail) {
       throw new Error(
         "O retorno da autenticação está incompleto. Tente fazer login novamente.",
       );
     }
 
-    const usuario = await this.buscarUsuarioPorEmail(email);
+    let usuario;
+    let tentativas = 0;
+
+    while (!usuario && tentativas < 6) {
+      try {
+        usuario = await this.buscarUsuarioPorEmail(email);
+      } catch (error) {
+        if (tentativas === 5) throw error;
+      }
+      if (!usuario) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      tentativas++;
+    }
 
     if (!usuario) {
       throw new Error(
-        "Não foi possível localizar sua conta na API do IFMS. Verifique seu cadastro.",
+        "Sua conta foi criada, mas a API está demorando muito para responder. Por favor, clique em 'Fazer Login' e entre manualmente.",
+      );
+    }
+
+    if (usuario.tokenGmail && usuario.tokenGmail !== tokenGmail) {
+      throw new Error(
+        "A credencial informada está incorreta ou inválida. Faça login novamente.",
       );
     }
 
@@ -150,7 +171,7 @@ export class AuthService implements vscode.Disposable {
       accessToken: gerarIdSessao(),
       email: usuario.email,
       displayName: nome || usuario.nome,
-      tokenGmail: usuario.tokenGmail,
+      tokenGmail: tokenGmail,
       userId: usuario.id,
       remember,
       authenticatedAt: Date.now(),
@@ -208,7 +229,7 @@ export class AuthService implements vscode.Disposable {
         return;
       }
 
-      if (usuario.tokenGmail !== sessao.tokenGmail) {
+      if (usuario.tokenGmail && usuario.tokenGmail !== sessao.tokenGmail) {
         await this.encerrarSessao(
           "Sua sessão não é mais válida. Faça login novamente.",
         );
@@ -247,21 +268,36 @@ export class AuthService implements vscode.Disposable {
     }
   }
 
-  private async buscarUsuarioPorEmail(
+ private async buscarUsuarioPorEmail(
     email: string,
   ): Promise<ResultadoUsuario | undefined> {
-    const url = new URL(
-      "/usuarios/por-email",
-      this.lerUrlBaseApiAutenticacao(),
-    );
-    url.searchParams.set("email", email);
+    const urlBase = this.lerUrlBaseApiAutenticacao();
+    
+    if (!urlBase) {
+      throw new Error("A configuração 'flexboxTrainer.authApiBaseUrl' está vazia no VS Code.");
+    }
 
-    const resposta = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const url = new URL("/usuarios/por-email", urlBase);
+    url.searchParams.set("email", email);
+    // Anti-cache seguro (sem usar a diretiva restrita do navegador)
+    url.searchParams.set("_t", Date.now().toString());
+
+    let resposta: Response;
+
+    try {
+      resposta = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        // Removemos o cache: "no-store" que causa "Failed to fetch" em Web Workers
+      });
+    } catch (error) {
+      console.error("Erro de Fetch na Extensão:", error);
+      throw new Error(
+        `Falha de rede ao tentar conectar com a API (${urlBase}). Verifique se o servidor está online e permite CORS.`,
+      );
+    }
 
     if (!resposta.ok) {
       if (resposta.status === 404) {
@@ -269,7 +305,7 @@ export class AuthService implements vscode.Disposable {
       }
 
       const detalhe = await extrairDetalheDeErro(resposta);
-      throw new Error(`Falha ao consultar usuário no IFMS: ${detalhe}`);
+      throw new Error(`Falha na API do IFMS (HTTP ${resposta.status}): ${detalhe}`);
     }
 
     const dados = (await resposta.json()) as unknown;
@@ -309,14 +345,16 @@ function normalizarUsuario(dados: unknown): ResultadoUsuario | undefined {
       valorTexto(registro.name) ??
       valorTexto(registro.nome_completo),
   );
-  const email = sanitizarTexto(valorTexto(registro.email));
-  const tokenGmail = email;
+  const email = sanitizarTexto(valorTexto(registro.email)).toLowerCase();
+  const tokenGmail = sanitizarTexto(
+    valorTexto(registro.token_gmail) ?? valorTexto(registro.tokenGmail),
+  );
   const id =
     valorNumero(registro.id) ??
     valorNumero(registro.usuario_id) ??
     valorNumero(registro.usuarioId);
 
-  if (!nome || !email || !tokenGmail) {
+  if (!nome || !email) {
     return undefined;
   }
 
