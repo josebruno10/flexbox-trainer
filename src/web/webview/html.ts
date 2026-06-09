@@ -14,7 +14,14 @@ export function obterHtmlWebview(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src ${webview.cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    img-src ${webview.cspSource} https: http: data: blob:;
+    script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';
+    style-src ${webview.cspSource} 'unsafe-inline' https: http:;
+    connect-src ${webview.cspSource} https: http: ws: wss:;
+    frame-src 'self' https: http: data:;
+  ">
   <title>FlexBox Trainer</title>
   <style>
     body {

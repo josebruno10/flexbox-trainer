@@ -31,9 +31,17 @@ export async function criarPastaDoAluno(
 ): Promise<string> {
   const rotaCriarPasta = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
 
+  console.log(`[FlexBox Trainer] Chamando API: ${rotaCriarPasta}`);
+
   const resposta = await fetch(rotaCriarPasta, {
     method: "POST",
     headers: montarCabecalhos(configuracao),
+  }).catch((err) => {
+    console.error("[FlexBox Trainer] Erro fatal no fetch (criar-pasta):", err);
+    // No navegador, se for CORS, o erro geralmente não tem detalhes por segurança.
+    throw new Error(
+      `Não foi possível conectar ao servidor. Verifique o CORS ou sua conexão.`,
+    );
   });
 
   if (!resposta.ok) {
@@ -63,12 +71,19 @@ export async function enviarConteudoDaTentativa(
   formulario.set("index_conteudo", html);
   formulario.set("style_conteudo", css);
 
+  console.log(
+    `[FlexBox Trainer] Enviando conteúdo para: ${configuracao.apiBaseUrl}/salvar-conteudo com pasta: ${codigoPasta}`,
+  );
+
   const resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
     method: "POST",
     headers: montarCabecalhos(configuracao, {
       "Content-Type": "application/x-www-form-urlencoded",
     }),
     body: formulario.toString(),
+  }).catch((err) => {
+    console.error("[FlexBox Trainer] Erro na rota salvar-conteudo:", err);
+    throw new Error(`Erro de rede ou CORS: ${err.message}`);
   });
 
   if (!resposta.ok) {
@@ -170,6 +185,8 @@ function montarCabecalhos(
   if (configuracao.apiToken) {
     cabecalhos.Authorization = `Bearer ${configuracao.apiToken}`;
   }
+
+  console.log("[FlexBox Trainer] Cabeçalhos da requisição:", cabecalhos);
 
   return cabecalhos;
 }

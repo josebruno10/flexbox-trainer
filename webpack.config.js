@@ -19,7 +19,6 @@ const webExtensionConfig = {
   entry: {
     extension: "./src/web/extension.ts",
     "test/suite/index": "./src/web/test/suite/index.ts",
-    "webview/app": "./src/web/webview/app.ts",
   },
   output: {
     filename: "[name].js",
@@ -73,4 +72,40 @@ const webExtensionConfig = {
   },
 };
 
-module.exports = [webExtensionConfig];
+/** @type WebpackConfig */
+const webviewAppConfig = {
+  mode: "none", // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
+  target: "web", // webview app runs in a browser context
+  entry: {
+    "webview/app": "./src/web/webview/app.ts",
+  },
+  output: {
+    filename: "[name].js",
+    path: path.join(__dirname, "./dist/web"),
+    // Para Webviews, o ideal é não definir library se for apenas um script global
+    // ou garantir que o formato seja estritamente para o navegador.
+    scriptType: "text/javascript",
+    devtoolModuleFilenameTemplate: "../../[resource-path]",
+  },
+  resolve: {
+    mainFields: ["browser", "module", "main"],
+    extensions: [".ts", ".js"],
+    fallback: {
+      assert: require.resolve("assert"),
+    },
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: [{ loader: "ts-loader" }],
+      },
+    ],
+  },
+  performance: { hints: false },
+  devtool: "nosources-source-map",
+  infrastructureLogging: { level: "log" },
+};
+
+module.exports = [webExtensionConfig, webviewAppConfig];
