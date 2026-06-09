@@ -61,7 +61,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "novoDesafio") {
-          this.iniciarNovoDesafio();
+          void this.iniciarNovoDesafio();
           void this.atualizarPreviewWorkspace();
           return;
         }
@@ -83,9 +83,21 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     void this.atualizarPreviewWorkspace();
   }
 
-  public iniciarNovoDesafio(): void {
+  public async iniciarNovoDesafio(): Promise<void> {
+
+    const resposta = await fetch('https://ifms.pro.br:6005/usuarios', {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+     }, }
+    );
+    await vscode.window.showInformationMessage(
+      "Deseja iniciar um novo desafio?"+await resposta.text(),
+      { modal: true },
+    );
     const configuracao = lerConfiguracaoServidor();
 
+    console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
       ...criarDesafioBase(),
       captureWidth: configuracao.captureWidth,
@@ -166,6 +178,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
     try {
       this.codigoPastaAluno = await criarPastaDoAluno(configuracao);
+      console.log(`[FlexBox Trainer] Pasta criada com sucesso no servidor! Código: ${this.codigoPastaAluno}`);
     } catch (error) {
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";

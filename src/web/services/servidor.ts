@@ -146,7 +146,7 @@ async function extrairDetalheDeErro(response: Response): Promise<string> {
   }
 }
 
-function extrairCodigoPasta(dados: unknown): string | undefined {
+export function extrairCodigoPasta(dados: unknown): string | undefined {
   if (typeof dados === "string" && dados.trim()) {
     return dados;
   }
@@ -177,10 +177,7 @@ function montarCabecalhos(
   configuracao: ConfiguracaoServidor,
   overrides?: Record<string, string>,
 ): Record<string, string> {
-  const cabecalhos: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(overrides ?? {}),
-  };
+  const cabecalhos: Record<string, string> = { ...(overrides ?? {}) };
 
   if (configuracao.apiToken) {
     cabecalhos.Authorization = `Bearer ${configuracao.apiToken}`;

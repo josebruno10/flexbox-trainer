@@ -46,14 +46,41 @@ suite("Servidor Service Test Suite", () => {
     assert.strictEqual(extrairCodigoPasta(null), undefined);
   });
 
-  // Nota: Para testar fetch real em ambiente de extensão web,
-  // você precisaria mockar o global.fetch ou usar um servidor de teste real.
   test("Configuração deve normalizar dinamicaId para maiúsculo", () => {
     // Este teste foca na lógica de negócio do serviço
     const entrada = "koti";
     // Simulando a lógica que existe no lerConfiguracaoServidor
     const processado = entrada.trim().toUpperCase();
     assert.strictEqual(processado, "KOTI");
+  });
+
+  test("Deve tratar erro de rede (Failed to fetch) ao criar pasta", async () => {
+    const config: ConfiguracaoServidor = {
+      apiBaseUrl: "https://url-invalida.com",
+      dinamicaId: "TEST",
+      userId: 1,
+      teamId: 1,
+      apiToken: "",
+      captureWidth: 960,
+      captureHeight: 540,
+    };
+
+    // Mock do fetch global para simular erro de rede/CORS
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = () =>
+      Promise.reject(new TypeError("Failed to fetch"));
+
+    try {
+      await criarPastaDoAluno(config);
+      assert.fail("Deveria ter lançado um erro de rede");
+    } catch (error: any) {
+      // Verifica se a mensagem de erro é a que definimos no servidor.ts
+      assert.ok(
+        error.message.includes("Não foi possível conectar ao servidor"),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("Deve formatar a URL de criação de pasta corretamente", () => {
