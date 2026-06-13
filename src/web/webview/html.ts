@@ -258,26 +258,68 @@ export function obterHtmlAutenticacao(
       color: #e8edf5;
       border: 1px solid rgba(159, 180, 209, 0.18);
     }
+    
+    button.terciario {
+      background: transparent;
+      color: #7f93ab;
+      border: 1px solid transparent;
+      padding: 8px 16px;
+    }
+    
+    button.terciario:hover {
+      color: #e8edf5;
+      background: rgba(255, 255, 255, 0.04);
+    }
 
     .meta {
       margin-top: 16px;
       font-size: 12px;
       color: #8ea4bc;
       line-height: 1.5;
+      text-align: center;
+    }
+    
+    .divisor {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: #7f93ab;
+      font-size: 12px;
+      margin: 16px 0;
+    }
+    
+    .divisor::before,
+    .divisor::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid rgba(159, 180, 209, 0.18);
+    }
+    
+    .divisor:not(:empty)::before {
+      margin-right: .5em;
+    }
+    
+    .divisor:not(:empty)::after {
+      margin-left: .5em;
     }
   </style>
 </head>
 <body>
   <main class="cartao">
     <p class="eyebrow">FlexBox Trainer</p>
-    <h1>Torne sua experiência melhor 🚀</h1>
-    <p class="descricao">Crie uma conta ou faça login para usar esta extensão.</p>
+    <h1>Acesse sua conta 🚀</h1>
+    <p class="descricao">Conecte-se com sua conta para acessar os desafios.</p>
     <div class="status" id="statusAutenticacao">Você precisa criar uma conta ou fazer login para usar esta extensão.</div>
     <div class="acoes">
-      <button id="botaoCriarConta" class="primario">Criar Conta</button>
-      <button id="botaoFazerLogin" class="secundario">Fazer Login</button>
-      <button id="botaoRevalidar" class="secundario">Tentar novamente</button>
-      <button id="botaoSair" class="secundario">Sair</button>
+      <button id="botaoGitHub" class="secundario">Entrar com GitHub</button>
+      <button id="botaoMicrosoft" class="secundario">Entrar com Microsoft</button>
+      
+      <div class="divisor">ou</div>
+      
+      <button id="botaoFazerLogin" class="primario">Fazer Login Manual</button>
+      <button id="botaoCriarConta" class="terciario">Criar Conta no Site</button>
+      <button id="botaoRevalidar" class="terciario">Tentar novamente</button>
+      <button id="botaoSair" class="terciario">Sair</button>
     </div>
     <div class="meta">A validação é feita com a API do IFMS e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
   </main>

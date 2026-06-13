@@ -97,6 +97,95 @@ export class AuthService implements vscode.Disposable {
     await this.validarSessaoComApi();
   }
 
+  public async loginComProvedorVSCode(provedor: 'github' | 'microsoft'): Promise<void> {
+    try {
+      this.definirEstado({
+        status: "checking",
+        message: `Conectando à sua conta ${provedor === 'github' ? 'GitHub' : 'Microsoft'}...`,
+      });
+
+      const session = await vscode.authentication.getSession(
+        provedor,
+        provedor === 'github' ? ['user:email'] : ['profile', 'email', 'openid'],
+        { createIfNone: true }
+      );
+
+      if (!session) {
+        throw new Error(`Autenticação com ${provedor} cancelada.`);
+      }
+
+      let email = "";
+
+      if (provedor === 'github') {
+        try {
+          const res = await fetch('https://api.github.com/user/emails', {
+            headers: {
+              Authorization: `token ${session.accessToken}`,
+              'User-Agent': 'VSCode-FlexBox-Trainer'
+            }
+          });
+          if (res.ok) {
+            const emails = await res.json() as { email: string; primary: boolean }[];
+            email = emails.find(e => e.primary)?.email || emails[0]?.email || "";
+          }
+        } catch (e) {
+          console.error("Erro ao buscar email do GitHub:", e);
+        }
+      }
+
+      if (!email || !email.includes('@')) {
+        email = session.account.label;
+      }
+
+      if (!email || !email.includes('@')) {
+        throw new Error(`Não conseguimos identificar o e-mail da sua conta ${provedor}.`);
+      }
+
+      email = email.toLowerCase().trim();
+
+      this.definirEstado({
+        status: "checking",
+        message: "Procurando este e-mail no servidor do IFMS...",
+      });
+
+      const usuario = await this.buscarUsuarioPorEmail(email);
+
+      if (!usuario) {
+        throw new Error(`Conta não encontrada. Você precisa criar uma conta no site do FlexBox Trainer com o e-mail "${email}" antes de usar este atalho.`);
+      }
+
+      const sessaoAuth: SessaoAutenticacao = {
+        accessToken: gerarIdSessao(),
+        email: usuario.email,
+        displayName: usuario.nome,
+        tokenGmail: usuario.tokenGmail || "vscode-auth",
+        userId: usuario.id,
+        remember: true,
+        authenticatedAt: Date.now(),
+        expiresAt: Date.now() + DURACAO_SESSAO_PERSISTENTE_MS,
+      };
+
+      await this.tokenManager.salvarSessao(sessaoAuth);
+      this.sessaoAtual = sessaoAuth;
+      this.definirEstado({
+        status: "authenticated",
+        email: sessaoAuth.email,
+        displayName: sessaoAuth.displayName,
+        message: `Bem-vindo, ${sessaoAuth.displayName}. Conectado via ${provedor === 'github' ? 'GitHub' : 'Microsoft'}.`,
+      });
+
+      vscode.window.showInformationMessage(`Login automático concluído via ${provedor}!`);
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Falha na autenticação nativa.";
+      this.definirEstado({
+        status: "error",
+        message: msg,
+      });
+      vscode.window.showErrorMessage(msg);
+    }
+  }
+
   public async abrirFluxoAutenticacao(modo: ModoAutenticacao): Promise<void> {
     const urlSiteAutenticacao = this.lerUrlSiteAutenticacao();
 
@@ -229,7 +318,7 @@ export class AuthService implements vscode.Disposable {
         return;
       }
 
-      if (usuario.tokenGmail && usuario.tokenGmail !== sessao.tokenGmail) {
+      if (sessao.tokenGmail !== "vscode-auth" && usuario.tokenGmail && usuario.tokenGmail !== sessao.tokenGmail) {
         await this.encerrarSessao(
           "Sua sessão não é mais válida. Faça login novamente.",
         );
@@ -268,9 +357,7 @@ export class AuthService implements vscode.Disposable {
     }
   }
 
- private async buscarUsuarioPorEmail(
-    email: string,
-  ): Promise<ResultadoUsuario | undefined> {
+  private async buscarUsuarioPorEmail(email: string): Promise<ResultadoUsuario | undefined> {
     const urlBase = this.lerUrlBaseApiAutenticacao();
     
     if (!urlBase) {
@@ -279,7 +366,6 @@ export class AuthService implements vscode.Disposable {
 
     const url = new URL("/usuarios/por-email", urlBase);
     url.searchParams.set("email", email);
-    // Anti-cache seguro (sem usar a diretiva restrita do navegador)
     url.searchParams.set("_t", Date.now().toString());
 
     let resposta: Response;
@@ -287,23 +373,17 @@ export class AuthService implements vscode.Disposable {
     try {
       resposta = await fetch(url.toString(), {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        // Removemos o cache: "no-store" que causa "Failed to fetch" em Web Workers
+        headers: { Accept: "application/json" }
       });
     } catch (error) {
       console.error("Erro de Fetch na Extensão:", error);
-      throw new Error(
-        `Falha de rede ao tentar conectar com a API (${urlBase}). Verifique se o servidor está online e permite CORS.`,
-      );
+      throw new Error(`Falha de rede ao conectar com a API (${urlBase}). O servidor pode estar bloqueando (CORS).`);
     }
 
     if (!resposta.ok) {
       if (resposta.status === 404) {
         return undefined;
       }
-
       const detalhe = await extrairDetalheDeErro(resposta);
       throw new Error(`Falha na API do IFMS (HTTP ${resposta.status}): ${detalhe}`);
     }
@@ -313,18 +393,11 @@ export class AuthService implements vscode.Disposable {
   }
 
   private lerUrlSiteAutenticacao(): string {
-    return vscode.workspace
-      .getConfiguration("flexboxTrainer")
-      .get<string>("authSiteUrl", "")
-      .trim();
+    return vscode.workspace.getConfiguration("flexboxTrainer").get<string>("authSiteUrl", "").trim();
   }
 
   private lerUrlBaseApiAutenticacao(): string {
-    return vscode.workspace
-      .getConfiguration("flexboxTrainer")
-      .get<string>("authApiBaseUrl", "https://ifms.pro.br:6005")
-      .trim()
-      .replace(/\/+$/, "");
+    return vscode.workspace.getConfiguration("flexboxTrainer").get<string>("authApiBaseUrl", "http://ifms.pro.br:6009").trim().replace(/\/+$/, "");
   }
 
   private definirEstado(estado: EstadoAutenticacao): void {
@@ -335,53 +408,24 @@ export class AuthService implements vscode.Disposable {
 
 function normalizarUsuario(dados: unknown): ResultadoUsuario | undefined {
   const registro = extrairRegistro(dados);
+  if (!registro) return undefined;
 
-  if (!registro) {
-    return undefined;
-  }
-
-  const nome = sanitizarTexto(
-    valorTexto(registro.nome) ??
-      valorTexto(registro.name) ??
-      valorTexto(registro.nome_completo),
-  );
+  const nome = sanitizarTexto(valorTexto(registro.nome) ?? valorTexto(registro.name) ?? valorTexto(registro.nome_completo));
   const email = sanitizarTexto(valorTexto(registro.email)).toLowerCase();
-  const tokenGmail = sanitizarTexto(
-    valorTexto(registro.token_gmail) ?? valorTexto(registro.tokenGmail),
-  );
-  const id =
-    valorNumero(registro.id) ??
-    valorNumero(registro.usuario_id) ??
-    valorNumero(registro.usuarioId);
+  const tokenGmail = sanitizarTexto(valorTexto(registro.token_gmail) ?? valorTexto(registro.tokenGmail));
+  const id = valorNumero(registro.id) ?? valorNumero(registro.usuario_id) ?? valorNumero(registro.usuarioId);
 
-  if (!nome || !email) {
-    return undefined;
-  }
-
-  return {
-    id,
-    nome,
-    email,
-    tokenGmail,
-  };
+  if (!nome || !email) return undefined;
+  return { id, nome, email, tokenGmail };
 }
 
 function extrairRegistro(dados: unknown): Record<string, unknown> | undefined {
-  if (!dados) {
-    return undefined;
-  }
-
+  if (!dados) return undefined;
   if (Array.isArray(dados)) {
     const primeiro = dados[0];
-    return primeiro && typeof primeiro === "object"
-      ? (primeiro as Record<string, unknown>)
-      : undefined;
+    return primeiro && typeof primeiro === "object" ? (primeiro as Record<string, unknown>) : undefined;
   }
-
-  if (typeof dados === "object") {
-    return dados as Record<string, unknown>;
-  }
-
+  if (typeof dados === "object") return dados as Record<string, unknown>;
   return undefined;
 }
 
@@ -390,15 +434,11 @@ function valorTexto(valor: unknown): string | undefined {
 }
 
 function valorNumero(valor: unknown): number | undefined {
-  if (typeof valor === "number" && Number.isFinite(valor)) {
-    return valor;
-  }
-
+  if (typeof valor === "number" && Number.isFinite(valor)) return valor;
   if (typeof valor === "string") {
     const numero = Number(valor);
     return Number.isFinite(numero) ? numero : undefined;
   }
-
   return undefined;
 }
 
@@ -407,40 +447,21 @@ function sanitizarTexto(valor: string | null | undefined): string {
 }
 
 function lerBooleano(valor: string | null | undefined): boolean {
-  if (!valor) {
-    return false;
-  }
-
+  if (!valor) return false;
   return ["1", "true", "yes", "on"].includes(valor.toLowerCase());
 }
 
 function gerarIdSessao(): string {
-  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `sessao-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `sessao-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 async function extrairDetalheDeErro(response: Response): Promise<string> {
   const fallback = `HTTP ${response.status}`;
-
   try {
-    const dados = (await response.json()) as {
-      detail?: unknown;
-      message?: string;
-    };
-
-    if (typeof dados.message === "string" && dados.message.trim()) {
-      return dados.message;
-    }
-
-    if (typeof dados.detail === "string" && dados.detail.trim()) {
-      return dados.detail;
-    }
-
-    if (Array.isArray(dados.detail) && dados.detail.length > 0) {
-      return JSON.stringify(dados.detail[0]);
-    }
-
+    const dados = (await response.json()) as { detail?: unknown; message?: string; };
+    if (typeof dados.message === "string" && dados.message.trim()) return dados.message;
+    if (typeof dados.detail === "string" && dados.detail.trim()) return dados.detail;
+    if (Array.isArray(dados.detail) && dados.detail.length > 0) return JSON.stringify(dados.detail[0]);
     return fallback;
   } catch {
     return fallback;

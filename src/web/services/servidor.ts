@@ -4,10 +4,16 @@ import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 export function lerConfiguracaoServidor(): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
+  let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
+  if (!apiBaseUrl) {
+    apiBaseUrl = config.get<string>("authApiBaseUrl", "http://ifms.pro.br:6009").trim();
+  }
+  apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+
   return {
-    apiBaseUrl: config.get<string>("apiBaseUrl", "").trim(),
+    apiBaseUrl,
     apiToken: config.get<string>("apiToken", "").trim(),
-    dinamicaId: config.get<string>("dinamicaId", "").trim().toUpperCase(),
+    dinamicaId: config.get<string>("dinamicaId", "").trim().toLowerCase(),
     userId: config.get<number>("userId", 0),
     teamId: config.get<number>("teamId", 0),
     captureWidth: config.get<number>("captureWidth", 960),
@@ -31,14 +37,19 @@ export async function criarPastaDoAluno(
 ): Promise<string> {
   const rotaCriarPasta = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
 
-  const resposta = await fetch(rotaCriarPasta, {
-    method: "POST",
-    headers: montarCabecalhos(configuracao),
-  });
+  let resposta: Response;
+  try {
+    resposta = await fetch(rotaCriarPasta, {
+      method: "POST",
+      headers: montarCabecalhos(configuracao),
+    });
+  } catch (error) {
+    throw new Error("Falha de rede ao conectar com a API para criar a pasta. O servidor pode estar offline ou bloqueando por CORS.");
+  }
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Falha ao criar pasta: ${detalhe}`);
+    throw new Error(`Falha ao criar pasta (HTTP ${resposta.status}): ${detalhe}`);
   }
 
   const dados = (await resposta.json()) as unknown;
@@ -63,17 +74,22 @@ export async function enviarConteudoDaTentativa(
   formulario.set("index_conteudo", html);
   formulario.set("style_conteudo", css);
 
-  const resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
-    method: "POST",
-    headers: montarCabecalhos(configuracao, {
-      "Content-Type": "application/x-www-form-urlencoded",
-    }),
-    body: formulario.toString(),
-  });
+  let resposta: Response;
+  try {
+    resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
+      method: "POST",
+      headers: montarCabecalhos(configuracao, {
+        "Content-Type": "application/x-www-form-urlencoded",
+      }),
+      body: formulario.toString(),
+    });
+  } catch (error) {
+    throw new Error("Falha de rede ao conectar com a API para enviar a tentativa. O servidor pode estar offline ou bloqueando por CORS.");
+  }
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Falha ao enviar conteúdo: ${detalhe}`);
+    throw new Error(`Falha ao enviar conteúdo (HTTP ${resposta.status}): ${detalhe}`);
   }
 
   const dados = (await resposta.json()) as {
@@ -142,8 +158,9 @@ function extrairCodigoPasta(dados: unknown): string | undefined {
 
   const resposta = dados as Record<string, unknown>;
   const candidatos = [
-    resposta.codigoPasta,
     resposta.codigo_pasta,
+    resposta.code_pasta,
+    resposta.codigoPasta,
     resposta.codPasta,
     resposta.cod_pasta,
     resposta.pastaCodigo,
@@ -152,7 +169,7 @@ function extrairCodigoPasta(dados: unknown): string | undefined {
 
   const encontrado = candidatos.find(
     (valor): valor is string =>
-      typeof valor === "string" && valor.trim().length > 0,
+      typeof valor === "string" && valor.trim().length > 0 && !valor.includes("Sucesso"),
   );
 
   return encontrado;
@@ -164,6 +181,7 @@ function montarCabecalhos(
 ): Record<string, string> {
   const cabecalhos: Record<string, string> = {
     "Content-Type": "application/json",
+    "Accept": "application/json",
     ...(overrides ?? {}),
   };
 

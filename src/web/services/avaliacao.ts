@@ -5,13 +5,11 @@ import {
   temConfiguracaoServidorMinima,
 } from "./servidor";
 
-// avalia tentativa usando mock local ou api externa.
 export async function avaliarTentativa(
   payload: TentativaPayload,
 ): Promise<ResultadoAvaliacao> {
   const configuracao = lerConfiguracaoServidor();
 
-  // sem api: retorno local para não bloquear estudo/desenvolvimento.
   if (!configuracao.apiBaseUrl) {
     return {
       precision: criarPrecisaoMock(payload.html, payload.css),
@@ -26,7 +24,7 @@ export async function avaliarTentativa(
       score: 0,
       source: "config-missing",
       error:
-        "Preencha apiBaseUrl, dinamicaId, userId e teamId nas configurações da extensão.",
+        "Preencha dinamicaId, userId e teamId nas configurações da extensão.",
     };
   }
 
@@ -53,7 +51,6 @@ export async function avaliarTentativa(
   }
 }
 
-// gera precisão simulada simples baseada no tamanho do conteúdo.
 function criarPrecisaoMock(html: string, css: string): number {
   const texto = `${html.trim()}|${css.trim()}`;
   if (!texto.trim()) {
