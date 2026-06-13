@@ -147,7 +147,7 @@ export function obterHtmlWebview(
 
   <section class="bloco">
     <h2 class="titulo">Resultado</h2>
-    <div class="linha" id="caixaResultado">Nenhuma verificacao ainda.</div>
+    <div class="linha" id="caixaResultado">Nenhuma verificação ainda.</div>
   </section>
 
   <script src="${scriptUri}"></script>
@@ -236,34 +236,48 @@ export function obterHtmlAutenticacao(
     button {
       appearance: none;
       border: 0;
-      border-radius: 999px;
+      border-radius: 8px;
       padding: 12px 16px;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 14px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
     }
 
     button:hover {
       transform: translateY(-1px);
+      filter: brightness(1.1);
     }
 
-    button.primario {
-      background: linear-gradient(135deg, #4cba72, #7de2a4);
-      color: #08111d;
+    .btn-github {
+      background: #24292e;
+      color: white;
+      border: 1px solid #444d56;
     }
 
-    button.secundario {
-      background: rgba(255, 255, 255, 0.06);
-      color: #e8edf5;
-      border: 1px solid rgba(159, 180, 209, 0.18);
+    .btn-microsoft {
+      background: #00a4ef;
+      color: white;
+      border: 1px solid #0078d4;
     }
-    
+
+    .btn-google {
+      background: white;
+      color: #444;
+      border: 1px solid #ddd;
+    }
+
     button.terciario {
       background: transparent;
       color: #7f93ab;
       border: 1px solid transparent;
       padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 500;
     }
     
     button.terciario:hover {
@@ -278,48 +292,19 @@ export function obterHtmlAutenticacao(
       line-height: 1.5;
       text-align: center;
     }
-    
-    .divisor {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      color: #7f93ab;
-      font-size: 12px;
-      margin: 16px 0;
-    }
-    
-    .divisor::before,
-    .divisor::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid rgba(159, 180, 209, 0.18);
-    }
-    
-    .divisor:not(:empty)::before {
-      margin-right: .5em;
-    }
-    
-    .divisor:not(:empty)::after {
-      margin-left: .5em;
-    }
   </style>
 </head>
 <body>
   <main class="cartao">
     <p class="eyebrow">FlexBox Trainer</p>
     <h1>Acesse sua conta 🚀</h1>
-    <p class="descricao">Conecte-se com sua conta para acessar os desafios.</p>
-    <div class="status" id="statusAutenticacao">Você precisa criar uma conta ou fazer login para usar esta extensão.</div>
+    <p class="descricao">Escolha um provedor para conectar à sua conta do IFMS.</p>
+    <div class="status" id="statusAutenticacao">Selecione uma opção para entrar.</div>
     <div class="acoes">
-      <button id="botaoGitHub" class="secundario">Entrar com GitHub</button>
-      <button id="botaoMicrosoft" class="secundario">Entrar com Microsoft</button>
-      
-      <div class="divisor">ou</div>
-      
-      <button id="botaoFazerLogin" class="primario">Fazer Login Manual</button>
-      <button id="botaoCriarConta" class="terciario">Criar Conta no Site</button>
-      <button id="botaoRevalidar" class="terciario">Tentar novamente</button>
-      <button id="botaoSair" class="terciario">Sair</button>
+      <button id="botaoGitHub" class="btn-github">Entrar com GitHub</button>
+      <button id="botaoMicrosoft" class="btn-microsoft">Entrar com Microsoft</button>
+      <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
+      <button id="botaoSair" class="terciario">Desconectar</button>
     </div>
     <div class="meta">A validação é feita com a API do IFMS e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
   </main>

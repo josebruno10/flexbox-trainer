@@ -104,6 +104,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if ((mensagem as any).type === "loginGoogle") {
+          void this.authService.abrirLoginGoogle(); // Nova função para o Google
+          return;
+        }
+
         if (mensagem.type === "revalidarSessao") {
           void this.loginProvider.revalidarSessao();
           return;
