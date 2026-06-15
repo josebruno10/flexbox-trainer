@@ -84,17 +84,16 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   public async iniciarNovoDesafio(): Promise<void> {
-
-    const resposta = await fetch('https://ifms.pro.br:6005/usuarios', {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-     }, }
-    );
-    await vscode.window.showInformationMessage(
-      "Deseja iniciar um novo desafio?"+await resposta.text(),
+    const confirmacao = await vscode.window.showInformationMessage(
+      "Deseja iniciar um novo desafio? O progresso atual será perdido.",
       { modal: true },
+      "Sim",
     );
+
+    if (confirmacao !== "Sim") {
+      return;
+    }
+
     const configuracao = lerConfiguracaoServidor();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
@@ -178,7 +177,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
     try {
       this.codigoPastaAluno = await criarPastaDoAluno(configuracao);
-      console.log(`[FlexBox Trainer] Pasta criada com sucesso no servidor! Código: ${this.codigoPastaAluno}`);
+      console.log(
+        `[FlexBox Trainer] Pasta criada com sucesso no servidor! Código: ${this.codigoPastaAluno}`,
+      );
     } catch (error) {
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";

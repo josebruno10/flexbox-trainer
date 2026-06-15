@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
+import { log } from "./logger";
 
 export function lerConfiguracaoServidor(): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
@@ -31,25 +32,43 @@ export async function criarPastaDoAluno(
 ): Promise<string> {
   const rotaCriarPasta = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
 
-  console.log(`[FlexBox Trainer] Chamando API: ${rotaCriarPasta}`);
+  log.info(`Chamando API criar-pasta: ${rotaCriarPasta}`);
+
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 10000); // 10 segundos
 
   const resposta = await fetch(rotaCriarPasta, {
     method: "POST",
+    mode: "cors",
     headers: montarCabecalhos(configuracao),
-  }).catch((err) => {
-    console.error("[FlexBox Trainer] Erro fatal no fetch (criar-pasta):", err);
-    // No navegador, se for CORS, o erro geralmente não tem detalhes por segurança.
-    throw new Error(
-      `Não foi possível conectar ao servidor. Verifique o CORS ou sua conexão.`,
-    );
-  });
+    signal: abortController.signal,
+  })
+    .catch((err) => {
+      log.error(
+        `Erro fatal no fetch (criar-pasta): ${err.name === "AbortError" ? "Timeout" : err.message}`,
+      );
+      throw new Error(
+        `Não foi possível conectar ao servidor. Verifique o CORS ou sua conexão.`,
+      );
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
     throw new Error(`Falha ao criar pasta: ${detalhe}`);
   }
 
-  const dados = (await resposta.json()) as unknown;
+  let dados: unknown;
+  try {
+    dados = await resposta.json();
+  } catch (e) {
+    // Se o servidor retornar 200 mas o corpo for texto simples (o código da pasta direto)
+    const texto = await resposta.text();
+    return texto.trim();
+  }
+
   const codigoPasta = extrairCodigoPasta(dados);
 
   if (!codigoPasta) {
@@ -65,24 +84,27 @@ export async function enviarConteudoDaTentativa(
   html: string,
   css: string,
 ): Promise<ResultadoAvaliacao> {
+  log.info(`Enviando conteúdo para pasta: ${codigoPasta}`);
+
   const formulario = new URLSearchParams();
   formulario.set("code_pasta", codigoPasta);
   formulario.set("tipo", "ambos");
   formulario.set("index_conteudo", html);
   formulario.set("style_conteudo", css);
 
-  console.log(
-    `[FlexBox Trainer] Enviando conteúdo para: ${configuracao.apiBaseUrl}/salvar-conteudo com pasta: ${codigoPasta}`,
-  );
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 segundos
 
   const resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
     method: "POST",
+    mode: "cors",
     headers: montarCabecalhos(configuracao, {
       "Content-Type": "application/x-www-form-urlencoded",
     }),
+    signal: abortController.signal,
     body: formulario.toString(),
   }).catch((err) => {
-    console.error("[FlexBox Trainer] Erro na rota salvar-conteudo:", err);
+    log.error("Erro na rota salvar-conteudo", err);
     throw new Error(`Erro de rede ou CORS: ${err.message}`);
   });
 
@@ -177,13 +199,16 @@ function montarCabecalhos(
   configuracao: ConfiguracaoServidor,
   overrides?: Record<string, string>,
 ): Record<string, string> {
-  const cabecalhos: Record<string, string> = { ...(overrides ?? {}) };
+  const cabecalhos: Record<string, string> = {
+    Accept: "application/json",
+    ...(overrides ?? {}),
+  };
 
   if (configuracao.apiToken) {
     cabecalhos.Authorization = `Bearer ${configuracao.apiToken}`;
   }
 
-  console.log("[FlexBox Trainer] Cabeçalhos da requisição:", cabecalhos);
+  log.info("[FlexBox Trainer] Cabeçalhos da requisição:", cabecalhos);
 
   return cabecalhos;
 }

@@ -4,7 +4,7 @@
   "description": "Treinador de recriação de layouts com FlexBox para o VS Code",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.110.0"
   },
   "categories": [
     "Other"
@@ -40,7 +40,7 @@
       "properties": {
         "flexboxTrainer.apiBaseUrl": {
           "type": "string",
-          "default": "https://ifms.pro.br:6005",
+          "default": "https://ifms.pro.br:6009/api",
           "description": "URL base da API de torneio para avaliar tentativas (exemplo: https://api.seudominio.com)."
         },
         "flexboxTrainer.apiToken": {
@@ -89,7 +89,7 @@
   "devDependencies": {
     "@types/assert": "^1.5.11",
     "@types/mocha": "^10.0.10",
-    "@types/vscode": "^1.107.0",
+    "@types/vscode": "^1.110.0",
     "@types/webpack-env": "^1.18.8",
     "@vscode/test-web": "^0.0.80",
     "assert": "^2.1.0",

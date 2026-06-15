@@ -11,7 +11,7 @@ export function run(): Promise<void> {
     // Inclui todos os arquivos da pasta que terminam com `.test`.
     const importarTodos = (contexto: __WebpackModuleApi.RequireContext) =>
       contexto.keys().forEach(contexto);
-    importarTodos(require.context(".", true, /\.test$/));
+    importarTodos(require.context(".", true, /\.test(\.ts)?$/));
 
     try {
       // Executa os testes.

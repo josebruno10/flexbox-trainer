@@ -1,6 +1,7 @@
-out
-dist
-node_modules
-.vscode-test-web/
-*.vsix
-.env
+node_modules/
+dist/
+out/
+.vscode-test/
+*.log
+.DS_Store
+vsc-extension-quickstart.md

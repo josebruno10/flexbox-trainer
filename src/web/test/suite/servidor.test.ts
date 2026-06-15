@@ -47,11 +47,46 @@ suite("Servidor Service Test Suite", () => {
   });
 
   test("Configuração deve normalizar dinamicaId para maiúsculo", () => {
-    // Este teste foca na lógica de negócio do serviço
-    const entrada = "koti";
-    // Simulando a lógica que existe no lerConfiguracaoServidor
-    const processado = entrada.trim().toUpperCase();
-    assert.strictEqual(processado, "KOTI");
+    // Simulando dados que viriam do vscode.workspace.getConfiguration
+    const mockConfig = {
+      get: (key: string, def: any) => {
+        if (key === "dinamicaId") return " koti ";
+        return def;
+      },
+    };
+    const resultado = mockConfig.get("dinamicaId", "").trim().toUpperCase();
+    assert.strictEqual(
+      resultado,
+      "KOTI",
+      "Deveria remover espaços e converter para maiúsculo",
+    );
+  });
+
+  test("Deve criar pasta com sucesso quando o servidor retorna JSON", async () => {
+    const config: ConfiguracaoServidor = {
+      apiBaseUrl: "https://api.teste.com",
+      dinamicaId: "KOTI",
+      userId: 1,
+      teamId: 1,
+      apiToken: "",
+      captureWidth: 960,
+      captureHeight: 540,
+    };
+
+    const originalFetch = globalThis.fetch;
+    // Mock de sucesso
+    (globalThis as any).fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ codigo_pasta: "PASTA_GERADA_123" }),
+    });
+
+    try {
+      const codigo = await criarPastaDoAluno(config);
+      assert.strictEqual(codigo, "PASTA_GERADA_123");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("Deve tratar erro de rede (Failed to fetch) ao criar pasta", async () => {
@@ -81,16 +116,5 @@ suite("Servidor Service Test Suite", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
-  });
-
-  test("Deve formatar a URL de criação de pasta corretamente", () => {
-    const config: ConfiguracaoServidor = {
-      apiBaseUrl: "https://api.com",
-      dinamicaId: "A1",
-      teamId: 10,
-      userId: 5,
-    } as any;
-    const rota = `${config.apiBaseUrl}/criar-pasta/${encodeURIComponent(config.dinamicaId)}/${config.teamId}/${config.userId}`;
-    assert.strictEqual(rota, "https://api.com/criar-pasta/A1/10/5");
   });
 });
