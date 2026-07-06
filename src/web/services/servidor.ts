@@ -27,10 +27,53 @@ export function temConfiguracaoServidorMinima(
   );
 }
 
+export async function verificarConexaoServidor(
+  configuracao: ConfiguracaoServidor,
+): Promise<string> {
+  if (!configuracao.apiBaseUrl) {
+    throw new Error("A URL base da API não está configurada.");
+  }
+
+  const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
+  const rotaUsuarios = `${apiBaseUrl}/usuarios`;
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 10000);
+
+  log.info(`Testando conexão com o servidor: ${rotaUsuarios}`);
+
+  const resposta = await fetch(rotaUsuarios, {
+    method: "GET",
+    mode: "cors",
+    headers: montarCabecalhos(configuracao),
+    signal: abortController.signal,
+  })
+    .catch((erro: unknown) => {
+      const mensagem =
+        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
+      const detalhe =
+        erro instanceof Error && erro.name === "AbortError"
+          ? "Tempo limite de 10 segundos excedido."
+          : mensagem;
+
+      throw new Error(`Não foi possível conectar ao servidor: ${detalhe}`);
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
+
+  if (!resposta.ok) {
+    const detalhe = await extrairDetalheDeErro(resposta);
+    throw new Error(`Servidor respondeu com erro: ${detalhe}`);
+  }
+
+  return `Conexão realizada com sucesso (HTTP ${resposta.status}).`;
+}
+
 export async function criarPastaDoAluno(
   configuracao: ConfiguracaoServidor,
 ): Promise<string> {
-  const rotaCriarPasta = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
+  const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
+  const rotaCriarPasta = `${apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
 
   log.info(`Chamando API criar-pasta: ${rotaCriarPasta}`);
 
@@ -85,6 +128,7 @@ export async function enviarConteudoDaTentativa(
   css: string,
 ): Promise<ResultadoAvaliacao> {
   log.info(`Enviando conteúdo para pasta: ${codigoPasta}`);
+  const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
 
   const formulario = new URLSearchParams();
   formulario.set("code_pasta", codigoPasta);
@@ -95,7 +139,7 @@ export async function enviarConteudoDaTentativa(
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 segundos
 
-  const resposta = await fetch(`${configuracao.apiBaseUrl}/salvar-conteudo`, {
+  const resposta = await fetch(`${apiBaseUrl}/salvar-conteudo`, {
     method: "POST",
     mode: "cors",
     headers: montarCabecalhos(configuracao, {
@@ -193,6 +237,14 @@ export function extrairCodigoPasta(dados: unknown): string | undefined {
   );
 
   return encontrado;
+}
+
+function normalizarApiBaseUrl(apiBaseUrl: string): string {
+  const url = new URL(apiBaseUrl);
+  url.hash = "";
+  url.search = "";
+  url.pathname = url.pathname.replace(/\/docs\/?$/, "").replace(/\/+$/, "");
+  return url.toString().replace(/\/$/, "");
 }
 
 function montarCabecalhos(

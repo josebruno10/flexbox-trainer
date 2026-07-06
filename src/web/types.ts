@@ -63,8 +63,14 @@ export type ConfiguracaoServidor = {
   captureHeight: number;
 };
 
+export type StatusConexaoServidor = {
+  ok: boolean;
+  mensagem: string;
+};
+
 export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
   | { type: "novoDesafio" }
+  | { type: "testarConexao" }
   | { type: "atualizarPreview" }
   | { type: "solicitarVerificacao" };

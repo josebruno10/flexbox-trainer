@@ -4,6 +4,7 @@ import {
   MensagemRecebidaBarraLateral,
   ResumoWorkspace,
   ResultadoAvaliacao,
+  StatusConexaoServidor,
 } from "../types";
 import { criarDesafioBase } from "../services/desafio";
 import {
@@ -15,6 +16,7 @@ import {
   criarPastaDoAluno,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
+  verificarConexaoServidor,
 } from "../services/servidor";
 import { obterHtmlWebview } from "../webview/html";
 
@@ -66,6 +68,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "testarConexao") {
+          void this.testarConexaoServidor();
+          return;
+        }
+
         if (mensagem.type === "atualizarPreview") {
           void this.atualizarPreviewWorkspace();
           return;
@@ -107,6 +114,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.inicioTentativaMs = Date.now();
     this.preparandoPasta = this.prepararPastaDoAluno();
     this.enviarEstado();
+    void this.testarConexaoServidor();
   }
 
   public async atualizarPreviewWorkspace(): Promise<void> {
@@ -192,6 +200,25 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       };
       this.enviarEstado();
     }
+  }
+
+  private async testarConexaoServidor(): Promise<void> {
+    const configuracao = lerConfiguracaoServidor();
+    let status: StatusConexaoServidor;
+
+    try {
+      const mensagem = await verificarConexaoServidor(configuracao);
+      status = { ok: true, mensagem };
+    } catch (error) {
+      const mensagem =
+        error instanceof Error ? error.message : "Erro desconhecido";
+      status = { ok: false, mensagem };
+    }
+
+    void this.visualizacaoWebview?.webview.postMessage({
+      type: "statusServidor",
+      payload: status,
+    });
   }
 
   private enviarEstado(): void {

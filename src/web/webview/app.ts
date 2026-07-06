@@ -38,10 +38,16 @@ type ResultadoAvaliacaoRecebido = {
   error?: string;
 };
 
+type StatusConexaoServidorRecebido = {
+  ok: boolean;
+  mensagem: string;
+};
+
 type MensagemDaExtensao =
   | { type: "dadosDesafio"; payload: DesafioRecebido }
   | { type: "dadosWorkspace"; payload: ResumoWorkspaceRecebido }
-  | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido };
+  | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido }
+  | { type: "statusServidor"; payload: StatusConexaoServidorRecebido };
 
 const vscode = acquireVsCodeApi();
 
@@ -58,11 +64,17 @@ const caixaResultado = document.getElementById(
 ) as HTMLDivElement;
 
 const botaoNovoDesafio = document.getElementById("botaoNovoDesafio");
+const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById("botaoVerificar");
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
+});
+
+botaoTestarConexao?.addEventListener("click", () => {
+  caixaResultado.textContent = "Testando conexão com o servidor...";
+  vscode.postMessage({ type: "testarConexao" });
 });
 
 botaoAtualizarPreview?.addEventListener("click", () => {
@@ -168,6 +180,12 @@ window.addEventListener(
 
     if (mensagem.type === "resultadoAvaliacao") {
       renderizarResultado(mensagem.payload);
+    }
+
+    if (mensagem.type === "statusServidor") {
+      caixaResultado.textContent =
+        (mensagem.payload.ok ? "Servidor conectado: " : "Erro no servidor: ") +
+        mensagem.payload.mensagem;
     }
   },
 );

@@ -4,7 +4,24 @@ import {
   temConfiguracaoServidorMinima,
   extrairCodigoPasta,
   criarPastaDoAluno,
+  enviarConteudoDaTentativa,
+  verificarConexaoServidor,
 } from "../../services/servidor";
+
+function criarConfiguracao(
+  overrides: Partial<ConfiguracaoServidor> = {},
+): ConfiguracaoServidor {
+  return {
+    apiBaseUrl: "https://api.teste.com/api",
+    apiToken: "",
+    dinamicaId: "KOTI",
+    userId: 1,
+    teamId: 10,
+    captureWidth: 960,
+    captureHeight: 540,
+    ...overrides,
+  };
+}
 
 suite("Servidor Service Test Suite", () => {
   test("Deve validar se a configuração mínima está preenchida", () => {
@@ -50,7 +67,9 @@ suite("Servidor Service Test Suite", () => {
     // Simulando dados que viriam do vscode.workspace.getConfiguration
     const mockConfig = {
       get: (key: string, def: any) => {
-        if (key === "dinamicaId") return " koti ";
+        if (key === "dinamicaId") {
+          return " koti ";
+        }
         return def;
       },
     };
@@ -63,15 +82,7 @@ suite("Servidor Service Test Suite", () => {
   });
 
   test("Deve criar pasta com sucesso quando o servidor retorna JSON", async () => {
-    const config: ConfiguracaoServidor = {
-      apiBaseUrl: "https://api.teste.com",
-      dinamicaId: "KOTI",
-      userId: 1,
-      teamId: 1,
-      apiToken: "",
-      captureWidth: 960,
-      captureHeight: 540,
-    };
+    const config = criarConfiguracao();
 
     const originalFetch = globalThis.fetch;
     // Mock de sucesso
@@ -90,15 +101,10 @@ suite("Servidor Service Test Suite", () => {
   });
 
   test("Deve tratar erro de rede (Failed to fetch) ao criar pasta", async () => {
-    const config: ConfiguracaoServidor = {
+    const config = criarConfiguracao({
       apiBaseUrl: "https://url-invalida.com",
       dinamicaId: "TEST",
-      userId: 1,
-      teamId: 1,
-      apiToken: "",
-      captureWidth: 960,
-      captureHeight: 540,
-    };
+    });
 
     // Mock do fetch global para simular erro de rede/CORS
     const originalFetch = globalThis.fetch;
@@ -112,6 +118,213 @@ suite("Servidor Service Test Suite", () => {
       // Verifica se a mensagem de erro é a que definimos no servidor.ts
       assert.ok(
         error.message.includes("Não foi possível conectar ao servidor"),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve montar a requisição de criação conforme o contrato da API", async () => {
+    const config = criarConfiguracao({
+      apiToken: "token-secreto",
+      dinamicaId: "DINAMICA ESPECIAL",
+      userId: 7,
+      teamId: 42,
+    });
+    const originalFetch = globalThis.fetch;
+    let urlRecebida = "";
+    let opcoesRecebidas: RequestInit | undefined;
+
+    globalThis.fetch = async (input, init) => {
+      urlRecebida = String(input);
+      opcoesRecebidas = init;
+      return new Response(JSON.stringify({ codigo_pasta: "PASTA-42" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    try {
+      const codigo = await criarPastaDoAluno(config);
+
+      assert.strictEqual(codigo, "PASTA-42");
+      assert.strictEqual(
+        urlRecebida,
+        "https://api.teste.com/api/criar-pasta/DINAMICA%20ESPECIAL/42/7",
+      );
+      assert.strictEqual(opcoesRecebidas?.method, "POST");
+      assert.strictEqual(opcoesRecebidas?.mode, "cors");
+      assert.deepStrictEqual(opcoesRecebidas?.headers, {
+        Accept: "application/json",
+        Authorization: "Bearer token-secreto",
+      });
+      assert.ok(opcoesRecebidas?.signal instanceof AbortSignal);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve testar a conexão sem exigir IDs do torneio", async () => {
+    const config = criarConfiguracao({
+      apiBaseUrl: "https://api.teste.com/api/",
+      dinamicaId: "",
+      userId: 0,
+      teamId: 0,
+    });
+    const originalFetch = globalThis.fetch;
+    let urlRecebida = "";
+    let opcoesRecebidas: RequestInit | undefined;
+
+    globalThis.fetch = async (input, init) => {
+      urlRecebida = String(input);
+      opcoesRecebidas = init;
+      return new Response("[]", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    try {
+      const mensagem = await verificarConexaoServidor(config);
+
+      assert.strictEqual(urlRecebida, "https://api.teste.com/api/usuarios");
+      assert.strictEqual(opcoesRecebidas?.method, "GET");
+      assert.strictEqual(opcoesRecebidas?.mode, "cors");
+      assert.strictEqual(
+        mensagem,
+        "Conexão realizada com sucesso (HTTP 200).",
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve remover /docs e fragmento da URL antes de chamar a API", async () => {
+    const config = criarConfiguracao({
+      apiBaseUrl: "https://ifms.pro.br:6005/docs#",
+      dinamicaId: "",
+      userId: 0,
+      teamId: 0,
+    });
+    const originalFetch = globalThis.fetch;
+    let urlRecebida = "";
+
+    globalThis.fetch = async (input) => {
+      urlRecebida = String(input);
+      return new Response("[]", { status: 200 });
+    };
+
+    try {
+      await verificarConexaoServidor(config);
+      assert.strictEqual(urlRecebida, "https://ifms.pro.br:6005/usuarios");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve enviar HTML e CSS no formulário esperado pelo servidor", async () => {
+    const config = criarConfiguracao({ apiToken: "token-secreto" });
+    const originalFetch = globalThis.fetch;
+    let urlRecebida = "";
+    let opcoesRecebidas: RequestInit | undefined;
+
+    globalThis.fetch = async (input, init) => {
+      urlRecebida = String(input);
+      opcoesRecebidas = init;
+      return new Response(JSON.stringify({ precision: 87.5 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    try {
+      const resultado = await enviarConteudoDaTentativa(
+        config,
+        "PASTA-42",
+        '<main class="alvo">Olá</main>',
+        ".alvo { display: flex; }",
+      );
+      const formulario = new URLSearchParams(String(opcoesRecebidas?.body));
+
+      assert.strictEqual(
+        urlRecebida,
+        "https://api.teste.com/api/salvar-conteudo",
+      );
+      assert.strictEqual(opcoesRecebidas?.method, "POST");
+      assert.strictEqual(opcoesRecebidas?.mode, "cors");
+      assert.deepStrictEqual(opcoesRecebidas?.headers, {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: "Bearer token-secreto",
+      });
+      assert.strictEqual(formulario.get("code_pasta"), "PASTA-42");
+      assert.strictEqual(formulario.get("tipo"), "ambos");
+      assert.strictEqual(
+        formulario.get("index_conteudo"),
+        '<main class="alvo">Olá</main>',
+      );
+      assert.strictEqual(
+        formulario.get("style_conteudo"),
+        ".alvo { display: flex; }",
+      );
+      assert.deepStrictEqual(resultado, {
+        precision: 87.5,
+        score: 87.5,
+        source: "servidor",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve sinalizar quando o servidor salva sem retornar nota", async () => {
+    const config = criarConfiguracao();
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ message: "Conteúdo salvo" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    try {
+      const resultado = await enviarConteudoDaTentativa(
+        config,
+        "PASTA-42",
+        "<main></main>",
+        "main { display: flex; }",
+      );
+
+      assert.deepStrictEqual(resultado, {
+        precision: 0,
+        score: 0,
+        source: "servidor-sem-nota",
+        error: "Conteúdo salvo",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve propagar a mensagem de erro HTTP retornada pelo servidor", async () => {
+    const config = criarConfiguracao();
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ message: "Pasta inexistente" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    try {
+      await assert.rejects(
+        enviarConteudoDaTentativa(
+          config,
+          "PASTA-INVALIDA",
+          "<main></main>",
+          "main { display: flex; }",
+        ),
+        /Falha ao enviar conteúdo: Pasta inexistente/,
       );
     } finally {
       globalThis.fetch = originalFetch;

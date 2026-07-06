@@ -98,6 +98,7 @@ export function obterHtmlWebview(
     <h2 class="titulo">FlexBox Trainer</h2>
     <div class="acoes">
       <button id="botaoNovoDesafio">Novo desafio</button>
+      <button id="botaoTestarConexao" class="secundario">Testar servidor</button>
     </div>
   </section>
 
