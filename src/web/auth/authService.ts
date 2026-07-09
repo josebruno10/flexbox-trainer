@@ -21,6 +21,11 @@ type DadosCallbackAutenticacao = {
   userId?: number;
 };
 
+type PerfilProvedor = {
+  emails: string[];
+  nome: string;
+};
+
 const DURACAO_SESSAO_PERSISTENTE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export class AuthService implements vscode.Disposable {
@@ -90,14 +95,26 @@ export class AuthService implements vscode.Disposable {
         throw new Error(`Cancelado.`);
       }
 
-      const perfil = await this.buscarPerfilProvedor(provedor, session.accessToken, session.account.label);
-      if (!perfil.email) {
+      const perfil = await this.buscarPerfilProvedor(
+        provedor,
+        session.accessToken,
+        session.account.label,
+      );
+
+      if (perfil.emails.length === 0) {
         throw new Error("Não foi possível identificar o e-mail da conta.");
       }
 
-      const usuarioDaApi = await this.buscarUsuarioPorEmail(perfil.email);
+      const usuarioDaApi = await this.buscarPrimeiroUsuarioCadastrado(
+        perfil.emails,
+      );
+
       if (!usuarioDaApi) {
-        throw new Error("Conta não encontrada. Faça o cadastro com esse e-mail antes de tentar entrar.");
+        const emailsTentados = perfil.emails.join(", ");
+        throw new Error(
+          `Conta não encontrada na API para o(s) e-mail(s): ${emailsTentados}. ` +
+            "Use um provedor cujo e-mail esteja cadastrado ou faça login com Google.",
+        );
       }
 
       const usuario: ResultadoUsuario = {
@@ -239,7 +256,25 @@ export class AuthService implements vscode.Disposable {
       : undefined;
   }
 
-  private async buscarPerfilProvedor(provedor: 'github' | 'microsoft', accessToken: string, nomeFallback: string): Promise<{ email: string; nome: string }> {
+  private async buscarPrimeiroUsuarioCadastrado(
+    emails: string[],
+  ): Promise<ResultadoUsuario | undefined> {
+    for (const email of emails) {
+      const usuario = await this.buscarUsuarioPorEmail(email);
+
+      if (usuario) {
+        return usuario;
+      }
+    }
+
+    return undefined;
+  }
+
+  private async buscarPerfilProvedor(
+    provedor: 'github' | 'microsoft',
+    accessToken: string,
+    nomeFallback: string,
+  ): Promise<PerfilProvedor> {
     if (provedor === 'github') {
       return this.buscarPerfilGitHub(accessToken, nomeFallback);
     }
@@ -247,7 +282,10 @@ export class AuthService implements vscode.Disposable {
     return this.buscarPerfilMicrosoft(accessToken, nomeFallback);
   }
 
-  private async buscarPerfilGitHub(accessToken: string, nomeFallback: string): Promise<{ email: string; nome: string }> {
+  private async buscarPerfilGitHub(
+    accessToken: string,
+    nomeFallback: string,
+  ): Promise<PerfilProvedor> {
     const headers = {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${accessToken}`,
@@ -260,24 +298,38 @@ export class AuthService implements vscode.Disposable {
     }
 
     const usuario = await usuarioRes.json() as any;
-    let email = String(usuario.email || "").trim();
+    const emails: string[] = [String(usuario.email || "").trim()];
 
-    if (!email) {
-      const emailsRes = await fetch("https://api.github.com/user/emails", { headers });
-      if (emailsRes.ok) {
-        const emails = await emailsRes.json() as Array<{ email?: string; primary?: boolean; verified?: boolean }>;
-        const principal = emails.find((item) => item.primary && item.verified && item.email);
-        email = String(principal?.email || emails.find((item) => item.verified && item.email)?.email || "").trim();
-      }
+    const emailsRes = await fetch("https://api.github.com/user/emails", { headers });
+    if (emailsRes.ok) {
+      const dadosEmails = await emailsRes.json() as Array<{
+        email?: string;
+        primary?: boolean;
+        verified?: boolean;
+      }>;
+
+      const principal = dadosEmails.find(
+        (item) => item.primary && item.verified && item.email,
+      );
+      emails.push(String(principal?.email || "").trim());
+
+      dadosEmails
+        .filter((item) => item.verified && item.email)
+        .forEach((item) => {
+          emails.push(String(item.email || "").trim());
+        });
     }
 
     return {
-      email,
+      emails: this.normalizarEmails(emails),
       nome: String(usuario.name || usuario.login || usuario.email || nomeFallback || "GitHub").trim(),
     };
   }
 
-  private async buscarPerfilMicrosoft(accessToken: string, nomeFallback: string): Promise<{ email: string; nome: string }> {
+  private async buscarPerfilMicrosoft(
+    accessToken: string,
+    nomeFallback: string,
+  ): Promise<PerfilProvedor> {
     try {
       const res = await fetch("https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName", {
         headers: {
@@ -288,13 +340,16 @@ export class AuthService implements vscode.Disposable {
 
       if (res.ok) {
         const dados = await res.json() as any;
-        const email = String(dados.mail || dados.userPrincipalName || "").trim();
-        if (email) {
-          return {
-            email,
-            nome: String(dados.displayName || dados.userPrincipalName || dados.mail || nomeFallback || "Microsoft").trim(),
-          };
-        }
+        const emails = this.normalizarEmails([
+          String(dados.mail || "").trim(),
+          String(dados.userPrincipalName || "").trim(),
+          this.extrairEmailDeTexto(nomeFallback),
+        ]);
+
+        return {
+          emails,
+          nome: String(dados.displayName || dados.userPrincipalName || dados.mail || nomeFallback || "Microsoft").trim(),
+        };
       }
     } catch {
       // fallback abaixo
@@ -302,7 +357,7 @@ export class AuthService implements vscode.Disposable {
 
     const emailFallback = this.extrairEmailDeTexto(nomeFallback);
     return {
-      email: emailFallback,
+      emails: this.normalizarEmails([emailFallback]),
       nome: String(nomeFallback || emailFallback || "Microsoft").trim(),
     };
   }
@@ -311,6 +366,16 @@ export class AuthService implements vscode.Disposable {
     const valor = String(texto || "").trim();
     const candidato = valor.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || valor;
     return candidato.includes("@") ? candidato.toLowerCase() : "";
+  }
+
+  private normalizarEmails(emails: string[]): string[] {
+    return Array.from(
+      new Set(
+        emails
+          .map((email) => email.trim().toLowerCase())
+          .filter((email) => email.includes("@")),
+      ),
+    );
   }
 
   private lerDadosCallback(parametros: URLSearchParams): DadosCallbackAutenticacao {

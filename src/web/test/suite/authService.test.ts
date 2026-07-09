@@ -85,6 +85,13 @@ suite("AuthService", () => {
         );
       }
 
+      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
         return new Response(
           JSON.stringify({
@@ -108,6 +115,86 @@ suite("AuthService", () => {
     assert.strictEqual(sessao?.email, "aluno@example.com");
     assert.strictEqual(sessao?.displayName, "Aluno GitHub");
     assert.strictEqual(sessao?.tokenGmail, "github-token");
+  });
+
+  test("loginComProvedorVSCode tenta e-mails verificados do GitHub até achar cadastro", async () => {
+    const contexto = criarContextoFalso();
+    const authService = new AuthService(contexto);
+    const emailsConsultados: string[] = [];
+
+    vscode.authentication.getSession = async () => ({
+      accessToken: "token-github-emails",
+      account: { label: "Aluno GitHub" },
+    } as vscode.AuthenticationSession);
+
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+
+      if (url.hostname === "api.github.com" && url.pathname === "/user") {
+        return new Response(
+          JSON.stringify({
+            login: "aluno-github",
+            name: "Aluno GitHub",
+            email: null,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
+        return new Response(
+          JSON.stringify([
+            {
+              email: "pessoal@example.com",
+              primary: true,
+              verified: true,
+            },
+            {
+              email: "aluno.ifms@estudante.ifms.edu.br",
+              primary: false,
+              verified: true,
+            },
+          ]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
+        const email = url.searchParams.get("email") || "";
+        emailsConsultados.push(email);
+
+        if (email === "pessoal@example.com") {
+          return new Response(JSON.stringify({ detail: "Não encontrado" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            id: 74,
+            nome: "Aluno IFMS",
+            email: "aluno.ifms@estudante.ifms.edu.br",
+            token_gmail: "github-ifms-token",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.loginComProvedorVSCode("github");
+
+    assert.deepStrictEqual(emailsConsultados, [
+      "pessoal@example.com",
+      "aluno.ifms@estudante.ifms.edu.br",
+    ]);
+    assert.strictEqual(authService.isAutenticado(), true);
+    assert.strictEqual(
+      authService.getSessaoAtual()?.email,
+      "aluno.ifms@estudante.ifms.edu.br",
+    );
   });
 
   test("loginComProvedorVSCode autentica via Microsoft e persiste sessão", async () => {
