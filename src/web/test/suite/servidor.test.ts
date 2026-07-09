@@ -53,6 +53,12 @@ suite("Servidor Service Test Suite", () => {
     // Teste com string direta
     assert.strictEqual(extrairCodigoPasta("PASTA123"), "PASTA123");
 
+    // Teste com o formato retornado pela API atual
+    assert.strictEqual(
+      extrairCodigoPasta({ code_pasta: "gref_2/46_74" }),
+      "gref_2/46_74",
+    );
+
     // Teste com objeto contendo snake_case
     assert.strictEqual(extrairCodigoPasta({ codigo_pasta: "ABC" }), "ABC");
 
@@ -63,21 +69,21 @@ suite("Servidor Service Test Suite", () => {
     assert.strictEqual(extrairCodigoPasta(null), undefined);
   });
 
-  test("Configuração deve normalizar dinamicaId para maiúsculo", () => {
+  test("Configuração deve remover espaços sem alterar maiúsculas/minúsculas do dinamicaId", () => {
     // Simulando dados que viriam do vscode.workspace.getConfiguration
     const mockConfig = {
       get: (key: string, def: any) => {
         if (key === "dinamicaId") {
-          return " koti ";
+          return " gref ";
         }
         return def;
       },
     };
-    const resultado = mockConfig.get("dinamicaId", "").trim().toUpperCase();
+    const resultado = mockConfig.get("dinamicaId", "").trim();
     assert.strictEqual(
       resultado,
-      "KOTI",
-      "Deveria remover espaços e converter para maiúsculo",
+      "gref",
+      "Deveria remover espaços sem alterar o código digitado",
     );
   });
 

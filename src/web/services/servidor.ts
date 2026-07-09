@@ -8,7 +8,7 @@ export function lerConfiguracaoServidor(): ConfiguracaoServidor {
   return {
     apiBaseUrl: config.get<string>("apiBaseUrl", "").trim(),
     apiToken: config.get<string>("apiToken", "").trim(),
-    dinamicaId: config.get<string>("dinamicaId", "").trim().toUpperCase(),
+    dinamicaId: config.get<string>("dinamicaId", "").trim(),
     userId: config.get<number>("userId", 0),
     teamId: config.get<number>("teamId", 0),
     captureWidth: config.get<number>("captureWidth", 960),
@@ -223,6 +223,7 @@ export function extrairCodigoPasta(dados: unknown): string | undefined {
 
   const resposta = dados as Record<string, unknown>;
   const candidatos = [
+    resposta.code_pasta,
     resposta.codigoPasta,
     resposta.codigo_pasta,
     resposta.codPasta,
