@@ -78,6 +78,7 @@ const webviewAppConfig = {
   target: "web", // webview app runs in a browser context
   entry: {
     "webview/app": "./src/web/webview/app.ts",
+    "webview/loginPage": "./src/web/webview/loginPage.ts",
   },
   output: {
     filename: "[name].js",

@@ -34,6 +34,13 @@ export type ResultadoAvaliacao = {
   error?: string;
 };
 
+export type EstadoAutenticacao = {
+  status: "checking" | "authenticated" | "unauthenticated" | "error";
+  message?: string;
+  displayName?: string;
+  email?: string;
+};
+
 export type ResumoWorkspace = {
   caminhoHtml: string;
   caminhoCss: string;
@@ -73,4 +80,11 @@ export type MensagemRecebidaBarraLateral =
   | { type: "novoDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao" };
+  | { type: "solicitarVerificacao" }
+  | { type: "abrirLogin" }
+  | { type: "abrirCadastro" }
+  | { type: "loginGitHub" }
+  | { type: "loginMicrosoft" }
+  | { type: "loginGoogle" }
+  | { type: "revalidarSessao" }
+  | { type: "logout" };

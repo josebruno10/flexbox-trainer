@@ -92,11 +92,11 @@ suite("Servidor Service Test Suite", () => {
 
     const originalFetch = globalThis.fetch;
     // Mock de sucesso
-    (globalThis as any).fetch = async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ codigo_pasta: "PASTA_GERADA_123" }),
-    });
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ codigo_pasta: "PASTA_GERADA_123" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
 
     try {
       const codigo = await criarPastaDoAluno(config);
@@ -330,7 +330,7 @@ suite("Servidor Service Test Suite", () => {
           "<main></main>",
           "main { display: flex; }",
         ),
-        /Falha ao enviar conteúdo: Pasta inexistente/,
+        /Falha ao enviar conteúdo \(HTTP 404\): Pasta inexistente/,
       );
     } finally {
       globalThis.fetch = originalFetch;

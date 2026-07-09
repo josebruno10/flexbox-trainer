@@ -43,11 +43,19 @@ type StatusConexaoServidorRecebido = {
   mensagem: string;
 };
 
+type EstadoAutenticacaoRecebido = {
+  status: "checking" | "authenticated" | "unauthenticated" | "error";
+  message?: string;
+  displayName?: string;
+  email?: string;
+};
+
 type MensagemDaExtensao =
   | { type: "dadosDesafio"; payload: DesafioRecebido }
   | { type: "dadosWorkspace"; payload: ResumoWorkspaceRecebido }
   | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido }
-  | { type: "statusServidor"; payload: StatusConexaoServidorRecebido };
+  | { type: "statusServidor"; payload: StatusConexaoServidorRecebido }
+  | { type: "estadoAutenticacao"; payload: EstadoAutenticacaoRecebido };
 
 const vscode = acquireVsCodeApi();
 
@@ -62,11 +70,15 @@ const quadroPreview = document.getElementById(
 const caixaResultado = document.getElementById(
   "caixaResultado",
 ) as HTMLDivElement;
+const statusAutenticacao = document.getElementById(
+  "statusAutenticacao",
+) as HTMLDivElement;
 
 const botaoNovoDesafio = document.getElementById("botaoNovoDesafio");
 const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById("botaoVerificar");
+const botaoSair = document.getElementById("botaoSair");
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
@@ -83,6 +95,10 @@ botaoAtualizarPreview?.addEventListener("click", () => {
 
 botaoVerificar?.addEventListener("click", () => {
   vscode.postMessage({ type: "solicitarVerificacao" });
+});
+
+botaoSair?.addEventListener("click", () => {
+  vscode.postMessage({ type: "logout" });
 });
 
 function desenharDesafio(desafio: DesafioRecebido): void {
@@ -165,6 +181,35 @@ function renderizarResultado(
     resultado.source;
 }
 
+function renderizarEstadoAutenticacao(
+  estado: EstadoAutenticacaoRecebido,
+): void {
+  if (!statusAutenticacao) {
+    return;
+  }
+
+  if (estado.status === "checking") {
+    statusAutenticacao.textContent = estado.message || "Validando sessão...";
+    return;
+  }
+
+  if (estado.status === "authenticated") {
+    const nome = estado.displayName || estado.email || "Usuário";
+    statusAutenticacao.innerHTML = `<strong>${escapeHtml(nome)}</strong>Conectado e pronto para usar a extensão.`;
+    return;
+  }
+
+  if (estado.status === "error") {
+    statusAutenticacao.textContent =
+      estado.message || "Não foi possível validar sua sessão agora.";
+    return;
+  }
+
+  statusAutenticacao.textContent =
+    estado.message ||
+    "Você precisa criar uma conta ou fazer login para usar esta extensão.";
+}
+
 window.addEventListener(
   "message",
   (event: MessageEvent<MensagemDaExtensao>) => {
@@ -187,7 +232,20 @@ window.addEventListener(
         (mensagem.payload.ok ? "Servidor conectado: " : "Erro no servidor: ") +
         mensagem.payload.mensagem;
     }
+
+    if (mensagem.type === "estadoAutenticacao") {
+      renderizarEstadoAutenticacao(mensagem.payload);
+    }
   },
 );
 
 vscode.postMessage({ type: "pronto" });
+
+function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

@@ -1,3 +1,5 @@
+// src/web/services/servidor.ts
+
 import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 import { log } from "./logger";
@@ -5,8 +7,15 @@ import { log } from "./logger";
 export function lerConfiguracaoServidor(): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
+  let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
+  if (!apiBaseUrl) {
+    apiBaseUrl = config
+      .get<string>("authApiBaseUrl", "https://frontendteamscup.com.br/api")
+      .trim();
+  }
+
   return {
-    apiBaseUrl: config.get<string>("apiBaseUrl", "").trim(),
+    apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
     apiToken: config.get<string>("apiToken", "").trim(),
     dinamicaId: config.get<string>("dinamicaId", "").trim(),
     userId: config.get<number>("userId", 0),
@@ -21,9 +30,9 @@ export function temConfiguracaoServidorMinima(
 ): boolean {
   return Boolean(
     configuracao.apiBaseUrl &&
-    configuracao.dinamicaId &&
-    configuracao.userId > 0 &&
-    configuracao.teamId > 0,
+      configuracao.dinamicaId &&
+      configuracao.userId > 0 &&
+      configuracao.teamId > 0,
   );
 }
 
@@ -74,11 +83,10 @@ export async function criarPastaDoAluno(
 ): Promise<string> {
   const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
   const rotaCriarPasta = `${apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 10000);
 
   log.info(`Chamando API criar-pasta: ${rotaCriarPasta}`);
-
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 10000); // 10 segundos
 
   const resposta = await fetch(rotaCriarPasta, {
     method: "POST",
@@ -86,13 +94,16 @@ export async function criarPastaDoAluno(
     headers: montarCabecalhos(configuracao),
     signal: abortController.signal,
   })
-    .catch((err) => {
-      log.error(
-        `Erro fatal no fetch (criar-pasta): ${err.name === "AbortError" ? "Timeout" : err.message}`,
-      );
-      throw new Error(
-        `Não foi possível conectar ao servidor. Verifique o CORS ou sua conexão.`,
-      );
+    .catch((erro: unknown) => {
+      const mensagem =
+        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
+      const detalhe =
+        erro instanceof Error && erro.name === "AbortError"
+          ? "Tempo limite de 10 segundos excedido."
+          : mensagem;
+
+      log.error(`Erro fatal no fetch (criar-pasta): ${detalhe}`);
+      throw new Error(`Não foi possível conectar ao servidor: ${detalhe}`);
     })
     .finally(() => {
       clearTimeout(timeoutId);
@@ -100,18 +111,10 @@ export async function criarPastaDoAluno(
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Falha ao criar pasta: ${detalhe}`);
+    throw new Error(`Falha ao criar pasta (HTTP ${resposta.status}): ${detalhe}`);
   }
 
-  let dados: unknown;
-  try {
-    dados = await resposta.json();
-  } catch (e) {
-    // Se o servidor retornar 200 mas o corpo for texto simples (o código da pasta direto)
-    const texto = await resposta.text();
-    return texto.trim();
-  }
-
+  const dados = await extrairCorpoResposta(resposta);
   const codigoPasta = extrairCodigoPasta(dados);
 
   if (!codigoPasta) {
@@ -127,9 +130,8 @@ export async function enviarConteudoDaTentativa(
   html: string,
   css: string,
 ): Promise<ResultadoAvaliacao> {
-  log.info(`Enviando conteúdo para pasta: ${codigoPasta}`);
   const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
-
+  const rotaSalvarConteudo = `${apiBaseUrl}/salvar-conteudo`;
   const formulario = new URLSearchParams();
   formulario.set("code_pasta", codigoPasta);
   formulario.set("tipo", "ambos");
@@ -137,9 +139,11 @@ export async function enviarConteudoDaTentativa(
   formulario.set("style_conteudo", css);
 
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 segundos
+  const timeoutId = setTimeout(() => abortController.abort(), 15000);
 
-  const resposta = await fetch(`${apiBaseUrl}/salvar-conteudo`, {
+  log.info(`Enviando conteúdo para pasta: ${codigoPasta}`);
+
+  const resposta = await fetch(rotaSalvarConteudo, {
     method: "POST",
     mode: "cors",
     headers: montarCabecalhos(configuracao, {
@@ -147,17 +151,30 @@ export async function enviarConteudoDaTentativa(
     }),
     signal: abortController.signal,
     body: formulario.toString(),
-  }).catch((err) => {
-    log.error("Erro na rota salvar-conteudo", err);
-    throw new Error(`Erro de rede ou CORS: ${err.message}`);
-  });
+  })
+    .catch((erro: unknown) => {
+      const mensagem =
+        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
+      const detalhe =
+        erro instanceof Error && erro.name === "AbortError"
+          ? "Tempo limite de 15 segundos excedido."
+          : mensagem;
+
+      log.error(`Erro na rota salvar-conteudo: ${detalhe}`);
+      throw new Error(`Falha de rede ao enviar a tentativa: ${detalhe}`);
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Falha ao enviar conteúdo: ${detalhe}`);
+    throw new Error(
+      `Falha ao enviar conteúdo (HTTP ${resposta.status}): ${detalhe}`,
+    );
   }
 
-  const dados = (await resposta.json()) as {
+  const dados = (await extrairCorpoResposta(resposta)) as {
     message?: string;
     nota?: number;
     score?: number;
@@ -189,7 +206,7 @@ async function extrairDetalheDeErro(response: Response): Promise<string> {
   const fallback = `HTTP ${response.status}`;
 
   try {
-    const dados = (await response.json()) as {
+    const dados = (await extrairCorpoResposta(response)) as {
       detail?: unknown;
       message?: string;
     };
@@ -212,6 +229,20 @@ async function extrairDetalheDeErro(response: Response): Promise<string> {
   }
 }
 
+async function extrairCorpoResposta(response: Response): Promise<unknown> {
+  const texto = await response.text();
+
+  if (!texto.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return texto.trim();
+  }
+}
+
 export function extrairCodigoPasta(dados: unknown): string | undefined {
   if (typeof dados === "string" && dados.trim()) {
     return dados;
@@ -224,20 +255,20 @@ export function extrairCodigoPasta(dados: unknown): string | undefined {
   const resposta = dados as Record<string, unknown>;
   const candidatos = [
     resposta.code_pasta,
-    resposta.codigoPasta,
     resposta.codigo_pasta,
+    resposta.codigoPasta,
     resposta.codPasta,
     resposta.cod_pasta,
     resposta.pastaCodigo,
     resposta.codigo,
   ];
 
-  const encontrado = candidatos.find(
+  return candidatos.find(
     (valor): valor is string =>
-      typeof valor === "string" && valor.trim().length > 0,
+      typeof valor === "string" &&
+      valor.trim().length > 0 &&
+      !valor.includes("Sucesso"),
   );
-
-  return encontrado;
 }
 
 function normalizarApiBaseUrl(apiBaseUrl: string): string {
