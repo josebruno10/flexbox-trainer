@@ -306,7 +306,7 @@ export function obterHtmlAutenticacao(
       <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
       <button id="botaoSair" class="terciario">Desconectar</button>
     </div>
-    <div class="meta">A validação é feita com a API do IFMS e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
+    <div class="meta">A validação é feita com a API configurada e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
   </main>
   <script src="${scriptUri}"></script>
 </body>

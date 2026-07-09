@@ -52,10 +52,10 @@
       "title": "FlexBox Trainer",
       "properties": {
         "flexboxTrainer.authApiBaseUrl": {
-  "type": "string",
-  "default": "http://ifms.pro.br:6009",
-  "description": "URL base da API do IFMS usada para cadastro, login e validação de sessão."
-},
+          "type": "string",
+          "default": "https://frontendteamscup.com.br/api",
+          "description": "URL base da API usada para cadastro, login e validação de sessão."
+        },
         "flexboxTrainer.authSiteUrl": {
           "type": "string",
           "default": "https://kevyngreenn.github.io/authserviceflexbox/",

@@ -1,3 +1,5 @@
+// src/web/auth/authService.ts
+
 import * as vscode from "vscode";
 import { EstadoAutenticacao } from "../types";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
@@ -29,7 +31,6 @@ export class AuthService implements vscode.Disposable {
   
   public getEstadoAtual(): EstadoAutenticacao { return { ...this.estadoAtual }; }
   
-  // ---> MÉTODO RESTAURADO AQUI <---
   public getSessaoAtual(): SessaoAutenticacao | undefined { 
     return this.sessaoAtual ? { ...this.sessaoAtual } : undefined; 
   }
@@ -75,20 +76,34 @@ export class AuthService implements vscode.Disposable {
 
       if (!session) throw new Error(`Cancelado.`);
 
-      let email = "";
-      if (provedor === 'github') {
-        const res = await fetch('https://api.github.com/user/emails', { headers: { Authorization: `token ${session.accessToken}`, 'User-Agent': 'VSCode' } });
-        if (res.ok) {
-          const emails = await res.json() as { email: string; primary: boolean }[];
-          email = emails.find(e => e.primary)?.email || emails[0]?.email || "";
-        }
+      const urlBase = this.lerUrlBaseApiAutenticacao();
+      const url = new URL("/validar-token-vscode", urlBase);
+      url.searchParams.set("provider", provedor);
+      url.searchParams.set("token", session.accessToken);
+
+      const res = await fetch(url.toString(), { 
+        method: "GET",
+        mode: "cors",
+        headers: { 
+          "Accept": "application/json"
+        } 
+      });
+
+      if (!res.ok) {
+        throw new Error(`Falha ao validar conta na API (HTTP ${res.status}).`);
       }
 
-      if (!email || !email.includes('@')) email = session.account.label;
-      if (!email || !email.includes('@')) throw new Error("E-mail não identificado.");
+      const dados = await res.json() as any;
+      if (!dados || !dados.email) {
+        throw new Error("Conta não encontrada ou e-mail não identificado.");
+      }
 
-      const usuario = await this.buscarUsuarioPorEmail(email.toLowerCase().trim());
-      if (!usuario) throw new Error("Conta não encontrada na API do IFMS.");
+      const usuario: ResultadoUsuario = {
+        id: dados.id,
+        nome: dados.nome || dados.name || dados.nome_completo || session.account.label,
+        email: dados.email,
+        tokenGmail: dados.token_gmail || dados.tokenGmail || provedor
+      };
 
       await this.salvarSessaoValidada(usuario, provedor);
     } catch (error) {
@@ -122,7 +137,7 @@ export class AuthService implements vscode.Disposable {
     if (!email) throw new Error("Retorno inválido.");
 
     const usuario = await this.buscarUsuarioPorEmail(email);
-    if (!usuario) throw new Error("Conta não encontrada no IFMS.");
+    if (!usuario) throw new Error("Conta não encontrada.");
 
     await this.salvarSessaoValidada(usuario, "google");
   }
@@ -177,7 +192,13 @@ export class AuthService implements vscode.Disposable {
     const url = new URL("/usuarios/por-email", urlBase);
     url.searchParams.set("email", email);
 
-    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+    const res = await fetch(url.toString(), { 
+        method: "GET",
+        mode: "cors",
+      headers: { 
+        "Accept": "application/json"
+      } 
+    });
     if (!res.ok) {
       if (res.status === 404) return undefined;
       throw new Error(`Falha API HTTP ${res.status}`);
@@ -187,7 +208,11 @@ export class AuthService implements vscode.Disposable {
   }
 
   private lerUrlBaseApiAutenticacao(): string {
-    return vscode.workspace.getConfiguration("flexboxTrainer").get<string>("authApiBaseUrl", "http://ifms.pro.br:6009").trim().replace(/\/+$/, "");
+    return vscode.workspace.getConfiguration("flexboxTrainer")
+      .get<string>("authApiBaseUrl", "https://frontendteamscup.com.br/api")
+      .trim()
+      .replace(/\/docs\/?$/, "")
+      .replace(/\/+$/, "");
   }
 
   private definirEstado(estado: EstadoAutenticacao): void {

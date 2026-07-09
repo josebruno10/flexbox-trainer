@@ -1,3 +1,5 @@
+// src/web/services/servidor.ts
+
 import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 
@@ -6,9 +8,9 @@ export function lerConfiguracaoServidor(): ConfiguracaoServidor {
 
   let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
   if (!apiBaseUrl) {
-    apiBaseUrl = config.get<string>("authApiBaseUrl", "http://ifms.pro.br:6009").trim();
+    apiBaseUrl = config.get<string>("authApiBaseUrl", "https://frontendteamscup.com.br/api").trim();
   }
-  apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+  apiBaseUrl = apiBaseUrl.replace(/\/docs\/?$/, "").replace(/\/+$/, "");
 
   return {
     apiBaseUrl,
@@ -31,13 +33,13 @@ export function temConfiguracaoServidorMinima(configuracao: ConfiguracaoServidor
 }
 
 export async function criarPastaDoAluno(configuracao: ConfiguracaoServidor): Promise<string> {
-  // Conexão limpa sem proxy
   const rotaFinal = `${configuracao.apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
   
   let resposta: Response;
   try {
     resposta = await fetch(rotaFinal, {
       method: "POST",
+      mode: "cors",
       headers: montarCabecalhos(configuracao),
     });
   } catch (error) {
@@ -77,6 +79,7 @@ export async function enviarConteudoDaTentativa(
   try {
     resposta = await fetch(rotaFinal, {
       method: "POST",
+      mode: "cors",
       headers: montarCabecalhos(configuracao, {
         "Content-Type": "application/x-www-form-urlencoded",
       }),
