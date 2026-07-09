@@ -28,12 +28,19 @@ document.getElementById("botaoSair")?.addEventListener("click", () => {
 
 window.addEventListener("message", (event: MessageEvent<{ type: string; payload: EstadoAutenticacaoRecebido }>) => {
   if (event.data.type === "estadoAutenticacao") {
-    if (!statusAutenticacao) return;
+    if (!statusAutenticacao) {
+      return;
+    }
     const estado = event.data.payload;
-    if (estado.status === "checking") statusAutenticacao.textContent = estado.message || "Carregando...";
-    else if (estado.status === "authenticated") statusAutenticacao.textContent = `${estado.displayName || estado.email} conectado.`;
-    else if (estado.status === "error") statusAutenticacao.textContent = estado.message || "Erro.";
-    else statusAutenticacao.textContent = "Escolha um provedor para continuar.";
+    if (estado.status === "checking") {
+      statusAutenticacao.textContent = estado.message || "Carregando...";
+    } else if (estado.status === "authenticated") {
+      statusAutenticacao.textContent = `${estado.displayName || estado.email} conectado.`;
+    } else if (estado.status === "error") {
+      statusAutenticacao.textContent = estado.message || "Erro.";
+    } else {
+      statusAutenticacao.textContent = "Escolha um provedor para continuar.";
+    }
   }
 });
 

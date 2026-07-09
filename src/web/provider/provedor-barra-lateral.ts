@@ -93,19 +93,19 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           void this.loginProvider.abrirCadastro();
           return;
         }
-        
-        if ((mensagem as any).type === "loginGitHub") {
-          void this.authService.loginComProvedorVSCode('github');
+
+        if (mensagem.type === "loginGitHub") {
+          void this.authService.loginComProvedorVSCode("github");
           return;
         }
 
-        if ((mensagem as any).type === "loginMicrosoft") {
-          void this.authService.loginComProvedorVSCode('microsoft');
+        if (mensagem.type === "loginMicrosoft") {
+          void this.authService.loginComProvedorVSCode("microsoft");
           return;
         }
 
-        if ((mensagem as any).type === "loginGoogle") {
-          void this.authService.abrirLoginGoogle(); // Nova função para o Google
+        if (mensagem.type === "loginGoogle") {
+          void this.authService.abrirLoginGoogle();
           return;
         }
 

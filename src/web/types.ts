@@ -77,5 +77,8 @@ export type MensagemRecebidaBarraLateral =
   | { type: "solicitarVerificacao" }
   | { type: "abrirLogin" }
   | { type: "abrirCadastro" }
+  | { type: "loginGitHub" }
+  | { type: "loginMicrosoft" }
+  | { type: "loginGoogle" }
   | { type: "revalidarSessao" }
   | { type: "logout" };
