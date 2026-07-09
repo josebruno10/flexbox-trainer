@@ -40,7 +40,7 @@
       "properties": {
         "flexboxTrainer.apiBaseUrl": {
           "type": "string",
-          "default": "https://ifms.pro.br:6005/docs#",
+          "default": "https://frontendteamscup.com.br/api/docs",
           "description": "URL base da API de torneio para avaliar tentativas (exemplo: https://api.seudominio.com)."
         },
         "flexboxTrainer.apiToken": {
