@@ -109,19 +109,21 @@ export class AuthService implements vscode.Disposable {
         perfil.emails,
       );
 
-      if (!usuarioDaApi) {
+      const usuarioAutenticado = usuarioDaApi
+        ?? await this.cadastrarUsuarioAutomaticamente(perfil, provedor);
+
+      if (!usuarioAutenticado) {
         const emailsTentados = perfil.emails.join(", ");
         throw new Error(
-          `Conta não encontrada na API para o(s) e-mail(s): ${emailsTentados}. ` +
-            "Use um provedor cujo e-mail esteja cadastrado ou faça login com Google.",
+          `Não foi possível localizar nem cadastrar a conta para o(s) e-mail(s): ${emailsTentados}.`,
         );
       }
 
       const usuario: ResultadoUsuario = {
-        id: usuarioDaApi.id,
-        nome: usuarioDaApi.nome || perfil.nome || session.account.label,
-        email: usuarioDaApi.email,
-        tokenGmail: usuarioDaApi.tokenGmail || provedor,
+        id: usuarioAutenticado.id,
+        nome: usuarioAutenticado.nome || perfil.nome || session.account.label,
+        email: usuarioAutenticado.email,
+        tokenGmail: usuarioAutenticado.tokenGmail || provedor,
       };
 
       await this.salvarSessaoValidada(usuario, true);
@@ -270,6 +272,49 @@ export class AuthService implements vscode.Disposable {
     return undefined;
   }
 
+  private async cadastrarUsuarioAutomaticamente(
+    perfil: PerfilProvedor,
+    provedor: 'github' | 'microsoft',
+  ): Promise<ResultadoUsuario | undefined> {
+    const emailPrincipal = perfil.emails[0];
+
+    if (!emailPrincipal) {
+      return undefined;
+    }
+
+    const urlBase = this.lerUrlBaseApiAutenticacao();
+    const resposta = await fetch(`${urlBase}/usuarios`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        nome: perfil.nome,
+        email: emailPrincipal,
+        token_gmail: provedor,
+      }).toString(),
+    });
+
+    if (!resposta.ok) {
+      if (resposta.status === 409) {
+        return this.buscarPrimeiroUsuarioCadastrado(perfil.emails);
+      }
+
+      const detalhe = await this.extrairDetalheResposta(resposta);
+      throw new Error(`Falha ao cadastrar usuário automaticamente (HTTP ${resposta.status}): ${detalhe}`);
+    }
+
+    const dados = await this.lerJSONOuVazio(resposta) as any;
+
+    return {
+      id: dados?.id,
+      nome: dados?.nome || dados?.name || perfil.nome,
+      email: dados?.email || emailPrincipal,
+      tokenGmail: dados?.token_gmail || dados?.tokenGmail || provedor,
+    };
+  }
+
   private async buscarPerfilProvedor(
     provedor: 'github' | 'microsoft',
     accessToken: string,
@@ -392,6 +437,29 @@ export class AuthService implements vscode.Disposable {
       remember: remember === "1" || remember.toLowerCase() === "true",
       userId: userIdTexto ? Number(userIdTexto) : undefined,
     };
+  }
+
+  private async extrairDetalheResposta(resposta: Response): Promise<string> {
+    try {
+      const dados = await this.lerJSONOuVazio(resposta) as any;
+      return dados?.message || dados?.detail || `HTTP ${resposta.status}`;
+    } catch {
+      return `HTTP ${resposta.status}`;
+    }
+  }
+
+  private async lerJSONOuVazio(resposta: Response): Promise<unknown> {
+    const texto = await resposta.text();
+
+    if (!texto.trim()) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(texto);
+    } catch {
+      return texto.trim();
+    }
   }
 
   private lerUrlBaseApiAutenticacao(): string {

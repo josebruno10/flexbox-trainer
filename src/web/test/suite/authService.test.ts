@@ -117,6 +117,73 @@ suite("AuthService", () => {
     assert.strictEqual(sessao?.tokenGmail, "github-token");
   });
 
+  test("loginComProvedorVSCode cadastra automaticamente via GitHub quando não existe conta", async () => {
+    const contexto = criarContextoFalso();
+    const authService = new AuthService(contexto);
+
+    vscode.authentication.getSession = async () => ({
+      accessToken: "token-github-cadastro",
+      account: { label: "Aluno GitHub" },
+    } as vscode.AuthenticationSession);
+
+    let cadastroEfetuado = false;
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+
+      if (url.hostname === "api.github.com" && url.pathname === "/user") {
+        return new Response(
+          JSON.stringify({
+            login: "aluno-github",
+            name: "Aluno GitHub",
+            email: "aluno@example.com",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
+        return new Response(JSON.stringify({ detail: "Não encontrado" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url.pathname === "/api/usuarios" || url.pathname === "/usuarios") {
+        cadastroEfetuado = true;
+        assert.strictEqual(init?.method, "POST");
+
+        const corpo = String(init?.body || "");
+        assert.ok(corpo.includes("email=aluno%40example.com") || corpo.includes("email=aluno@example.com"));
+
+        return new Response(
+          JSON.stringify({
+            id: 99,
+            nome: "Aluno GitHub",
+            email: "aluno@example.com",
+            token_gmail: "github",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.loginComProvedorVSCode("github");
+
+    assert.strictEqual(cadastroEfetuado, true);
+    assert.strictEqual(authService.isAutenticado(), true);
+    assert.strictEqual(authService.getSessaoAtual()?.email, "aluno@example.com");
+  });
+
   test("loginComProvedorVSCode tenta e-mails verificados do GitHub até achar cadastro", async () => {
     const contexto = criarContextoFalso();
     const authService = new AuthService(contexto);
@@ -243,6 +310,66 @@ suite("AuthService", () => {
     assert.ok(sessao);
     assert.strictEqual(sessao?.email, "aluno.microsoft@example.com");
     assert.strictEqual(sessao?.displayName, "Aluno Microsoft");
+  });
+
+  test("loginComProvedorVSCode cadastra automaticamente via Microsoft quando não existe conta", async () => {
+    const contexto = criarContextoFalso();
+    const authService = new AuthService(contexto);
+
+    vscode.authentication.getSession = async () => ({
+      accessToken: "token-ms-cadastro",
+      account: { label: "Aluno Microsoft" },
+    } as vscode.AuthenticationSession);
+
+    let cadastroEfetuado = false;
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+
+      if (url.hostname === "graph.microsoft.com" && url.pathname === "/v1.0/me") {
+        return new Response(
+          JSON.stringify({
+            displayName: "Aluno Microsoft",
+            mail: "aluno.microsoft@example.com",
+            userPrincipalName: "aluno.microsoft@example.com",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
+        return new Response(JSON.stringify({ detail: "Não encontrado" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url.pathname === "/api/usuarios" || url.pathname === "/usuarios") {
+        cadastroEfetuado = true;
+        assert.strictEqual(init?.method, "POST");
+
+        const corpo = String(init?.body || "");
+        assert.ok(corpo.includes("email=aluno.microsoft%40example.com") || corpo.includes("email=aluno.microsoft@example.com"));
+
+        return new Response(
+          JSON.stringify({
+            id: 100,
+            nome: "Aluno Microsoft",
+            email: "aluno.microsoft@example.com",
+            token_gmail: "microsoft",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.loginComProvedorVSCode("microsoft");
+
+    assert.strictEqual(cadastroEfetuado, true);
+    assert.strictEqual(authService.isAutenticado(), true);
+    assert.strictEqual(authService.getSessaoAtual()?.email, "aluno.microsoft@example.com");
   });
 
   test("loginComProvedorVSCode faz fallback quando Microsoft Graph retorna 400", async () => {
