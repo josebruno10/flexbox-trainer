@@ -104,6 +104,30 @@ export function obterHtmlWebview(
       flex-wrap: wrap;
     }
 
+    .nivel-desafio {
+      display: grid;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .nivel-desafio label {
+      color: #9fb4d1;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid #2a3140;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: #0b0d12;
+      color: #e8edf5;
+      font: inherit;
+      font-size: 12px;
+    }
+
     button {
       border: 0;
       border-radius: 999px;
@@ -119,6 +143,11 @@ export function obterHtmlWebview(
       background: #2a3140;
       color: #e8edf5;
     }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
   </style>
 </head>
 <body>
@@ -128,8 +157,16 @@ export function obterHtmlWebview(
       <button id="botaoSair" class="secundario">Sair</button>
     </div>
     <div class="status-auth" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
+    <div class="nivel-desafio">
+      <label for="seletorDificuldade">Nível do desafio</label>
+      <select id="seletorDificuldade">
+        <option value="facil">Fácil</option>
+        <option value="medio">Médio</option>
+        <option value="dificil">Difícil</option>
+      </select>
+    </div>
     <div class="acoes">
-      <button id="botaoNovoDesafio">Novo desafio</button>
+      <button id="botaoNovoDesafio">Gerar desafio</button>
       <button id="botaoTestarConexao" class="secundario">Testar servidor</button>
     </div>
   </section>
@@ -152,7 +189,7 @@ export function obterHtmlWebview(
     <h2 class="titulo">Preview do aluno</h2>
     <iframe id="quadroPreview" class="preview" sandbox="allow-scripts allow-same-origin"></iframe>
     <div class="acoes">
-      <button id="botaoVerificar">Verificar</button>
+      <button id="botaoVerificar" disabled>Verificar</button>
     </div>
   </section>
 

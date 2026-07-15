@@ -6,6 +6,7 @@ type DesafioRecebido = {
   challengeId: string;
   seed: number;
   titulo: string;
+  dificuldade: "facil" | "medio" | "dificil";
   width: number;
   height: number;
   backgroundColor: string;
@@ -18,6 +19,7 @@ type DesafioRecebido = {
     height: number;
     color: string;
     borderRadius?: number;
+    shape?: "rectangle" | "circle";
   }>;
   captureWidth?: number;
   captureHeight?: number;
@@ -80,12 +82,20 @@ const statusAutenticacao = document.getElementById(
 const botaoNovoDesafio = document.getElementById("botaoNovoDesafio");
 const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
-const botaoVerificar = document.getElementById("botaoVerificar");
+const botaoVerificar = document.getElementById(
+  "botaoVerificar",
+) as HTMLButtonElement;
 const botaoSair = document.getElementById("botaoSair");
+const seletorDificuldade = document.getElementById(
+  "seletorDificuldade",
+) as HTMLSelectElement;
 let ultimoGabaritoEnviado = "";
 
 botaoNovoDesafio?.addEventListener("click", () => {
-  vscode.postMessage({ type: "novoDesafio" });
+  vscode.postMessage({
+    type: "novoDesafio",
+    dificuldade: seletorDificuldade.value,
+  });
 });
 
 botaoTestarConexao?.addEventListener("click", () => {
@@ -121,15 +131,28 @@ function desenharDesafio(desafio: DesafioRecebido): void {
 
   desafio.blocks.forEach((bloco) => {
     contexto.fillStyle = bloco.color;
-    desenharRetanguloArredondado(
-      contexto,
-      bloco.x,
-      bloco.y,
-      bloco.width,
-      bloco.height,
-      bloco.borderRadius ?? 0,
-    );
+    if (bloco.shape === "circle") {
+      desenharCirculo(
+        contexto,
+        bloco.x,
+        bloco.y,
+        bloco.width,
+        bloco.height,
+      );
+    } else {
+      desenharRetanguloArredondado(
+        contexto,
+        bloco.x,
+        bloco.y,
+        bloco.width,
+        bloco.height,
+        bloco.borderRadius ?? 0,
+      );
+    }
   });
+
+  seletorDificuldade.value = desafio.dificuldade;
+  botaoVerificar.disabled = false;
 
   if (ultimoGabaritoEnviado !== desafio.challengeId) {
     ultimoGabaritoEnviado = desafio.challengeId;
@@ -145,6 +168,8 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   metaDesafio.textContent =
     "Titulo: " +
     desafio.titulo +
+    " | Nível: " +
+    formatarDificuldade(desafio.dificuldade) +
     " | Seed: " +
     desafio.seed +
     " | Tempo: " +
@@ -154,6 +179,64 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     (desafio.captureWidth ?? 960) +
     "x" +
     (desafio.captureHeight ?? 540);
+}
+
+function desenharEstadoInicial(): void {
+  canvasAlvo.width = 960;
+  canvasAlvo.height = 540;
+  const contexto = canvasAlvo.getContext("2d");
+
+  if (!contexto) {
+    return;
+  }
+
+  contexto.fillStyle = "#9ca3af";
+  contexto.fillRect(0, 0, canvasAlvo.width, canvasAlvo.height);
+  contexto.fillStyle = "#334155";
+  contexto.font = "600 28px sans-serif";
+  contexto.textAlign = "center";
+  contexto.textBaseline = "middle";
+  contexto.fillText(
+    "Escolha o nível e clique em Gerar desafio",
+    canvasAlvo.width / 2,
+    canvasAlvo.height / 2,
+  );
+  metaDesafio.textContent = "Nenhum desafio iniciado.";
+  botaoVerificar.disabled = true;
+}
+
+function desenharCirculo(
+  contexto: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  contexto.beginPath();
+  contexto.ellipse(
+    x + width / 2,
+    y + height / 2,
+    width / 2,
+    height / 2,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  contexto.fill();
+}
+
+function formatarDificuldade(
+  dificuldade: DesafioRecebido["dificuldade"],
+): string {
+  if (dificuldade === "facil") {
+    return "Fácil";
+  }
+
+  if (dificuldade === "medio") {
+    return "Médio";
+  }
+
+  return "Difícil";
 }
 
 function desenharRetanguloArredondado(
@@ -295,6 +378,7 @@ window.addEventListener(
   },
 );
 
+desenharEstadoInicial();
 vscode.postMessage({ type: "pronto" });
 
 function escapeHtml(texto: string): string {

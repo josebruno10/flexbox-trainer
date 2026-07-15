@@ -8,25 +8,81 @@ import { Bloco } from "../../types";
 
 suite("Gerador de desafios", () => {
   test("gera um desafio de 960x540 com a mesma seed", () => {
-    const primeiro = criarDesafioGerado(123456);
-    const segundo = criarDesafioGerado(123456);
+    const primeiro = criarDesafioGerado({
+      dificuldade: "medio",
+      seed: 123456,
+    });
+    const segundo = criarDesafioGerado({
+      dificuldade: "medio",
+      seed: 123456,
+    });
 
     assert.strictEqual(primeiro.width, LARGURA_GABARITO);
     assert.strictEqual(primeiro.height, ALTURA_GABARITO);
     assert.strictEqual(primeiro.challengeId, "challenge-123456");
+    assert.strictEqual(primeiro.backgroundColor, "#9ca3af");
+    assert.strictEqual(primeiro.dificuldade, "medio");
     assert.deepStrictEqual(primeiro, segundo);
   });
 
   test("produz variações para seeds diferentes", () => {
-    const primeiro = criarDesafioGerado(10);
-    const segundo = criarDesafioGerado(11);
+    const primeiro = criarDesafioGerado({ seed: 10 });
+    const segundo = criarDesafioGerado({ seed: 11 });
 
     assert.notDeepStrictEqual(primeiro.blocks, segundo.blocks);
   });
 
+  test("aumenta a complexidade conforme o nível", () => {
+    let blocosFaceis = 0;
+    let blocosMedios = 0;
+    let blocosDificeis = 0;
+
+    for (let seed = 0; seed < 40; seed++) {
+      blocosFaceis += criarDesafioGerado({
+        dificuldade: "facil",
+        seed,
+      }).blocks.length;
+      blocosMedios += criarDesafioGerado({
+        dificuldade: "medio",
+        seed,
+      }).blocks.length;
+      blocosDificeis += criarDesafioGerado({
+        dificuldade: "dificil",
+        seed,
+      }).blocks.length;
+    }
+
+    assert.ok(blocosMedios > blocosFaceis);
+    assert.ok(blocosDificeis > blocosMedios);
+  });
+
+  test("gera círculos e cantos arredondados nos níveis superiores", () => {
+    let encontrouCirculo = false;
+    let encontrouArredondado = false;
+
+    for (let seed = 0; seed < 80; seed++) {
+      const desafio = criarDesafioGerado({
+        dificuldade: seed % 2 === 0 ? "medio" : "dificil",
+        seed,
+      });
+      encontrouCirculo ||= desafio.blocks.some(
+        (bloco) => bloco.shape === "circle",
+      );
+      encontrouArredondado ||= desafio.blocks.some(
+        (bloco) => (bloco.borderRadius ?? 0) > 0,
+      );
+    }
+
+    assert.ok(encontrouCirculo, "Nenhum círculo foi gerado.");
+    assert.ok(encontrouArredondado, "Nenhum canto arredondado foi gerado.");
+  });
+
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {
+    const dificuldades = ["facil", "medio", "dificil"] as const;
+
     for (let seed = 0; seed < 250; seed++) {
-      const desafio = criarDesafioGerado(seed);
+      const dificuldade = dificuldades[seed % dificuldades.length];
+      const desafio = criarDesafioGerado({ dificuldade, seed });
       const blocosPorId = new Map<number, Bloco>();
       const filhosPorPai = new Map<number | undefined, Bloco[]>();
 
@@ -52,6 +108,17 @@ suite("Gerador de desafios", () => {
         );
         assert.match(bloco.color, /^#[0-9a-f]{6}$/i);
         assert.ok((bloco.borderRadius ?? 0) >= 0);
+        assert.ok(
+          bloco.shape === "rectangle" || bloco.shape === "circle",
+          `Forma inválida na seed ${seed}.`,
+        );
+        if (bloco.shape === "circle") {
+          assert.strictEqual(
+            bloco.width,
+            bloco.height,
+            `Círculo deformado na seed ${seed}.`,
+          );
+        }
 
         if (bloco.parentId !== undefined) {
           const pai = blocosPorId.get(bloco.parentId);

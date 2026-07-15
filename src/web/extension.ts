@@ -96,13 +96,12 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      await provedor.iniciarNovoDesafio();
       await provedor.atualizarPreviewWorkspace();
       await vscode.commands.executeCommand(
         "workbench.view.extension.flexboxTrainer",
       );
       vscode.window.showInformationMessage(
-        "FlexBox Trainer aberto na barra lateral.",
+        "Escolha o nível e gere um desafio na barra lateral.",
       );
     }),
   );

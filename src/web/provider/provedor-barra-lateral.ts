@@ -3,6 +3,7 @@ import { AuthService } from "../auth/authService";
 import { LoginProvider } from "../auth/loginProvider";
 import {
   Desafio,
+  DificuldadeDesafio,
   EstadoAutenticacao,
   MensagemRecebidaBarraLateral,
   ResumoWorkspace,
@@ -34,7 +35,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private visualizacaoWebview?: vscode.WebviewView;
 
-  private desafioAtual: Desafio = criarDesafioGerado();
+  private dificuldadeAtual: DificuldadeDesafio = "facil";
+
+  private desafioAtual?: Desafio;
 
   private gabaritoAtual?: {
     challengeId: string;
@@ -66,8 +69,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.renderizarWebviewAtual();
 
       if (estado.status === "authenticated") {
-        void this.iniciarNovoDesafio(false);
         void this.atualizarPreviewWorkspace();
+      } else if (estado.status === "unauthenticated") {
+        this.desafioAtual = undefined;
+        this.gabaritoAtual = undefined;
+        this.avaliacaoAtual = undefined;
       }
 
       this.enviarEstado();
@@ -130,7 +136,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
         if (mensagem.type === "gabaritoGerado") {
           if (
-            mensagem.challengeId === this.desafioAtual.challengeId &&
+            mensagem.challengeId === this.desafioAtual?.challengeId &&
             mensagem.width === this.desafioAtual.width &&
             mensagem.height === this.desafioAtual.height &&
             mensagem.imagemDataUrl.startsWith("data:image/png;base64,")
@@ -153,7 +159,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "novoDesafio") {
-          void this.iniciarNovoDesafio();
+          void this.iniciarNovoDesafio(true, mensagem.dificuldade);
           void this.atualizarPreviewWorkspace();
           return;
         }
@@ -181,12 +187,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  public async iniciarNovoDesafio(confirmar = true): Promise<void> {
+  public async iniciarNovoDesafio(
+    confirmar = true,
+    dificuldade = this.dificuldadeAtual,
+  ): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
 
-    if (confirmar) {
+    if (confirmar && this.desafioAtual) {
       const confirmacao = await vscode.window.showInformationMessage(
         "Deseja iniciar um novo desafio? O progresso atual será perdido.",
         { modal: true },
@@ -201,8 +210,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     const configuracao = lerConfiguracaoServidor();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
+    this.dificuldadeAtual = dificuldade;
     this.desafioAtual = {
-      ...criarDesafioGerado(),
+      ...criarDesafioGerado({ dificuldade }),
       captureWidth: configuracao.captureWidth,
       captureHeight: configuracao.captureHeight,
     };
@@ -226,6 +236,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private async verificarTentativaAtual(): Promise<void> {
     if (!this.authService.isAutenticado()) {
+      return;
+    }
+
+    if (!this.desafioAtual) {
       return;
     }
 
@@ -346,13 +360,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    this.visualizacaoWebview.webview.postMessage({
-      type: "dadosDesafio",
-      payload: {
-        ...this.desafioAtual,
-        tempoAtualMs: Date.now() - this.inicioTentativaMs,
-      },
-    });
+    if (this.desafioAtual) {
+      this.visualizacaoWebview.webview.postMessage({
+        type: "dadosDesafio",
+        payload: {
+          ...this.desafioAtual,
+          tempoAtualMs: Date.now() - this.inicioTentativaMs,
+        },
+      });
+    }
 
     this.visualizacaoWebview.webview.postMessage({
       type: "dadosWorkspace",
