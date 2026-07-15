@@ -9,7 +9,7 @@ import {
   ResultadoAvaliacao,
   StatusConexaoServidor,
 } from "../types";
-import { criarDesafioBase } from "../services/desafio";
+import { criarDesafioGerado } from "../services/desafio";
 import {
   criarResumoWorkspaceVazio,
   lerResumoWorkspace,
@@ -34,7 +34,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private visualizacaoWebview?: vscode.WebviewView;
 
-  private desafioAtual: Desafio = criarDesafioBase();
+  private desafioAtual: Desafio = criarDesafioGerado();
+
+  private gabaritoAtual?: {
+    challengeId: string;
+    imagemDataUrl: string;
+    width: number;
+    height: number;
+  };
 
   private resumoWorkspaceAtual: ResumoWorkspace = criarResumoWorkspaceVazio();
 
@@ -121,6 +128,26 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "gabaritoGerado") {
+          if (
+            mensagem.challengeId === this.desafioAtual.challengeId &&
+            mensagem.width === this.desafioAtual.width &&
+            mensagem.height === this.desafioAtual.height &&
+            mensagem.imagemDataUrl.startsWith("data:image/png;base64,")
+          ) {
+            this.gabaritoAtual = {
+              challengeId: mensagem.challengeId,
+              imagemDataUrl: mensagem.imagemDataUrl,
+              width: mensagem.width,
+              height: mensagem.height,
+            };
+            console.log(
+              `[FlexBox Trainer] Gabarito PNG gerado: ${mensagem.challengeId} (${mensagem.width}x${mensagem.height})`,
+            );
+          }
+          return;
+        }
+
         if (!this.authService.isAutenticado()) {
           return;
         }
@@ -175,10 +202,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
-      ...criarDesafioBase(),
+      ...criarDesafioGerado(),
       captureWidth: configuracao.captureWidth,
       captureHeight: configuracao.captureHeight,
     };
+    this.gabaritoAtual = undefined;
     this.avaliacaoAtual = undefined;
     this.codigoPastaAluno = undefined;
     this.inicioTentativaMs = Date.now();

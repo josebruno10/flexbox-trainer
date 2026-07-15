@@ -74,6 +74,9 @@ export function obterHtmlWebview(
 
     canvas {
       width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      display: block;
       background: #fff;
       border-radius: 6px;
       border: 1px solid #2a3140;
@@ -133,7 +136,7 @@ export function obterHtmlWebview(
 
   <section class="bloco">
     <h2 class="titulo">Desafio alvo</h2>
-    <canvas id="canvasAlvo" width="640" height="360"></canvas>
+    <canvas id="canvasAlvo" width="960" height="540"></canvas>
     <div class="linha" id="metaDesafio"></div>
   </section>
 

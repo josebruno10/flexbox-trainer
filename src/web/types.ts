@@ -1,11 +1,13 @@
 // estruturas compartilhadas entre extensão, provider e serviços.
 export type Bloco = {
   id: number;
+  parentId?: number;
   x: number;
   y: number;
   width: number;
   height: number;
   color: string;
+  borderRadius?: number;
 };
 
 export type Desafio = {
@@ -14,6 +16,7 @@ export type Desafio = {
   titulo: string;
   width: number;
   height: number;
+  backgroundColor: string;
   blocks: Bloco[];
   captureWidth?: number;
   captureHeight?: number;
@@ -87,4 +90,11 @@ export type MensagemRecebidaBarraLateral =
   | { type: "loginMicrosoft" }
   | { type: "loginGoogle" }
   | { type: "revalidarSessao" }
+  | {
+      type: "gabaritoGerado";
+      challengeId: string;
+      imagemDataUrl: string;
+      width: number;
+      height: number;
+    }
   | { type: "logout" };

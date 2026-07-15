@@ -8,13 +8,16 @@ type DesafioRecebido = {
   titulo: string;
   width: number;
   height: number;
+  backgroundColor: string;
   blocks: Array<{
     id: number;
+    parentId?: number;
     x: number;
     y: number;
     width: number;
     height: number;
     color: string;
+    borderRadius?: number;
   }>;
   captureWidth?: number;
   captureHeight?: number;
@@ -79,6 +82,7 @@ const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById("botaoVerificar");
 const botaoSair = document.getElementById("botaoSair");
+let ultimoGabaritoEnviado = "";
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
@@ -112,13 +116,31 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   }
 
   contexto.clearRect(0, 0, canvasAlvo.width, canvasAlvo.height);
-  contexto.fillStyle = "#f2f2f2";
+  contexto.fillStyle = desafio.backgroundColor;
   contexto.fillRect(0, 0, canvasAlvo.width, canvasAlvo.height);
 
   desafio.blocks.forEach((bloco) => {
     contexto.fillStyle = bloco.color;
-    contexto.fillRect(bloco.x, bloco.y, bloco.width, bloco.height);
+    desenharRetanguloArredondado(
+      contexto,
+      bloco.x,
+      bloco.y,
+      bloco.width,
+      bloco.height,
+      bloco.borderRadius ?? 0,
+    );
   });
+
+  if (ultimoGabaritoEnviado !== desafio.challengeId) {
+    ultimoGabaritoEnviado = desafio.challengeId;
+    vscode.postMessage({
+      type: "gabaritoGerado",
+      challengeId: desafio.challengeId,
+      imagemDataUrl: canvasAlvo.toDataURL("image/png"),
+      width: canvasAlvo.width,
+      height: canvasAlvo.height,
+    });
+  }
 
   metaDesafio.textContent =
     "Titulo: " +
@@ -132,6 +154,40 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     (desafio.captureWidth ?? 960) +
     "x" +
     (desafio.captureHeight ?? 540);
+}
+
+function desenharRetanguloArredondado(
+  contexto: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  raioSolicitado: number,
+): void {
+  const raio = Math.max(0, Math.min(raioSolicitado, width / 2, height / 2));
+
+  if (raio === 0) {
+    contexto.fillRect(x, y, width, height);
+    return;
+  }
+
+  contexto.beginPath();
+  contexto.moveTo(x + raio, y);
+  contexto.lineTo(x + width - raio, y);
+  contexto.quadraticCurveTo(x + width, y, x + width, y + raio);
+  contexto.lineTo(x + width, y + height - raio);
+  contexto.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - raio,
+    y + height,
+  );
+  contexto.lineTo(x + raio, y + height);
+  contexto.quadraticCurveTo(x, y + height, x, y + height - raio);
+  contexto.lineTo(x, y + raio);
+  contexto.quadraticCurveTo(x, y, x + raio, y);
+  contexto.closePath();
+  contexto.fill();
 }
 
 function renderizarWorkspace(resumoWorkspace: ResumoWorkspaceRecebido): void {
