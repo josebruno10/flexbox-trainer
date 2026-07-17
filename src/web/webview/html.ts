@@ -8,7 +8,6 @@ export function obterHtmlWebview(
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
   );
-
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -64,6 +63,36 @@ export function obterHtmlWebview(
       font-size: 12px;
       line-height: 1.4;
       margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .status-auth-texto {
+      min-width: 0;
+    }
+
+    .avatar-usuario,
+    .avatar-fallback {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      border-radius: 50%;
+      border: 1px solid #40506a;
+      object-fit: cover;
+    }
+
+    .avatar-fallback {
+      display: grid;
+      place-items: center;
+      color: #07150c;
+      background: #4cba72;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    [hidden] {
+      display: none !important;
     }
 
     .status-auth strong {
@@ -82,12 +111,50 @@ export function obterHtmlWebview(
       border: 1px solid #2a3140;
     }
 
-    .preview {
+    .canvas-desafio {
+      position: relative;
       width: 100%;
-      height: 220px;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
       border: 1px solid #2a3140;
       border-radius: 6px;
       background: #fff;
+    }
+
+    .canvas-desafio canvas {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .canvas-anotacoes {
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .preview {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      display: block;
+      border: 1px solid #2a3140;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .preview-avaliacao {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: 960px;
+      height: 540px;
+      border: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: -1;
     }
 
     .linha {
@@ -144,6 +211,11 @@ export function obterHtmlWebview(
       color: #e8edf5;
     }
 
+    button.perigo {
+      background: #ef4444;
+      color: #fff;
+    }
+
     button:disabled {
       cursor: not-allowed;
       opacity: 0.45;
@@ -156,7 +228,11 @@ export function obterHtmlWebview(
       <h2 class="titulo">FlexBox Trainer</h2>
       <button id="botaoSair" class="secundario">Sair</button>
     </div>
-    <div class="status-auth" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
+    <div class="status-auth">
+      <img id="avatarUsuario" class="avatar-usuario" alt="Foto do usuário" hidden>
+      <div id="avatarFallback" class="avatar-fallback">${escapeHtml((nomeUsuario || "U").trim().charAt(0).toUpperCase() || "U")}</div>
+      <div class="status-auth-texto" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
+    </div>
     <div class="nivel-desafio">
       <label for="seletorDificuldade">Nível do desafio</label>
       <select id="seletorDificuldade">
@@ -167,14 +243,18 @@ export function obterHtmlWebview(
     </div>
     <div class="acoes">
       <button id="botaoNovoDesafio">Gerar desafio</button>
+      <button id="botaoEncerrarDesafio" class="perigo" disabled>Encerrar desafio</button>
       <button id="botaoTestarConexao" class="secundario">Testar servidor</button>
     </div>
   </section>
 
-  <section class="bloco">
-    <h2 class="titulo">Desafio alvo</h2>
-    <canvas id="canvasAlvo" width="960" height="540"></canvas>
+  <section class="bloco" aria-label="Desafio alvo">
+    <div class="canvas-desafio">
+      <canvas id="canvasAlvo" width="960" height="540"></canvas>
+      <canvas id="canvasAnotacoes" class="canvas-anotacoes" width="960" height="540"></canvas>
+    </div>
     <div class="linha" id="metaDesafio"></div>
+    <div class="linha" id="detalheComponente">Clique em um componente para ver suas medidas e sua cor.</div>
   </section>
 
   <section class="bloco">
@@ -187,7 +267,12 @@ export function obterHtmlWebview(
 
   <section class="bloco">
     <h2 class="titulo">Preview do aluno</h2>
-    <iframe id="quadroPreview" class="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+    <canvas id="canvasPreviewAluno" class="preview" width="960" height="540"></canvas>
+    <div
+      id="quadroAvaliacao"
+      class="preview-avaliacao"
+      aria-hidden="true"
+    ></div>
     <div class="acoes">
       <button id="botaoVerificar" disabled>Verificar</button>
     </div>

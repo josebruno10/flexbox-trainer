@@ -61,6 +61,22 @@ suite("AuthService", () => {
     vscode.env.asExternalUri = originalAsExternalUri;
   });
 
+  test("inicializar não impede a extensão de abrir quando o armazenamento seguro falha", async () => {
+    const contexto = criarContextoFalso();
+    contexto.secrets.get = async () => {
+      throw new Error("armazenamento indisponível");
+    };
+    const authService = new AuthService(contexto);
+
+    await authService.inicializar();
+
+    assert.strictEqual(authService.getEstadoAtual().status, "error");
+    assert.match(
+      authService.getEstadoAtual().message || "",
+      /armazenamento indisponível/,
+    );
+  });
+
   test("loginComProvedorVSCode autentica via GitHub e persiste sessão", async () => {
     const contexto = criarContextoFalso();
     const authService = new AuthService(contexto);
@@ -80,6 +96,7 @@ suite("AuthService", () => {
             login: "aluno-github",
             name: "Aluno GitHub",
             email: "aluno@example.com",
+            avatar_url: "https://avatars.githubusercontent.com/u/123",
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
@@ -115,6 +132,10 @@ suite("AuthService", () => {
     assert.strictEqual(sessao?.email, "aluno@example.com");
     assert.strictEqual(sessao?.displayName, "Aluno GitHub");
     assert.strictEqual(sessao?.tokenGmail, "github-token");
+    assert.strictEqual(
+      sessao?.avatarUrl,
+      "https://avatars.githubusercontent.com/u/123",
+    );
   });
 
   test("loginComProvedorVSCode cadastra automaticamente via GitHub quando não existe conta", async () => {
@@ -288,6 +309,16 @@ suite("AuthService", () => {
         );
       }
 
+      if (
+        url.hostname === "graph.microsoft.com" &&
+        url.pathname === "/v1.0/me/photo/$value"
+      ) {
+        return new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { "Content-Type": "image/jpeg" },
+        });
+      }
+
       if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
         return new Response(
           JSON.stringify({
@@ -310,6 +341,7 @@ suite("AuthService", () => {
     assert.ok(sessao);
     assert.strictEqual(sessao?.email, "aluno.microsoft@example.com");
     assert.strictEqual(sessao?.displayName, "Aluno Microsoft");
+    assert.strictEqual(sessao?.avatarUrl, "data:image/jpeg;base64,AQID");
   });
 
   test("loginComProvedorVSCode cadastra automaticamente via Microsoft quando não existe conta", async () => {
@@ -422,7 +454,7 @@ suite("AuthService", () => {
 
     await authService.processarCallback(
       vscode.Uri.parse(
-        "vscode://flexbox-trainer.test/auth/callback?email=aluno%40example.com&nome=Aluno%20Google&token_gmail=google-token&remember=1&userId=7",
+        "vscode://flexbox-trainer.test/auth/callback?email=aluno%40example.com&nome=Aluno%20Google&token_gmail=google-token&remember=1&userId=7&avatarUrl=https%3A%2F%2Fexample.com%2Faluno.jpg",
       ),
     );
 
@@ -433,5 +465,6 @@ suite("AuthService", () => {
     assert.strictEqual(sessao?.displayName, "Aluno Google");
     assert.strictEqual(sessao?.tokenGmail, "google-token");
     assert.strictEqual(sessao?.userId, 7);
+    assert.strictEqual(sessao?.avatarUrl, "https://example.com/aluno.jpg");
   });
 });

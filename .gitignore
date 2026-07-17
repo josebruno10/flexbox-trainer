@@ -2,6 +2,7 @@ node_modules/
 dist/
 out/
 .vscode-test/
+.vscode-test-web/
 *.log
 .DS_Store
 vsc-extension-quickstart.md

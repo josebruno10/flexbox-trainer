@@ -8,8 +8,6 @@ export async function activate(context: vscode.ExtensionContext) {
   initializeLogger(context);
 
   const authService = new AuthService(context);
-  await authService.inicializar();
-
   const provedor = new ProvedorBarraLateralFlexBox(
     context.extensionUri,
     authService,
@@ -105,6 +103,11 @@ export async function activate(context: vscode.ExtensionContext) {
       );
     }),
   );
+
+  // A barra lateral e os comandos precisam estar disponíveis mesmo quando o
+  // armazenamento seguro ou a API de autenticação estiverem lentos/offline.
+  // A inicialização da sessão atualiza a webview assim que for concluída.
+  void authService.inicializar();
 }
 
 export function deactivate() {}

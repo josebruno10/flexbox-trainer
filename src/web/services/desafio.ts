@@ -53,7 +53,7 @@ type ContextoGeracao = {
 
 export type OpcoesGeracaoDesafio = {
   dificuldade?: DificuldadeDesafio;
-  seed?: number;
+  aleatorio?: Aleatorio;
 };
 
 const CONFIGURACOES: Record<DificuldadeDesafio, ConfiguracaoNivel> = {
@@ -92,15 +92,13 @@ const CONFIGURACOES: Record<DificuldadeDesafio, ConfiguracaoNivel> = {
 /**
  * Gera um gabarito 960x540 seguindo a linguagem visual dos desafios:
  * fundo cinza, cabeçalho, navegação, faixas, cartões, formas aninhadas e
- * grupos de linhas. A seed existe para testes e depuração; cada chamada sem
- * seed continua produzindo uma imagem aleatória.
+ * grupos de linhas. Cada chamada produz uma nova combinação aleatória.
  */
 export function criarDesafioGerado(
   opcoes: OpcoesGeracaoDesafio = {},
 ): Desafio {
   const dificuldade = opcoes.dificuldade ?? "facil";
-  const seed = (opcoes.seed ?? criarSeedAleatoria()) >>> 0;
-  const aleatorio = criarGeradorAleatorio(seed);
+  const aleatorio = opcoes.aleatorio ?? Math.random;
   const contexto: ContextoGeracao = {
     aleatorio,
     blocks: [],
@@ -164,9 +162,7 @@ export function criarDesafioGerado(
   }
 
   return {
-    challengeId: `challenge-${seed}`,
-    seed,
-    titulo: "Desafio aleatório",
+    challengeId: criarIdDesafio(aleatorio),
     dificuldade,
     width: LARGURA_GABARITO,
     height: ALTURA_GABARITO,
@@ -651,20 +647,11 @@ function raioAleatorio(contexto: ContextoGeracao): number {
   );
 }
 
-function criarSeedAleatoria(): number {
-  return Math.floor(Math.random() * 0xffffffff) >>> 0;
-}
-
-function criarGeradorAleatorio(seed: number): Aleatorio {
-  let estado = seed >>> 0;
-
-  return () => {
-    estado = (estado + 0x6d2b79f5) >>> 0;
-    let valor = estado;
-    valor = Math.imul(valor ^ (valor >>> 15), valor | 1);
-    valor ^= valor + Math.imul(valor ^ (valor >>> 7), valor | 61);
-    return ((valor ^ (valor >>> 14)) >>> 0) / 4294967296;
-  };
+function criarIdDesafio(aleatorio: Aleatorio): string {
+  const trechoAleatorio = Math.floor(aleatorio() * 0xffffffff)
+    .toString(36)
+    .padStart(7, "0");
+  return `challenge-${Date.now().toString(36)}-${trechoAleatorio}`;
 }
 
 function inteiroAleatorio(

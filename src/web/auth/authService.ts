@@ -11,6 +11,7 @@ type ResultadoUsuario = {
   nome: string;
   email: string;
   tokenGmail: string;
+  avatarUrl?: string;
 };
 
 type DadosCallbackAutenticacao = {
@@ -19,11 +20,13 @@ type DadosCallbackAutenticacao = {
   tokenGmail?: string;
   remember?: boolean;
   userId?: number;
+  avatarUrl?: string;
 };
 
 type PerfilProvedor = {
   emails: string[];
   nome: string;
+  avatarUrl?: string;
 };
 
 const DURACAO_SESSAO_PERSISTENTE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -57,13 +60,22 @@ export class AuthService implements vscode.Disposable {
   }
 
   public async inicializar(): Promise<void> {
-    const sessao = await this.tokenManager.carregarSessao();
-    if (!sessao || sessao.expiresAt <= Date.now()) {
-      await this.encerrarSessao("Aguardando login.");
-      return;
+    try {
+      const sessao = await this.tokenManager.carregarSessao();
+      if (!sessao || sessao.expiresAt <= Date.now()) {
+        await this.encerrarSessao("Aguardando login.");
+        return;
+      }
+      this.sessaoAtual = sessao;
+      await this.validarSessaoComApi();
+    } catch (error) {
+      this.sessaoAtual = undefined;
+      const detalhe = error instanceof Error ? error.message : "erro desconhecido";
+      this.definirEstado({
+        status: "error",
+        message: `Não foi possível carregar sua sessão (${detalhe}).`,
+      });
     }
-    this.sessaoAtual = sessao;
-    await this.validarSessaoComApi();
   }
 
   public async revalidarSessao(): Promise<void> {
@@ -124,6 +136,7 @@ export class AuthService implements vscode.Disposable {
         nome: usuarioAutenticado.nome || perfil.nome || session.account.label,
         email: usuarioAutenticado.email,
         tokenGmail: usuarioAutenticado.tokenGmail || provedor,
+        avatarUrl: perfil.avatarUrl || usuarioAutenticado.avatarUrl,
       };
 
       await this.salvarSessaoValidada(usuario, true);
@@ -170,6 +183,7 @@ export class AuthService implements vscode.Disposable {
             nome: dadosCallback.nome,
             email,
             tokenGmail: dadosCallback.tokenGmail,
+            avatarUrl: dadosCallback.avatarUrl,
           }
         : await this.buscarUsuarioPorEmail(email);
 
@@ -188,6 +202,7 @@ export class AuthService implements vscode.Disposable {
           : `sessao-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       email: usuario.email,
       displayName: usuario.nome,
+      avatarUrl: usuario.avatarUrl,
       tokenGmail: usuario.tokenGmail,
       userId: usuario.id,
       remember,
@@ -199,6 +214,7 @@ export class AuthService implements vscode.Disposable {
     this.sessaoAtual = sessao;
     this.definirEstado({
       status: "authenticated", email: sessao.email, displayName: sessao.displayName,
+      avatarUrl: sessao.avatarUrl,
       message: `Conectado como ${sessao.displayName}.`,
     });
   }
@@ -221,8 +237,15 @@ export class AuthService implements vscode.Disposable {
         await this.encerrarSessao("Sua conta não foi encontrada.");
         return;
       }
+      this.sessaoAtual = {
+        ...this.sessaoAtual,
+        displayName: usuario.nome,
+        avatarUrl: usuario.avatarUrl || this.sessaoAtual.avatarUrl,
+      };
+      await this.tokenManager.salvarSessao(this.sessaoAtual);
       this.definirEstado({
         status: "authenticated", email: this.sessaoAtual.email, displayName: usuario.nome,
+        avatarUrl: this.sessaoAtual.avatarUrl,
         message: `Conectado como ${usuario.nome}.`,
       });
     } catch {
@@ -254,6 +277,7 @@ export class AuthService implements vscode.Disposable {
           nome: dados.nome || dados.name || dados.nome_completo || email,
           email: dados.email,
           tokenGmail: dados.token_gmail || dados.tokenGmail || "google",
+          avatarUrl: this.extrairAvatarUsuario(dados),
         }
       : undefined;
   }
@@ -293,6 +317,9 @@ export class AuthService implements vscode.Disposable {
         nome: perfil.nome,
         email: emailPrincipal,
         token_gmail: provedor,
+        url_image_perfil: this.ehUrlRemota(perfil.avatarUrl)
+          ? perfil.avatarUrl || ""
+          : "",
       }).toString(),
     });
 
@@ -312,6 +339,7 @@ export class AuthService implements vscode.Disposable {
       nome: dados?.nome || dados?.name || perfil.nome,
       email: dados?.email || emailPrincipal,
       tokenGmail: dados?.token_gmail || dados?.tokenGmail || provedor,
+      avatarUrl: this.extrairAvatarUsuario(dados) || perfil.avatarUrl,
     };
   }
 
@@ -368,6 +396,7 @@ export class AuthService implements vscode.Disposable {
     return {
       emails: this.normalizarEmails(emails),
       nome: String(usuario.name || usuario.login || usuario.email || nomeFallback || "GitHub").trim(),
+      avatarUrl: String(usuario.avatar_url || "").trim() || undefined,
     };
   }
 
@@ -394,6 +423,7 @@ export class AuthService implements vscode.Disposable {
         return {
           emails,
           nome: String(dados.displayName || dados.userPrincipalName || dados.mail || nomeFallback || "Microsoft").trim(),
+          avatarUrl: await this.buscarFotoMicrosoft(accessToken),
         };
       }
     } catch {
@@ -405,6 +435,29 @@ export class AuthService implements vscode.Disposable {
       emails: this.normalizarEmails([emailFallback]),
       nome: String(nomeFallback || emailFallback || "Microsoft").trim(),
     };
+  }
+
+  private async buscarFotoMicrosoft(accessToken: string): Promise<string | undefined> {
+    try {
+      const resposta = await fetch(
+        "https://graph.microsoft.com/v1.0/me/photo/$value",
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      if (!resposta.ok) {
+        return undefined;
+      }
+
+      const blob = await resposta.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binario = "";
+      for (const byte of bytes) {
+        binario += String.fromCharCode(byte);
+      }
+      return `data:${blob.type || "image/jpeg"};base64,${btoa(binario)}`;
+    } catch {
+      return undefined;
+    }
   }
 
   private extrairEmailDeTexto(texto: string): string {
@@ -429,6 +482,13 @@ export class AuthService implements vscode.Disposable {
     const tokenGmail = (parametros.get("token_gmail") || parametros.get("tokenGmail") || "").trim();
     const remember = (parametros.get("remember") || "").trim();
     const userIdTexto = (parametros.get("userId") || parametros.get("id") || "").trim();
+    const avatarUrl = (
+      parametros.get("avatarUrl") ||
+      parametros.get("avatar") ||
+      parametros.get("picture") ||
+      parametros.get("url_image_perfil") ||
+      ""
+    ).trim();
 
     return {
       email,
@@ -436,6 +496,7 @@ export class AuthService implements vscode.Disposable {
       tokenGmail: tokenGmail || undefined,
       remember: remember === "1" || remember.toLowerCase() === "true",
       userId: userIdTexto ? Number(userIdTexto) : undefined,
+      avatarUrl: avatarUrl || undefined,
     };
   }
 
@@ -460,6 +521,17 @@ export class AuthService implements vscode.Disposable {
     } catch {
       return texto.trim();
     }
+  }
+
+  private extrairAvatarUsuario(dados: any): string | undefined {
+    const avatar = String(
+      dados?.url_image_perfil || dados?.avatarUrl || dados?.avatar || dados?.picture || "",
+    ).trim();
+    return avatar || undefined;
+  }
+
+  private ehUrlRemota(url?: string): boolean {
+    return Boolean(url && /^https?:\/\//i.test(url));
   }
 
   private lerUrlBaseApiAutenticacao(): string {

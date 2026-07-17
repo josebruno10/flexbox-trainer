@@ -51,6 +51,7 @@ loginForm.addEventListener("submit", async (event) => {
       nome: usuario.nome,
       email: usuario.email,
       tokenGmail: usuario.tokenGmail,
+      avatarUrl: usuario.avatarUrl,
       remember,
       mode: "login",
     });
@@ -107,6 +108,7 @@ registerForm.addEventListener("submit", async (event) => {
       nome: payload.nome,
       email: payload.email,
       tokenGmail: payload.token_gmail,
+      avatarUrl: payload.url_image_perfil,
       remember,
       mode: "register",
     });
@@ -148,12 +150,15 @@ function normalizarUsuario(dados) {
   const nome = sanitizarTexto(registro.nome || registro.name || registro.nome_completo);
   const email = sanitizarTexto(registro.email);
   const tokenGmail = sanitizarTexto(registro.token_gmail || registro.tokenGmail);
+  const avatarUrl = sanitizarTexto(
+    registro.url_image_perfil || registro.avatarUrl || registro.avatar || registro.picture,
+  );
 
   if (!nome || !email || !tokenGmail) {
     return undefined;
   }
 
-  return { nome, email, tokenGmail };
+  return { nome, email, tokenGmail, avatarUrl };
 }
 
 function redirecionarParaExtensao(dados) {
@@ -167,6 +172,9 @@ function redirecionarParaExtensao(dados) {
   url.searchParams.set("token_gmail", dados.tokenGmail);
   url.searchParams.set("remember", dados.remember ? "1" : "0");
   url.searchParams.set("mode", dados.mode);
+  if (dados.avatarUrl) {
+    url.searchParams.set("avatarUrl", dados.avatarUrl);
+  }
   window.location.href = url.toString();
 }
 

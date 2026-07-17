@@ -15,8 +15,6 @@ export type Bloco = {
 
 export type Desafio = {
   challengeId: string;
-  seed: number;
-  titulo: string;
   dificuldade: DificuldadeDesafio;
   width: number;
   height: number;
@@ -24,6 +22,7 @@ export type Desafio = {
   blocks: Bloco[];
   captureWidth?: number;
   captureHeight?: number;
+  encerrado?: boolean;
 };
 
 export type ResultadoAvaliacao = {
@@ -31,6 +30,7 @@ export type ResultadoAvaliacao = {
   score: number;
   source:
     | "mock-local"
+    | "local-visual"
     | "servidor"
     | "servidor-sem-nota"
     | "api-error"
@@ -39,6 +39,7 @@ export type ResultadoAvaliacao = {
     | "capture-error"
     | "folder-error";
   error?: string;
+  serverMessage?: string;
 };
 
 export type EstadoAutenticacao = {
@@ -46,6 +47,7 @@ export type EstadoAutenticacao = {
   message?: string;
   displayName?: string;
   email?: string;
+  avatarUrl?: string;
 };
 
 export type ResumoWorkspace = {
@@ -63,7 +65,6 @@ export type TentativaPayload = {
   css: string;
   elapsedMs: number;
   challengeId: string;
-  seed: number;
   codigoPasta?: string;
 };
 
@@ -85,9 +86,15 @@ export type StatusConexaoServidor = {
 export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
   | { type: "novoDesafio"; dificuldade: DificuldadeDesafio }
+  | { type: "encerrarDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao" }
+  | {
+      type: "solicitarVerificacao";
+      challengeId: string;
+      precisaoLocal?: number;
+      erroCorrecaoLocal?: string;
+    }
   | { type: "abrirLogin" }
   | { type: "abrirCadastro" }
   | { type: "loginGitHub" }

@@ -1,11 +1,12 @@
+import html2canvas from "html2canvas";
+import { calcularPrecisaoImagem } from "../services/comparacaoImagem";
+
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
 };
 
 type DesafioRecebido = {
   challengeId: string;
-  seed: number;
-  titulo: string;
   dificuldade: "facil" | "medio" | "dificil";
   width: number;
   height: number;
@@ -24,7 +25,10 @@ type DesafioRecebido = {
   captureWidth?: number;
   captureHeight?: number;
   tempoAtualMs?: number;
+  encerrado?: boolean;
 };
+
+type BlocoRecebido = DesafioRecebido["blocks"][number];
 
 type ResumoWorkspaceRecebido = {
   caminhoHtml: string;
@@ -41,6 +45,7 @@ type ResultadoAvaliacaoRecebido = {
   score: number;
   source: string;
   error?: string;
+  serverMessage?: string;
 };
 
 type StatusConexaoServidorRecebido = {
@@ -53,6 +58,7 @@ type EstadoAutenticacaoRecebido = {
   message?: string;
   displayName?: string;
   email?: string;
+  avatarUrl?: string;
 };
 
 type MensagemDaExtensao =
@@ -65,21 +71,39 @@ type MensagemDaExtensao =
 const vscode = acquireVsCodeApi();
 
 const canvasAlvo = document.getElementById("canvasAlvo") as HTMLCanvasElement;
+const canvasAnotacoes = document.getElementById(
+  "canvasAnotacoes",
+) as HTMLCanvasElement;
 const metaDesafio = document.getElementById("metaDesafio") as HTMLDivElement;
+const detalheComponente = document.getElementById(
+  "detalheComponente",
+) as HTMLDivElement;
 const listaWorkspace = document.getElementById(
   "listaWorkspace",
 ) as HTMLDivElement;
-const quadroPreview = document.getElementById(
-  "quadroPreview",
-) as HTMLIFrameElement;
+const canvasPreviewAluno = document.getElementById(
+  "canvasPreviewAluno",
+) as HTMLCanvasElement;
+const quadroAvaliacao = document.getElementById(
+  "quadroAvaliacao",
+) as HTMLDivElement;
 const caixaResultado = document.getElementById(
   "caixaResultado",
 ) as HTMLDivElement;
 const statusAutenticacao = document.getElementById(
   "statusAutenticacao",
 ) as HTMLDivElement;
+const avatarUsuario = document.getElementById(
+  "avatarUsuario",
+) as HTMLImageElement;
+const avatarFallback = document.getElementById(
+  "avatarFallback",
+) as HTMLDivElement;
 
 const botaoNovoDesafio = document.getElementById("botaoNovoDesafio");
+const botaoEncerrarDesafio = document.getElementById(
+  "botaoEncerrarDesafio",
+) as HTMLButtonElement;
 const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById(
@@ -90,12 +114,24 @@ const seletorDificuldade = document.getElementById(
   "seletorDificuldade",
 ) as HTMLSelectElement;
 let ultimoGabaritoEnviado = "";
+let desafioAtual: DesafioRecebido | undefined;
+let tempoBaseMs = 0;
+let instanteTempoRecebido = Date.now();
+let confirmarAtualizacaoWorkspace: (() => void) | undefined;
+let componenteSelecionadoId: number | undefined;
+let capturaWorkspaceAtual: Promise<HTMLCanvasElement> | undefined;
+let versaoWorkspace = 0;
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({
     type: "novoDesafio",
     dificuldade: seletorDificuldade.value,
   });
+});
+
+botaoEncerrarDesafio?.addEventListener("click", () => {
+  botaoEncerrarDesafio.disabled = true;
+  vscode.postMessage({ type: "encerrarDesafio" });
 });
 
 botaoTestarConexao?.addEventListener("click", () => {
@@ -108,16 +144,24 @@ botaoAtualizarPreview?.addEventListener("click", () => {
 });
 
 botaoVerificar?.addEventListener("click", () => {
-  vscode.postMessage({ type: "solicitarVerificacao" });
+  void solicitarVerificacao();
 });
 
 botaoSair?.addEventListener("click", () => {
   vscode.postMessage({ type: "logout" });
 });
 
+canvasAnotacoes.addEventListener("click", selecionarComponenteNoCanvas);
+
 function desenharDesafio(desafio: DesafioRecebido): void {
+  const mudouDesafio = desafioAtual?.challengeId !== desafio.challengeId;
+  desafioAtual = desafio;
+  tempoBaseMs = desafio.tempoAtualMs ?? 0;
+  instanteTempoRecebido = Date.now();
   canvasAlvo.width = desafio.width;
   canvasAlvo.height = desafio.height;
+  canvasAnotacoes.width = desafio.width;
+  canvasAnotacoes.height = desafio.height;
 
   const contexto = canvasAlvo.getContext("2d");
 
@@ -152,7 +196,19 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   });
 
   seletorDificuldade.value = desafio.dificuldade;
+  // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
+  // calcular o resultado final da tentativa.
   botaoVerificar.disabled = false;
+  botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
+
+  if (mudouDesafio) {
+    componenteSelecionadoId = undefined;
+    caixaResultado.textContent = "Nenhuma verificação ainda.";
+  }
+  canvasAnotacoes
+    .getContext("2d")
+    ?.clearRect(0, 0, canvasAnotacoes.width, canvasAnotacoes.height);
+  renderizarDetalheComponente();
 
   if (ultimoGabaritoEnviado !== desafio.challengeId) {
     ultimoGabaritoEnviado = desafio.challengeId;
@@ -165,20 +221,28 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     });
   }
 
+  renderizarMetaDesafio();
+}
+
+function renderizarMetaDesafio(): void {
+  if (!desafioAtual) {
+    return;
+  }
+
+  const tempoDecorrido =
+    tempoBaseMs +
+    (desafioAtual.encerrado ? 0 : Date.now() - instanteTempoRecebido);
   metaDesafio.textContent =
-    "Titulo: " +
-    desafio.titulo +
-    " | Nível: " +
-    formatarDificuldade(desafio.dificuldade) +
-    " | Seed: " +
-    desafio.seed +
+    "Nível: " +
+    formatarDificuldade(desafioAtual.dificuldade) +
     " | Tempo: " +
-    Math.floor((desafio.tempoAtualMs || 0) / 1000) +
-    "s" +
+    formatarTempo(tempoDecorrido) +
+    " | Status: " +
+    (desafioAtual.encerrado ? "Encerrado" : "Em andamento") +
     " | Captura: " +
-    (desafio.captureWidth ?? 960) +
+    (desafioAtual.captureWidth ?? 960) +
     "x" +
-    (desafio.captureHeight ?? 540);
+    (desafioAtual.captureHeight ?? 540);
 }
 
 function desenharEstadoInicial(): void {
@@ -202,7 +266,96 @@ function desenharEstadoInicial(): void {
     canvasAlvo.height / 2,
   );
   metaDesafio.textContent = "Nenhum desafio iniciado.";
+  detalheComponente.textContent =
+    "Gere um desafio para consultar medidas e cores.";
+  canvasAnotacoes.width = 960;
+  canvasAnotacoes.height = 540;
+  canvasAnotacoes.getContext("2d")?.clearRect(0, 0, 960, 540);
+  desenharMensagemPreview("O preview aparecerá aqui.");
   botaoVerificar.disabled = true;
+  botaoEncerrarDesafio.disabled = true;
+}
+
+function selecionarComponenteNoCanvas(evento: MouseEvent): void {
+  if (!desafioAtual) {
+    return;
+  }
+
+  const limites = canvasAnotacoes.getBoundingClientRect();
+  const x =
+    (evento.clientX - limites.left) * (canvasAnotacoes.width / limites.width);
+  const y =
+    (evento.clientY - limites.top) * (canvasAnotacoes.height / limites.height);
+  const bloco = [...desafioAtual.blocks]
+    .reverse()
+    .find((candidato) => pontoPertenceAoBloco(x, y, candidato));
+
+  componenteSelecionadoId = bloco?.id;
+  renderizarDetalheComponente();
+}
+
+function pontoPertenceAoBloco(
+  x: number,
+  y: number,
+  bloco: BlocoRecebido,
+): boolean {
+  if (bloco.shape === "circle") {
+    const raioX = bloco.width / 2;
+    const raioY = bloco.height / 2;
+    const centroX = bloco.x + raioX;
+    const centroY = bloco.y + raioY;
+
+    if (raioX <= 0 || raioY <= 0) {
+      return false;
+    }
+
+    return (
+      ((x - centroX) * (x - centroX)) / (raioX * raioX) +
+        ((y - centroY) * (y - centroY)) / (raioY * raioY) <=
+      1
+    );
+  }
+
+  return (
+    x >= bloco.x &&
+    x <= bloco.x + bloco.width &&
+    y >= bloco.y &&
+    y <= bloco.y + bloco.height
+  );
+}
+
+function renderizarDetalheComponente(): void {
+  if (!desafioAtual) {
+    detalheComponente.textContent =
+      "Gere um desafio para consultar medidas e cores.";
+    return;
+  }
+
+  const bloco = desafioAtual.blocks.find(
+    (candidato) => candidato.id === componenteSelecionadoId,
+  );
+
+  if (!bloco) {
+    detalheComponente.textContent =
+      `Tamanho da tela: ${formatarMedida(desafioAtual.width)} × ` +
+      `${formatarMedida(desafioAtual.height)} px` +
+      ` | Cor: ${normalizarHex(desafioAtual.backgroundColor)}` +
+      " | Clique em um componente para consultar os valores exatos.";
+    return;
+  }
+
+  detalheComponente.textContent =
+    `Tamanho: ${formatarMedida(bloco.width)} × ` +
+    `${formatarMedida(bloco.height)} px` +
+    ` | Cor: ${normalizarHex(bloco.color)}`;
+}
+
+function formatarMedida(valor: number): string {
+  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
+}
+
+function normalizarHex(cor: string): string {
+  return cor.toUpperCase();
 }
 
 function desenharCirculo(
@@ -273,7 +426,9 @@ function desenharRetanguloArredondado(
   contexto.fill();
 }
 
-function renderizarWorkspace(resumoWorkspace: ResumoWorkspaceRecebido): void {
+function renderizarWorkspace(
+  resumoWorkspace: ResumoWorkspaceRecebido,
+): void {
   const htmlInfo = resumoWorkspace.temArquivoHtml
     ? resumoWorkspace.caminhoHtml
     : "index.html nao encontrado";
@@ -282,12 +437,250 @@ function renderizarWorkspace(resumoWorkspace: ResumoWorkspaceRecebido): void {
     : "style.css nao encontrado";
 
   listaWorkspace.textContent = "HTML: " + htmlInfo + " | CSS: " + cssInfo;
-  quadroPreview.srcdoc = resumoWorkspace.htmlPreview;
+  try {
+    prepararSuperficieAvaliacao(resumoWorkspace.htmlPreview);
+    const versaoDaCaptura = ++versaoWorkspace;
+    const captura = capturarCanvasAluno();
+    capturaWorkspaceAtual = captura;
+    void captura
+      .then((canvasAluno) => {
+        if (versaoDaCaptura === versaoWorkspace) {
+          desenharPreviewAluno(canvasAluno);
+        }
+      })
+      .catch((error: unknown) => {
+        if (versaoDaCaptura === versaoWorkspace) {
+          const mensagem =
+            error instanceof Error ? error.message : "Falha ao gerar preview.";
+          desenharMensagemPreview(mensagem);
+        }
+      });
+  } catch (error) {
+    capturaWorkspaceAtual = undefined;
+    const mensagem =
+      error instanceof Error ? error.message : "Falha ao preparar o preview.";
+    desenharMensagemPreview(mensagem);
+  } finally {
+    confirmarAtualizacaoWorkspace?.();
+    confirmarAtualizacaoWorkspace = undefined;
+  }
+}
+
+async function solicitarVerificacao(): Promise<void> {
+  if (!desafioAtual || botaoVerificar.disabled) {
+    return;
+  }
+
+  const challengeId = desafioAtual.challengeId;
+  botaoVerificar.disabled = true;
+  caixaResultado.textContent =
+    "Atualizando o preview e calculando a precisão...";
+
+  try {
+    await atualizarWorkspaceAntesDaVerificacao();
+    const precisaoLocal = await calcularPrecisaoVisualLocal();
+
+    if (desafioAtual?.challengeId !== challengeId) {
+      return;
+    }
+
+    caixaResultado.textContent =
+      `Precisão visual local: ${precisaoLocal.toFixed(2)}%` +
+      " | Enviando o HTML e o CSS ao servidor...";
+    vscode.postMessage({
+      type: "solicitarVerificacao",
+      challengeId,
+      precisaoLocal,
+    });
+  } catch (error) {
+    if (desafioAtual?.challengeId !== challengeId) {
+      return;
+    }
+
+    const mensagem =
+      error instanceof Error ? error.message : "Falha desconhecida na captura.";
+    vscode.postMessage({
+      type: "solicitarVerificacao",
+      challengeId,
+      erroCorrecaoLocal: mensagem,
+    });
+  }
+}
+
+async function atualizarWorkspaceAntesDaVerificacao(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    let concluiu = false;
+    const timeoutId = window.setTimeout(() => {
+      if (concluiu) {
+        return;
+      }
+
+      concluiu = true;
+      confirmarAtualizacaoWorkspace = undefined;
+      reject(
+        new Error(
+          "O VS Code não atualizou o preview em 5 segundos. Tente novamente.",
+        ),
+      );
+    }, 5000);
+
+    confirmarAtualizacaoWorkspace = () => {
+      if (concluiu) {
+        return;
+      }
+
+      concluiu = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+
+    vscode.postMessage({ type: "atualizarPreview" });
+  });
+}
+
+async function calcularPrecisaoVisualLocal(): Promise<number> {
+  const canvasAluno = await (
+    capturaWorkspaceAtual ?? capturarCanvasAluno()
+  );
+  desenharPreviewAluno(canvasAluno);
+  const contextoAlvo = canvasAlvo.getContext("2d", { willReadFrequently: true });
+  const contextoAluno = canvasAluno.getContext("2d", { willReadFrequently: true });
+
+  if (!contextoAlvo || !contextoAluno) {
+    throw new Error("O navegador não disponibilizou o contexto de comparação.");
+  }
+
+  const alvo = contextoAlvo.getImageData(0, 0, 960, 540).data;
+  const atual = contextoAluno.getImageData(0, 0, 960, 540).data;
+  return calcularPrecisaoImagem(alvo, atual).precisao;
+}
+
+async function capturarCanvasAluno(): Promise<HTMLCanvasElement> {
+  await document.fonts?.ready;
+  await aguardarDoisFrames();
+
+  return html2canvas(quadroAvaliacao, {
+    width: 960,
+    height: 540,
+    windowWidth: 960,
+    windowHeight: 540,
+    scale: 1,
+    useCORS: true,
+    imageTimeout: 5000,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+}
+
+function desenharPreviewAluno(canvasAluno: HTMLCanvasElement): void {
+  canvasPreviewAluno.width = 960;
+  canvasPreviewAluno.height = 540;
+  const contexto = canvasPreviewAluno.getContext("2d");
+
+  if (!contexto) {
+    return;
+  }
+
+  contexto.clearRect(0, 0, 960, 540);
+  contexto.drawImage(canvasAluno, 0, 0, 960, 540);
+}
+
+function desenharMensagemPreview(mensagem: string): void {
+  canvasPreviewAluno.width = 960;
+  canvasPreviewAluno.height = 540;
+  const contexto = canvasPreviewAluno.getContext("2d");
+
+  if (!contexto) {
+    return;
+  }
+
+  contexto.fillStyle = "#ffffff";
+  contexto.fillRect(0, 0, 960, 540);
+  contexto.fillStyle = "#52606d";
+  contexto.font = "600 24px sans-serif";
+  contexto.textAlign = "center";
+  contexto.textBaseline = "middle";
+  contexto.fillText(mensagem, 480, 270, 880);
+}
+
+function prepararSuperficieAvaliacao(htmlPreview: string): void {
+  const documento = new DOMParser().parseFromString(htmlPreview, "text/html");
+  documento.querySelectorAll("script, iframe, object, embed").forEach((elemento) =>
+    elemento.remove(),
+  );
+  documento.querySelectorAll("*").forEach((elemento) => {
+    Array.from(elemento.attributes).forEach((atributo) => {
+      if (atributo.name.toLowerCase().startsWith("on")) {
+        elemento.removeAttribute(atributo.name);
+      }
+    });
+  });
+  documento
+    .querySelectorAll('meta[http-equiv="Content-Security-Policy" i]')
+    .forEach((elemento) => elemento.remove());
+
+  const raiz = quadroAvaliacao.shadowRoot ?? quadroAvaliacao.attachShadow({
+    mode: "open",
+  });
+  raiz.replaceChildren();
+
+  const estilo = document.createElement("style");
+  estilo.textContent = `
+    :host {
+      display: block;
+      width: 960px;
+      height: 540px;
+      overflow: hidden;
+      background: #fff;
+    }
+    html, body {
+      display: block;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+  `;
+
+  documento.querySelectorAll("style").forEach((estiloOriginal) => {
+    estilo.textContent += `\n${estiloOriginal.textContent || ""}`;
+  });
+
+  const htmlAluno = document.createElement("html");
+  copiarAtributosPermitidos(documento.documentElement, htmlAluno);
+  const bodyAluno = document.createElement("body");
+  copiarAtributosPermitidos(documento.body, bodyAluno);
+
+  Array.from(documento.body.childNodes).forEach((filho) => {
+    if (!(filho instanceof HTMLStyleElement)) {
+      bodyAluno.append(filho.cloneNode(true));
+    }
+  });
+  htmlAluno.append(bodyAluno);
+  raiz.append(estilo, htmlAluno);
+}
+
+function copiarAtributosPermitidos(
+  origem: Element,
+  destino: Element,
+): void {
+  Array.from(origem.attributes).forEach((atributo) => {
+    if (!atributo.name.toLowerCase().startsWith("on")) {
+      destino.setAttribute(atributo.name, atributo.value);
+    }
+  });
+}
+
+function aguardarDoisFrames(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
 }
 
 function renderizarResultado(
   resultado: ResultadoAvaliacaoRecebido | undefined,
 ): void {
+  botaoVerificar.disabled = !desafioAtual;
+
   if (!resultado) {
     caixaResultado.textContent = "Nenhuma verificacao ainda.";
     return;
@@ -302,6 +695,21 @@ function renderizarResultado(
   ) {
     caixaResultado.textContent =
       resultado.error || "Erro ao verificar a tentativa.";
+    return;
+  }
+
+  if (resultado.source === "local-visual") {
+    caixaResultado.textContent =
+      "Precisão visual local (experimental): " +
+      resultado.precision.toFixed(2) +
+      "%" +
+      (resultado.serverMessage ? " | Servidor: " + resultado.serverMessage : "");
+    return;
+  }
+
+  if (resultado.source === "servidor") {
+    caixaResultado.textContent =
+      "Precisão oficial do servidor: " + resultado.precision.toFixed(2) + "%";
     return;
   }
 
@@ -335,6 +743,7 @@ function renderizarEstadoAutenticacao(
   if (estado.status === "authenticated") {
     const nome = estado.displayName || estado.email || "Usuário";
     statusAutenticacao.innerHTML = `<strong>${escapeHtml(nome)}</strong>Conectado e pronto para usar a extensão.`;
+    renderizarAvatar(nome, estado.avatarUrl);
     return;
   }
 
@@ -349,6 +758,46 @@ function renderizarEstadoAutenticacao(
     "Você precisa criar uma conta ou fazer login para usar esta extensão.";
 }
 
+function renderizarAvatar(nome: string, avatarUrl?: string): void {
+  avatarFallback.textContent = nome.trim().charAt(0).toUpperCase() || "U";
+  avatarFallback.hidden = false;
+  avatarUsuario.hidden = true;
+  avatarUsuario.removeAttribute("src");
+
+  if (!avatarUrl || !ehUrlAvatarPermitida(avatarUrl)) {
+    return;
+  }
+
+  avatarUsuario.onload = () => {
+    avatarUsuario.hidden = false;
+    avatarFallback.hidden = true;
+  };
+  avatarUsuario.onerror = () => {
+    avatarUsuario.hidden = true;
+    avatarFallback.hidden = false;
+  };
+  avatarUsuario.src = avatarUrl;
+}
+
+function ehUrlAvatarPermitida(url: string): boolean {
+  return /^https?:\/\//i.test(url) || /^data:image\//i.test(url);
+}
+
+function formatarTempo(tempoMs: number): string {
+  const totalSegundos = Math.max(0, Math.floor(tempoMs / 1000));
+  const horas = Math.floor(totalSegundos / 3600);
+  const minutos = Math.floor((totalSegundos % 3600) / 60);
+  const segundos = totalSegundos % 60;
+  const partes = [minutos, segundos].map((parte) =>
+    parte.toString().padStart(2, "0"),
+  );
+
+  if (horas > 0) {
+    partes.unshift(horas.toString().padStart(2, "0"));
+  }
+  return partes.join(":");
+}
+
 window.addEventListener(
   "message",
   (event: MessageEvent<MensagemDaExtensao>) => {
@@ -359,7 +808,7 @@ window.addEventListener(
     }
 
     if (mensagem.type === "dadosWorkspace") {
-      renderizarWorkspace(mensagem.payload);
+      void renderizarWorkspace(mensagem.payload);
     }
 
     if (mensagem.type === "resultadoAvaliacao") {
@@ -379,6 +828,7 @@ window.addEventListener(
 );
 
 desenharEstadoInicial();
+window.setInterval(renderizarMetaDesafio, 250);
 vscode.postMessage({ type: "pronto" });
 
 function escapeHtml(texto: string): string {

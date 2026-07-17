@@ -4,6 +4,7 @@ export type SessaoAutenticacao = {
   accessToken: string;
   email: string;
   displayName: string;
+  avatarUrl?: string;
   tokenGmail: string;
   userId?: number;
   remember: boolean;

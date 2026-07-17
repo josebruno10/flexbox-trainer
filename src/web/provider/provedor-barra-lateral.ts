@@ -52,6 +52,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private inicioTentativaMs = Date.now();
 
+  private fimTentativaMs?: number;
+
   private codigoPastaAluno?: string;
 
   private preparandoPasta: Promise<void> = Promise.resolve();
@@ -72,6 +74,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         void this.atualizarPreviewWorkspace();
       } else if (estado.status === "unauthenticated") {
         this.desafioAtual = undefined;
+        this.fimTentativaMs = undefined;
         this.gabaritoAtual = undefined;
         this.avaliacaoAtual = undefined;
       }
@@ -164,6 +167,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "encerrarDesafio") {
+          this.encerrarDesafioAtual();
+          return;
+        }
+
         if (mensagem.type === "testarConexao") {
           void this.testarConexaoServidor();
           return;
@@ -175,7 +183,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "solicitarVerificacao") {
-          void this.verificarTentativaAtual();
+          if (mensagem.challengeId !== this.desafioAtual?.challengeId) {
+            return;
+          }
+
+          void this.verificarTentativaAtual(
+            mensagem.challengeId,
+            mensagem.precisaoLocal,
+            mensagem.erroCorrecaoLocal,
+          );
         }
       },
       undefined,
@@ -220,6 +236,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.avaliacaoAtual = undefined;
     this.codigoPastaAluno = undefined;
     this.inicioTentativaMs = Date.now();
+    this.fimTentativaMs = undefined;
     this.preparandoPasta = this.prepararPastaDoAluno();
     this.enviarEstado();
     void this.testarConexaoServidor();
@@ -234,19 +251,40 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarEstado();
   }
 
-  private async verificarTentativaAtual(): Promise<void> {
+  private encerrarDesafioAtual(): void {
+    if (!this.desafioAtual || this.fimTentativaMs !== undefined) {
+      return;
+    }
+
+    this.fimTentativaMs = Date.now();
+    this.enviarEstado();
+  }
+
+  private async verificarTentativaAtual(
+    challengeId: string,
+    precisaoLocal?: number,
+    erroCorrecaoLocal?: string,
+  ): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
 
-    if (!this.desafioAtual) {
+    if (!this.desafioAtual || this.desafioAtual.challengeId !== challengeId) {
       return;
     }
 
+    const resumoWorkspace = this.resumoWorkspaceAtual;
+    const preparandoPasta = this.preparandoPasta;
+    const inicioTentativaMs = this.inicioTentativaMs;
+    const fimTentativaMs = this.fimTentativaMs;
+    const instanteVerificacaoMs = Date.now();
+    const desafioAindaEhAtual = (): boolean =>
+      this.desafioAtual?.challengeId === challengeId;
+
     try {
       if (
-        !this.resumoWorkspaceAtual.temArquivoHtml ||
-        !this.resumoWorkspaceAtual.temArquivoCss
+        !resumoWorkspace.temArquivoHtml ||
+        !resumoWorkspace.temArquivoCss
       ) {
         this.avaliacaoAtual = {
           precision: 0,
@@ -258,31 +296,58 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      await this.preparandoPasta;
+      await preparandoPasta;
 
-      if (!this.codigoPastaAluno) {
-        this.avaliacaoAtual = {
-          precision: 0,
-          score: 0,
-          source: "folder-error",
-          error:
-            "A pasta do aluno ainda não foi criada. Verifique a configuração do servidor.",
-        };
-        this.enviarEstado();
+      if (!desafioAindaEhAtual()) {
         return;
       }
 
-      this.avaliacaoAtual = await avaliarTentativa({
-        html: this.resumoWorkspaceAtual.textoHtml,
-        css: this.resumoWorkspaceAtual.textoCss,
-        elapsedMs: Date.now() - this.inicioTentativaMs,
-        challengeId: this.desafioAtual.challengeId,
-        seed: this.desafioAtual.seed,
-        codigoPasta: this.codigoPastaAluno,
+      const codigoPasta = this.codigoPastaAluno;
+
+      const resultadoServidor = await avaliarTentativa({
+        html: resumoWorkspace.textoHtml,
+        css: resumoWorkspace.textoCss,
+        elapsedMs:
+          (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
+        challengeId,
+        codigoPasta,
       });
+
+      if (!desafioAindaEhAtual()) {
+        return;
+      }
+
+      if (resultadoServidor.source === "servidor") {
+        this.avaliacaoAtual = resultadoServidor;
+      } else if (
+        typeof precisaoLocal === "number" &&
+        Number.isFinite(precisaoLocal)
+      ) {
+        const precisaoNormalizada = Math.min(100, Math.max(0, precisaoLocal));
+        this.avaliacaoAtual = {
+          precision: precisaoNormalizada,
+          score: precisaoNormalizada,
+          source: "local-visual",
+          serverMessage: this.descreverResultadoServidor(resultadoServidor),
+        };
+      } else {
+        const detalheServidor = this.descreverResultadoServidor(resultadoServidor);
+        this.avaliacaoAtual = {
+          precision: 0,
+          score: 0,
+          source: "capture-error",
+          error:
+            `Não foi possível calcular a precisão visual: ${erroCorrecaoLocal || "falha na captura do preview."}` +
+            (detalheServidor ? ` Servidor: ${detalheServidor}` : ""),
+        };
+      }
 
       this.enviarEstado();
     } catch (error) {
+      if (!desafioAindaEhAtual()) {
+        return;
+      }
+
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";
       this.avaliacaoAtual = {
@@ -293,6 +358,22 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       };
       this.enviarEstado();
     }
+  }
+
+  private descreverResultadoServidor(resultado: ResultadoAvaliacao): string {
+    if (resultado.source === "servidor") {
+      return `nota retornada: ${resultado.precision.toFixed(2)}%.`;
+    }
+
+    if (resultado.source === "servidor-sem-nota") {
+      return resultado.error || "conteúdo salvo, sem nota retornada.";
+    }
+
+    if (resultado.source === "mock-local") {
+      return "API não configurada; conteúdo não enviado.";
+    }
+
+    return resultado.error || "envio não concluído.";
   }
 
   private async prepararPastaDoAluno(): Promise<void> {
@@ -365,7 +446,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         type: "dadosDesafio",
         payload: {
           ...this.desafioAtual,
-          tempoAtualMs: Date.now() - this.inicioTentativaMs,
+          tempoAtualMs:
+            (this.fimTentativaMs ?? Date.now()) - this.inicioTentativaMs,
+          encerrado: this.fimTentativaMs !== undefined,
         },
       });
     }
