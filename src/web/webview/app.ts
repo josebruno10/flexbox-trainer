@@ -7,7 +7,6 @@ declare function acquireVsCodeApi(): {
 
 type DesafioRecebido = {
   challengeId: string;
-  dificuldade: "facil" | "medio" | "dificil";
   width: number;
   height: number;
   backgroundColor: string;
@@ -110,9 +109,6 @@ const botaoVerificar = document.getElementById(
   "botaoVerificar",
 ) as HTMLButtonElement;
 const botaoSair = document.getElementById("botaoSair");
-const seletorDificuldade = document.getElementById(
-  "seletorDificuldade",
-) as HTMLSelectElement;
 let ultimoGabaritoEnviado = "";
 let desafioAtual: DesafioRecebido | undefined;
 let tempoBaseMs = 0;
@@ -123,10 +119,7 @@ let capturaWorkspaceAtual: Promise<HTMLCanvasElement> | undefined;
 let versaoWorkspace = 0;
 
 botaoNovoDesafio?.addEventListener("click", () => {
-  vscode.postMessage({
-    type: "novoDesafio",
-    dificuldade: seletorDificuldade.value,
-  });
+  vscode.postMessage({ type: "novoDesafio" });
 });
 
 botaoEncerrarDesafio?.addEventListener("click", () => {
@@ -195,7 +188,6 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     }
   });
 
-  seletorDificuldade.value = desafio.dificuldade;
   // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
   // calcular o resultado final da tentativa.
   botaoVerificar.disabled = false;
@@ -233,9 +225,7 @@ function renderizarMetaDesafio(): void {
     tempoBaseMs +
     (desafioAtual.encerrado ? 0 : Date.now() - instanteTempoRecebido);
   metaDesafio.textContent =
-    "Nível: " +
-    formatarDificuldade(desafioAtual.dificuldade) +
-    " | Tempo: " +
+    "Tempo: " +
     formatarTempo(tempoDecorrido) +
     " | Status: " +
     (desafioAtual.encerrado ? "Encerrado" : "Em andamento") +
@@ -261,7 +251,7 @@ function desenharEstadoInicial(): void {
   contexto.textAlign = "center";
   contexto.textBaseline = "middle";
   contexto.fillText(
-    "Escolha o nível e clique em Gerar desafio",
+    "Clique em Gerar novo desafio",
     canvasAlvo.width / 2,
     canvasAlvo.height / 2,
   );
@@ -376,20 +366,6 @@ function desenharCirculo(
     Math.PI * 2,
   );
   contexto.fill();
-}
-
-function formatarDificuldade(
-  dificuldade: DesafioRecebido["dificuldade"],
-): string {
-  if (dificuldade === "facil") {
-    return "Fácil";
-  }
-
-  if (dificuldade === "medio") {
-    return "Médio";
-  }
-
-  return "Difícil";
 }
 
 function desenharRetanguloArredondado(

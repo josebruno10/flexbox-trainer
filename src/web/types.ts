@@ -1,5 +1,4 @@
 // estruturas compartilhadas entre extensão, provider e serviços.
-export type DificuldadeDesafio = "facil" | "medio" | "dificil";
 
 export type Bloco = {
   id: number;
@@ -15,7 +14,6 @@ export type Bloco = {
 
 export type Desafio = {
   challengeId: string;
-  dificuldade: DificuldadeDesafio;
   width: number;
   height: number;
   backgroundColor: string;
@@ -85,7 +83,7 @@ export type StatusConexaoServidor = {
 
 export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
-  | { type: "novoDesafio"; dificuldade: DificuldadeDesafio }
+  | { type: "novoDesafio" }
   | { type: "encerrarDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }

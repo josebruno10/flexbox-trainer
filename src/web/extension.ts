@@ -99,7 +99,7 @@ export async function activate(context: vscode.ExtensionContext) {
         "workbench.view.extension.flexboxTrainer",
       );
       vscode.window.showInformationMessage(
-        "Escolha o nível e gere um desafio na barra lateral.",
+        "Gere desafios aleatórios na barra lateral até escolher o que deseja treinar.",
       );
     }),
   );

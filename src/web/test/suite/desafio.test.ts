@@ -9,11 +9,9 @@ import { Bloco } from "../../types";
 suite("Gerador de desafios", () => {
   test("gera um desafio reproduzível de 960x540 nos testes", () => {
     const primeiro = criarDesafioGerado({
-      dificuldade: "medio",
       aleatorio: criarAleatorioTeste(123456),
     });
     const segundo = criarDesafioGerado({
-      dificuldade: "medio",
       aleatorio: criarAleatorioTeste(123456),
     });
 
@@ -21,7 +19,11 @@ suite("Gerador de desafios", () => {
     assert.strictEqual(primeiro.height, ALTURA_GABARITO);
     assert.match(primeiro.challengeId, /^challenge-[a-z0-9]+-[a-z0-9]+$/);
     assert.strictEqual(primeiro.backgroundColor, "#9ca3af");
-    assert.strictEqual(primeiro.dificuldade, "medio");
+    assert.strictEqual(
+      "dificuldade" in primeiro,
+      false,
+      "O desafio não deve possuir nível de dificuldade.",
+    );
     assert.strictEqual(
       "titulo" in primeiro,
       false,
@@ -30,65 +32,45 @@ suite("Gerador de desafios", () => {
     assert.deepStrictEqual(primeiro.blocks, segundo.blocks);
   });
 
-  test("produz variações aleatórias diferentes", () => {
+  test("produz uma nova combinação aleatória a cada geração", () => {
     const primeiro = criarDesafioGerado({ aleatorio: criarAleatorioTeste(10) });
     const segundo = criarDesafioGerado({ aleatorio: criarAleatorioTeste(11) });
 
     assert.notDeepStrictEqual(primeiro.blocks, segundo.blocks);
   });
 
-  test("aumenta a complexidade conforme o nível", () => {
-    let blocosFaceis = 0;
-    let blocosMedios = 0;
-    let blocosDificeis = 0;
+  test("usa cortes, elementos internos e sequências do algoritmo adaptado", () => {
+    let encontrouBlocoAninhado = false;
+    let encontrouSequencia = false;
 
-    for (let caso = 0; caso < 40; caso++) {
-      blocosFaceis += criarDesafioGerado({
-        dificuldade: "facil",
-        aleatorio: criarAleatorioTeste(caso),
-      }).blocks.length;
-      blocosMedios += criarDesafioGerado({
-        dificuldade: "medio",
-        aleatorio: criarAleatorioTeste(caso),
-      }).blocks.length;
-      blocosDificeis += criarDesafioGerado({
-        dificuldade: "dificil",
-        aleatorio: criarAleatorioTeste(caso),
-      }).blocks.length;
-    }
-
-    assert.ok(blocosMedios > blocosFaceis);
-    assert.ok(blocosDificeis > blocosMedios);
-  });
-
-  test("gera círculos e cantos arredondados nos níveis superiores", () => {
-    let encontrouCirculo = false;
-    let encontrouArredondado = false;
-
-    for (let caso = 0; caso < 80; caso++) {
+    for (let caso = 0; caso < 100; caso++) {
       const desafio = criarDesafioGerado({
-        dificuldade: caso % 2 === 0 ? "medio" : "dificil",
         aleatorio: criarAleatorioTeste(caso),
       });
-      encontrouCirculo ||= desafio.blocks.some(
-        (bloco) => bloco.shape === "circle",
-      );
-      encontrouArredondado ||= desafio.blocks.some(
-        (bloco) => (bloco.borderRadius ?? 0) > 0,
+      const filhosPorPai = new Map<number, number>();
+
+      for (const bloco of desafio.blocks) {
+        if (bloco.parentId !== undefined) {
+          encontrouBlocoAninhado = true;
+          filhosPorPai.set(
+            bloco.parentId,
+            (filhosPorPai.get(bloco.parentId) ?? 0) + 1,
+          );
+        }
+      }
+
+      encontrouSequencia ||= [...filhosPorPai.values()].some(
+        (quantidade) => quantidade >= 2,
       );
     }
 
-    assert.ok(encontrouCirculo, "Nenhum círculo foi gerado.");
-    assert.ok(encontrouArredondado, "Nenhum canto arredondado foi gerado.");
+    assert.ok(encontrouBlocoAninhado, "Nenhum bloco interno foi gerado.");
+    assert.ok(encontrouSequencia, "Nenhuma sequência de blocos foi gerada.");
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {
-    const dificuldades = ["facil", "medio", "dificil"] as const;
-
-    for (let caso = 0; caso < 250; caso++) {
-      const dificuldade = dificuldades[caso % dificuldades.length];
+    for (let caso = 0; caso < 300; caso++) {
       const desafio = criarDesafioGerado({
-        dificuldade,
         aleatorio: criarAleatorioTeste(caso),
       });
       const blocosPorId = new Map<number, Bloco>();
@@ -96,7 +78,7 @@ suite("Gerador de desafios", () => {
 
       assert.ok(desafio.blocks.length >= 3, `Caso ${caso} gerou poucos blocos.`);
       assert.ok(
-        desafio.blocks.length <= 100,
+        desafio.blocks.length <= 90,
         `Caso ${caso} gerou blocos demais: ${desafio.blocks.length}.`,
       );
 
@@ -115,18 +97,8 @@ suite("Gerador de desafios", () => {
           `Bloco fora abaixo no caso ${caso}.`,
         );
         assert.match(bloco.color, /^#[0-9a-f]{6}$/i);
-        assert.ok((bloco.borderRadius ?? 0) >= 0);
-        assert.ok(
-          bloco.shape === "rectangle" || bloco.shape === "circle",
-          `Forma inválida no caso ${caso}.`,
-        );
-        if (bloco.shape === "circle") {
-          assert.strictEqual(
-            bloco.width,
-            bloco.height,
-            `Círculo deformado no caso ${caso}.`,
-          );
-        }
+        assert.strictEqual(bloco.borderRadius, 0);
+        assert.strictEqual(bloco.shape, "rectangle");
 
         if (bloco.parentId !== undefined) {
           const pai = blocosPorId.get(bloco.parentId);

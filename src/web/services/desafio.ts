@@ -1,27 +1,13 @@
-import { Bloco, Desafio, DificuldadeDesafio } from "../types";
+import { Bloco, Desafio } from "../types";
 
 export const LARGURA_GABARITO = 960;
 export const ALTURA_GABARITO = 540;
 
-const MARGEM_EXTERNA = 16;
-const ESPACO_SECOES = 8;
 const COR_FUNDO = "#9ca3af";
-
-const CORES_VIVAS = [
-  "#dc2626",
-  "#ef4444",
-  "#f97316",
-  "#facc15",
-  "#84cc16",
-  "#22c55e",
-  "#06b6d4",
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-];
-
-const CORES_CLARAS = ["#f8fafc", "#e2e8f0", "#dbeafe", "#dcfce7"];
-const CORES_SECAO = ["#aeb4bc", "#b8bec6", "#c1c7ce"];
+const MARGEM_EXTERNA = 12;
+const TAMANHO_MINIMO_CORTE = 72;
+const PROFUNDIDADE_MAXIMA = 3;
+const LIMITE_BLOCOS = 90;
 
 type Retangulo = {
   x: number;
@@ -30,140 +16,45 @@ type Retangulo = {
   height: number;
 };
 
+type Direcao = "row" | "column";
 type Aleatorio = () => number;
-
-type ConfiguracaoNivel = {
-  itensNavegacao: [number, number];
-  gruposConteudo: number;
-  linhasPorGrupo: [number, number];
-  chanceCirculo: number;
-  chanceArredondado: number;
-  chanceRodape: number;
-  profundidadeCartao: number;
-  raioMaximo: number;
-};
 
 type ContextoGeracao = {
   aleatorio: Aleatorio;
   blocks: Bloco[];
-  configuracao: ConfiguracaoNivel;
   proximoId: number;
-  indiceCor: number;
 };
 
 export type OpcoesGeracaoDesafio = {
-  dificuldade?: DificuldadeDesafio;
   aleatorio?: Aleatorio;
 };
 
-const CONFIGURACOES: Record<DificuldadeDesafio, ConfiguracaoNivel> = {
-  facil: {
-    itensNavegacao: [2, 3],
-    gruposConteudo: 2,
-    linhasPorGrupo: [2, 3],
-    chanceCirculo: 0.1,
-    chanceArredondado: 0.15,
-    chanceRodape: 0.15,
-    profundidadeCartao: 1,
-    raioMaximo: 8,
-  },
-  medio: {
-    itensNavegacao: [3, 5],
-    gruposConteudo: 3,
-    linhasPorGrupo: [3, 4],
-    chanceCirculo: 0.28,
-    chanceArredondado: 0.35,
-    chanceRodape: 0.55,
-    profundidadeCartao: 2,
-    raioMaximo: 14,
-  },
-  dificil: {
-    itensNavegacao: [4, 6],
-    gruposConteudo: 4,
-    linhasPorGrupo: [4, 6],
-    chanceCirculo: 0.45,
-    chanceArredondado: 0.55,
-    chanceRodape: 1,
-    profundidadeCartao: 3,
-    raioMaximo: 22,
-  },
-};
-
 /**
- * Gera um gabarito 960x540 seguindo a linguagem visual dos desafios:
- * fundo cinza, cabeçalho, navegação, faixas, cartões, formas aninhadas e
- * grupos de linhas. Cada chamada produz uma nova combinação aleatória.
+ * Adapta o gerador experimental baseado em cortes para o modelo da extensão.
+ * Cada chamada divide o gabarito em regiões aleatórias e preenche as regiões
+ * finais com retângulos comuns, alinhados, em sequência ou em lados opostos.
  */
 export function criarDesafioGerado(
   opcoes: OpcoesGeracaoDesafio = {},
 ): Desafio {
-  const dificuldade = opcoes.dificuldade ?? "facil";
   const aleatorio = opcoes.aleatorio ?? Math.random;
   const contexto: ContextoGeracao = {
     aleatorio,
     blocks: [],
-    configuracao: CONFIGURACOES[dificuldade],
     proximoId: 1,
-    indiceCor: inteiroAleatorio(aleatorio, 0, CORES_VIVAS.length - 1),
   };
-
-  const area: Retangulo = {
+  const areaUtil: Retangulo = {
     x: MARGEM_EXTERNA,
     y: MARGEM_EXTERNA,
     width: LARGURA_GABARITO - MARGEM_EXTERNA * 2,
     height: ALTURA_GABARITO - MARGEM_EXTERNA * 2,
   };
-  const temRodape = aleatorio() < contexto.configuracao.chanceRodape;
-  const alturaCabecalho = inteiroAleatorio(
-    aleatorio,
-    dificuldade === "dificil" ? 104 : 112,
-    dificuldade === "facil" ? 132 : 124,
-  );
-  const alturaFaixa = inteiroAleatorio(aleatorio, 48, 60);
-  const alturaRodape = temRodape ? inteiroAleatorio(aleatorio, 42, 54) : 0;
-  const quantidadeEspacos = temRodape ? 3 : 2;
-  const alturaConteudo =
-    area.height -
-    alturaCabecalho -
-    alturaFaixa -
-    alturaRodape -
-    quantidadeEspacos * ESPACO_SECOES;
+  const direcaoInicial: Direcao = aleatorio() < 0.5 ? "row" : "column";
 
-  const cabecalho: Retangulo = {
-    x: area.x,
-    y: area.y,
-    width: area.width,
-    height: alturaCabecalho,
-  };
-  const faixa: Retangulo = {
-    x: area.x,
-    y: cabecalho.y + cabecalho.height + ESPACO_SECOES,
-    width: area.width,
-    height: alturaFaixa,
-  };
-  const conteudo: Retangulo = {
-    x: area.x,
-    y: faixa.y + faixa.height + ESPACO_SECOES,
-    width: area.width,
-    height: alturaConteudo,
-  };
-
-  gerarCabecalho(contexto, cabecalho);
-  gerarFaixaDestaque(contexto, faixa);
-  gerarConteudo(contexto, conteudo);
-
-  if (temRodape) {
-    gerarRodape(contexto, {
-      x: area.x,
-      y: conteudo.y + conteudo.height + ESPACO_SECOES,
-      width: area.width,
-      height: alturaRodape,
-    });
-  }
+  gerarCortes(contexto, areaUtil, direcaoInicial, 0, undefined, COR_FUNDO);
 
   return {
     challengeId: criarIdDesafio(aleatorio),
-    dificuldade,
     width: LARGURA_GABARITO,
     height: ALTURA_GABARITO,
     backgroundColor: COR_FUNDO,
@@ -171,431 +62,331 @@ export function criarDesafioGerado(
   };
 }
 
-function gerarCabecalho(
+function gerarCortes(
   contexto: ContextoGeracao,
-  retangulo: Retangulo,
+  area: Retangulo,
+  direcao: Direcao,
+  profundidade: number,
+  parentId: number | undefined,
+  corPai: string,
 ): void {
-  const corSecao = itemAleatorio(contexto.aleatorio, CORES_SECAO);
-  const cabecalho = adicionarBloco(contexto, retangulo, corSecao);
-  const padding = 14;
-  const gap = 14;
-  const painelNaEsquerda = contexto.aleatorio() < 0.5;
-  const larguraPainel = Math.floor(retangulo.width * faixa(contexto.aleatorio, 0.28, 0.36));
-  const larguraPrincipal = retangulo.width - padding * 2 - gap - larguraPainel;
-  const xPrincipal = painelNaEsquerda
-    ? retangulo.x + padding + larguraPainel + gap
-    : retangulo.x + padding;
-  const xPainel = painelNaEsquerda
-    ? retangulo.x + padding
-    : xPrincipal + larguraPrincipal + gap;
-  const quantidadeNavegacao = inteiroAleatorio(
-    contexto.aleatorio,
-    contexto.configuracao.itensNavegacao[0],
-    contexto.configuracao.itensNavegacao[1],
-  );
-  const gapNavegacao = 10;
-  const larguraItem = Math.floor(
-    (larguraPrincipal - gapNavegacao * (quantidadeNavegacao - 1)) /
-      quantidadeNavegacao,
-  );
-  const alturaItem = inteiroAleatorio(contexto.aleatorio, 20, 28);
-  const yNavegacao = retangulo.y + padding;
-
-  for (let indice = 0; indice < quantidadeNavegacao; indice++) {
-    adicionarBloco(
-      contexto,
-      {
-        x: xPrincipal + indice * (larguraItem + gapNavegacao),
-        y: yNavegacao,
-        width: larguraItem,
-        height: alturaItem,
-      },
-      proximaCor(contexto),
-      cabecalho.id,
-      raioAleatorio(contexto),
-    );
+  if (contexto.blocks.length >= LIMITE_BLOCOS) {
+    return;
   }
 
-  const yCaixa = yNavegacao + alturaItem + 12;
-  const caixa = adicionarBloco(
-    contexto,
-    {
-      x: xPrincipal,
-      y: yCaixa,
-      width: larguraPrincipal,
-      height: retangulo.y + retangulo.height - padding - yCaixa,
-    },
-    itemAleatorio(contexto.aleatorio, CORES_CLARAS),
-    cabecalho.id,
-    raioAleatorio(contexto),
-  );
-  const caixaPadding = 10;
-  const larguraMarcador = Math.max(18, Math.floor(caixa.width * 0.12));
+  const partes = dividirRetangulo(area, direcao, contexto.aleatorio);
 
-  adicionarBloco(
-    contexto,
-    {
-      x: caixa.x + caixaPadding,
-      y: caixa.y + caixaPadding,
-      width: larguraMarcador,
-      height: caixa.height - caixaPadding * 2,
-    },
-    proximaCor(contexto),
-    caixa.id,
-    raioAleatorio(contexto),
-  );
-  adicionarBloco(
-    contexto,
-    {
-      x: caixa.x + caixa.width - caixaPadding - larguraMarcador * 1.8,
-      y: caixa.y + caixaPadding,
-      width: larguraMarcador * 1.8,
-      height: caixa.height - caixaPadding * 2,
-    },
-    proximaCor(contexto),
-    caixa.id,
-    raioAleatorio(contexto),
-  );
-
-  const painel = adicionarBloco(
-    contexto,
-    {
-      x: xPainel,
-      y: retangulo.y + padding,
-      width: larguraPainel,
-      height: retangulo.height - padding * 2,
-    },
-    itemAleatorio(contexto.aleatorio, CORES_CLARAS),
-    cabecalho.id,
-    raioAleatorio(contexto),
-  );
-
-  if (contexto.configuracao.profundidadeCartao > 1) {
-    const lado = Math.floor(Math.min(painel.width, painel.height) * 0.36);
-    adicionarBloco(
-      contexto,
-      {
-        x: painel.x + (painel.width - lado) / 2,
-        y: painel.y + (painel.height - lado) / 2,
-        width: lado,
-        height: lado,
-      },
-      proximaCor(contexto),
-      painel.id,
-      raioAleatorio(contexto),
-      contexto.aleatorio() < contexto.configuracao.chanceCirculo
-        ? "circle"
-        : "rectangle",
-    );
-  }
-}
-
-function gerarFaixaDestaque(
-  contexto: ContextoGeracao,
-  retangulo: Retangulo,
-): void {
-  const faixa = adicionarBloco(
-    contexto,
-    retangulo,
-    proximaCor(contexto),
-    undefined,
-    raioAleatorio(contexto),
-  );
-  const padding = 9;
-  const alturaLinha = Math.max(7, Math.floor(retangulo.height * 0.18));
-  const alturaChip = retangulo.height - padding * 2 - alturaLinha - 5;
-  const larguraChip = inteiroAleatorio(
-    contexto.aleatorio,
-    Math.floor(retangulo.width * 0.08),
-    Math.floor(retangulo.width * 0.16),
-  );
-
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + padding,
-      y: retangulo.y + padding,
-      width: larguraChip,
-      height: alturaChip,
-    },
-    proximaCor(contexto, faixa.color),
-    faixa.id,
-    raioAleatorio(contexto),
-  );
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + retangulo.width - padding - larguraChip,
-      y: retangulo.y + padding,
-      width: larguraChip,
-      height: alturaChip,
-    },
-    proximaCor(contexto, faixa.color),
-    faixa.id,
-    raioAleatorio(contexto),
-  );
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + padding,
-      y: retangulo.y + retangulo.height - padding - alturaLinha,
-      width: retangulo.width - padding * 2,
-      height: alturaLinha,
-    },
-    proximaCor(contexto, faixa.color),
-    faixa.id,
-    raioAleatorio(contexto),
-  );
-}
-
-function gerarConteudo(
-  contexto: ContextoGeracao,
-  retangulo: Retangulo,
-): void {
-  const corConteudo = itemAleatorio(contexto.aleatorio, CORES_SECAO);
-  const conteudo = adicionarBloco(contexto, retangulo, corConteudo);
-  const padding = 12;
-  const gap = 12;
-  const quantidade = contexto.configuracao.gruposConteudo;
-  const colunas = 2;
-  const linhas = Math.ceil(quantidade / colunas);
-  const larguraGrupo = Math.floor(
-    (retangulo.width - padding * 2 - gap * (colunas - 1)) / colunas,
-  );
-  const alturaGrupo = Math.floor(
-    (retangulo.height - padding * 2 - gap * (linhas - 1)) / linhas,
-  );
-  const inverterOrdem = contexto.aleatorio() < 0.5;
-
-  for (let indice = 0; indice < quantidade; indice++) {
-    const indiceVisual = inverterOrdem ? quantidade - indice - 1 : indice;
-    const coluna = indiceVisual % colunas;
-    const linha = Math.floor(indiceVisual / colunas);
-    const grupo = adicionarBloco(
-      contexto,
-      {
-        x: retangulo.x + padding + coluna * (larguraGrupo + gap),
-        y: retangulo.y + padding + linha * (alturaGrupo + gap),
-        width: larguraGrupo,
-        height: alturaGrupo,
-      },
-      corConteudo,
-      conteudo.id,
-    );
-    gerarGrupoCartao(contexto, grupo);
-  }
-}
-
-function gerarGrupoCartao(contexto: ContextoGeracao, grupo: Bloco): void {
-  const padding = 8;
-  const gap = 10;
-  const cartaoNaEsquerda = contexto.aleatorio() < 0.5;
-  const larguraUtil = grupo.width - padding * 2;
-  const larguraCartao = Math.floor(
-    larguraUtil *
-      faixa(
-        contexto.aleatorio,
-        contexto.configuracao.gruposConteudo > 3 ? 0.46 : 0.52,
-        0.62,
-      ),
-  );
-  const larguraLinhas = larguraUtil - larguraCartao - gap;
-  const alturaCartao = Math.floor(
-    (grupo.height - padding * 2) * faixa(contexto.aleatorio, 0.72, 1),
-  );
-  const xCartao = cartaoNaEsquerda
-    ? grupo.x + padding
-    : grupo.x + grupo.width - padding - larguraCartao;
-  const xLinhas = cartaoNaEsquerda
-    ? xCartao + larguraCartao + gap
-    : grupo.x + padding;
-  const yCartao =
-    grupo.y +
-    padding +
-    inteiroAleatorio(
-      contexto.aleatorio,
-      0,
-      Math.max(0, grupo.height - padding * 2 - alturaCartao),
-    );
-  const cartao = adicionarBloco(
-    contexto,
-    {
-      x: xCartao,
-      y: yCartao,
-      width: larguraCartao,
-      height: alturaCartao,
-    },
-    proximaCor(contexto),
-    grupo.id,
-    raioAleatorio(contexto),
-  );
-
-  gerarFormasDoCartao(contexto, cartao);
-  gerarLinhas(contexto, grupo, {
-    x: xLinhas,
-    y: grupo.y + padding,
-    width: larguraLinhas,
-    height: grupo.height - padding * 2,
-  });
-}
-
-function gerarFormasDoCartao(
-  contexto: ContextoGeracao,
-  cartao: Bloco,
-): void {
-  const padding = Math.max(7, Math.floor(Math.min(cartao.width, cartao.height) * 0.08));
-  const ladoMaximo = Math.max(
-    1,
-    Math.min(cartao.width - padding * 2, cartao.height - padding * 2),
-  );
-  const lado = Math.max(
-    1,
-    Math.floor(ladoMaximo * faixa(contexto.aleatorio, 0.58, 0.92)),
-  );
-  const posicoesX = [
-    cartao.x + padding,
-    cartao.x + (cartao.width - lado) / 2,
-    cartao.x + cartao.width - padding - lado,
-  ];
-  const posicoesY = [
-    cartao.y + padding,
-    cartao.y + (cartao.height - lado) / 2,
-    cartao.y + cartao.height - padding - lado,
-  ];
-  let forma = adicionarBloco(
-    contexto,
-    {
-      x: itemAleatorio(contexto.aleatorio, posicoesX),
-      y: itemAleatorio(contexto.aleatorio, posicoesY),
-      width: lado,
-      height: lado,
-    },
-    proximaCor(contexto, cartao.color),
-    cartao.id,
-    raioAleatorio(contexto),
-    contexto.aleatorio() < contexto.configuracao.chanceCirculo
-      ? "circle"
-      : "rectangle",
-  );
-
-  for (
-    let nivel = 1;
-    nivel < contexto.configuracao.profundidadeCartao;
-    nivel++
-  ) {
-    const novoLado = Math.floor(Math.min(forma.width, forma.height) * 0.46);
-
-    if (novoLado < 6) {
+  for (const parte of partes) {
+    if (contexto.blocks.length >= LIMITE_BLOCOS) {
       break;
     }
 
-    forma = adicionarBloco(
+    const bloco = adicionarBloco(
       contexto,
-      {
-        x: forma.x + (forma.width - novoLado) / 2,
-        y: forma.y + (forma.height - novoLado) / 2,
-        width: novoLado,
-        height: novoLado,
-      },
-      proximaCor(contexto, forma.color),
-      forma.id,
-      raioAleatorio(contexto),
-      contexto.aleatorio() < contexto.configuracao.chanceCirculo
-        ? "circle"
-        : "rectangle",
+      parte,
+      gerarCorContrastante(contexto.aleatorio, corPai),
+      parentId,
     );
+    const proximaDirecao: Direcao = direcao === "row" ? "column" : "row";
+    const tamanhoParaNovoCorte =
+      proximaDirecao === "row" ? bloco.width : bloco.height;
+    const chanceNovoCorte = [0.65, 0.4, 0.15][profundidade] ?? 0;
+    const podeCortar =
+      profundidade + 1 < PROFUNDIDADE_MAXIMA &&
+      tamanhoParaNovoCorte >= TAMANHO_MINIMO_CORTE * 2;
+
+    if (podeCortar && contexto.aleatorio() < chanceNovoCorte) {
+      gerarCortes(
+        contexto,
+        bloco,
+        proximaDirecao,
+        profundidade + 1,
+        bloco.id,
+        bloco.color,
+      );
+    } else {
+      adicionarPadraoInterno(contexto, bloco);
+    }
   }
 }
 
-function gerarLinhas(
-  contexto: ContextoGeracao,
-  grupo: Bloco,
+function dividirRetangulo(
   area: Retangulo,
-): void {
-  const quantidade = inteiroAleatorio(
-    contexto.aleatorio,
-    contexto.configuracao.linhasPorGrupo[0],
-    contexto.configuracao.linhasPorGrupo[1],
-  );
-  const gap = Math.max(4, Math.floor(area.height * 0.045));
-  const altura = Math.max(
+  direcao: Direcao,
+  aleatorio: Aleatorio,
+): Retangulo[] {
+  const tamanhoTotal = direcao === "row" ? area.width : area.height;
+  const maximoPartes = Math.min(
     3,
-    Math.min(14, Math.floor((area.height - gap * (quantidade - 1)) / quantidade)),
+    Math.floor(tamanhoTotal / TAMANHO_MINIMO_CORTE),
   );
-  const alturaTotal = quantidade * altura + gap * (quantidade - 1);
-  const inicioY = area.y + Math.max(0, (area.height - alturaTotal) / 2);
-  const cor = proximaCor(contexto);
+
+  if (maximoPartes < 2) {
+    return [area];
+  }
+
+  const quantidade = inteiroAleatorio(aleatorio, 2, maximoPartes);
+  const tamanhos: number[] = [];
+  let restante = tamanhoTotal;
 
   for (let indice = 0; indice < quantidade; indice++) {
+    const partesRestantes = quantidade - indice - 1;
+    const tamanho =
+      partesRestantes === 0
+        ? restante
+        : inteiroAleatorio(
+            aleatorio,
+            TAMANHO_MINIMO_CORTE,
+            restante - partesRestantes * TAMANHO_MINIMO_CORTE,
+          );
+    tamanhos.push(tamanho);
+    restante -= tamanho;
+  }
+
+  let deslocamento = 0;
+  return tamanhos.map((tamanho) => {
+    const parte: Retangulo =
+      direcao === "row"
+        ? {
+            x: area.x + deslocamento,
+            y: area.y,
+            width: tamanho,
+            height: area.height,
+          }
+        : {
+            x: area.x,
+            y: area.y + deslocamento,
+            width: area.width,
+            height: tamanho,
+          };
+    deslocamento += tamanho;
+    return parte;
+  });
+}
+
+function adicionarPadraoInterno(
+  contexto: ContextoGeracao,
+  pai: Bloco,
+): void {
+  if (
+    contexto.blocks.length >= LIMITE_BLOCOS ||
+    pai.width < 24 ||
+    pai.height < 24
+  ) {
+    return;
+  }
+
+  const tiposPossiveis = [0, 1];
+  if (Math.max(pai.width, pai.height) >= 150) {
+    tiposPossiveis.push(2);
+  }
+  if (Math.max(pai.width, pai.height) >= 180) {
+    tiposPossiveis.push(3);
+  }
+
+  const tipo = itemAleatorio(contexto.aleatorio, tiposPossiveis);
+
+  if (tipo === 0) {
+    adicionarRetanguloComum(contexto, pai);
+    return;
+  }
+
+  if (tipo === 1) {
+    adicionarRetanguloAlinhado(contexto, pai);
+    return;
+  }
+
+  if (tipo === 2) {
+    adicionarSequencia(contexto, pai);
+    return;
+  }
+
+  adicionarOpostos(contexto, pai);
+}
+
+function adicionarRetanguloComum(
+  contexto: ContextoGeracao,
+  pai: Bloco,
+): void {
+  const margem = Math.max(4, Math.floor(Math.min(pai.width, pai.height) * 0.05));
+  const width = limitarInteiro(
+    Math.floor(pai.width * faixa(contexto.aleatorio, 0.8, 0.9)),
+    1,
+    pai.width - margem * 2,
+  );
+  const height = limitarInteiro(
+    Math.floor(pai.height * faixa(contexto.aleatorio, 0.8, 0.9)),
+    1,
+    pai.height - margem * 2,
+  );
+  const x = inteiroAleatorio(
+    contexto.aleatorio,
+    pai.x + margem,
+    pai.x + pai.width - margem - width,
+  );
+  const y = inteiroAleatorio(
+    contexto.aleatorio,
+    pai.y + margem,
+    pai.y + pai.height - margem - height,
+  );
+
+  adicionarBloco(
+    contexto,
+    { x, y, width, height },
+    gerarCorContrastante(contexto.aleatorio, pai.color),
+    pai.id,
+  );
+}
+
+function adicionarRetanguloAlinhado(
+  contexto: ContextoGeracao,
+  pai: Bloco,
+): void {
+  const margem = Math.max(4, Math.floor(Math.min(pai.width, pai.height) * 0.05));
+  const width = limitarInteiro(
+    Math.floor(pai.width * faixa(contexto.aleatorio, 0.7, 0.8)),
+    1,
+    pai.width - margem * 2,
+  );
+  const height = limitarInteiro(
+    Math.floor(pai.height * faixa(contexto.aleatorio, 0.7, 0.8)),
+    1,
+    pai.height - margem * 2,
+  );
+  const centralizarHorizontal = contexto.aleatorio() < 0.5;
+  const posicoesX = [
+    pai.x + margem,
+    pai.x + Math.floor((pai.width - width) / 2),
+    pai.x + pai.width - margem - width,
+  ];
+  const posicoesY = [
+    pai.y + margem,
+    pai.y + Math.floor((pai.height - height) / 2),
+    pai.y + pai.height - margem - height,
+  ];
+  const x = centralizarHorizontal
+    ? posicoesX[1]
+    : itemAleatorio(contexto.aleatorio, posicoesX);
+  const y = centralizarHorizontal
+    ? itemAleatorio(contexto.aleatorio, posicoesY)
+    : posicoesY[1];
+
+  adicionarBloco(
+    contexto,
+    { x, y, width, height },
+    gerarCorContrastante(contexto.aleatorio, pai.color),
+    pai.id,
+  );
+}
+
+function adicionarSequencia(contexto: ContextoGeracao, pai: Bloco): void {
+  const horizontal = pai.width >= pai.height;
+  const tamanhoPrimario = horizontal ? pai.width : pai.height;
+  const maximo = Math.min(6, Math.floor(tamanhoPrimario / 60));
+
+  if (maximo < 2) {
+    adicionarRetanguloComum(contexto, pai);
+    return;
+  }
+
+  const quantidade = inteiroAleatorio(contexto.aleatorio, 2, maximo);
+  const maximoPrimario = Math.max(1, Math.floor((tamanhoPrimario - 12) / 54));
+  const itensPrimarios = Math.min(quantidade, maximoPrimario);
+  const colunas = horizontal ? itensPrimarios : Math.ceil(quantidade / itensPrimarios);
+  const linhas = horizontal ? Math.ceil(quantidade / itensPrimarios) : itensPrimarios;
+  const padding = 6;
+  const gap = 6;
+  const larguraCelula = Math.floor(
+    (pai.width - padding * 2 - gap * (colunas - 1)) / colunas,
+  );
+  const alturaCelula = Math.floor(
+    (pai.height - padding * 2 - gap * (linhas - 1)) / linhas,
+  );
+
+  if (larguraCelula < 4 || alturaCelula < 4) {
+    adicionarRetanguloComum(contexto, pai);
+    return;
+  }
+
+  for (
+    let indice = 0;
+    indice < quantidade && contexto.blocks.length < LIMITE_BLOCOS;
+    indice++
+  ) {
+    const linha = horizontal
+      ? Math.floor(indice / colunas)
+      : indice % linhas;
+    const coluna = horizontal
+      ? indice % colunas
+      : Math.floor(indice / linhas);
     const width = Math.max(
-      5,
-      Math.floor(area.width * faixa(contexto.aleatorio, 0.62, 1)),
+      2,
+      Math.floor(larguraCelula * faixa(contexto.aleatorio, 0.72, 0.92)),
     );
-    const alinhadoDireita = contexto.aleatorio() < 0.5;
+    const height = Math.max(
+      2,
+      Math.floor(alturaCelula * faixa(contexto.aleatorio, 0.72, 0.92)),
+    );
+    const origemX = pai.x + padding + coluna * (larguraCelula + gap);
+    const origemY = pai.y + padding + linha * (alturaCelula + gap);
+
     adicionarBloco(
       contexto,
       {
-        x: alinhadoDireita ? area.x + area.width - width : area.x,
-        y: inicioY + indice * (altura + gap),
+        x: origemX + Math.floor((larguraCelula - width) / 2),
+        y: origemY + Math.floor((alturaCelula - height) / 2),
         width,
-        height: altura,
+        height,
       },
-      cor,
-      grupo.id,
-      raioAleatorio(contexto),
+      gerarCorContrastante(contexto.aleatorio, pai.color),
+      pai.id,
     );
   }
 }
 
-function gerarRodape(contexto: ContextoGeracao, retangulo: Retangulo): void {
-  const rodape = adicionarBloco(
-    contexto,
-    retangulo,
-    proximaCor(contexto),
-    undefined,
-    raioAleatorio(contexto),
+function adicionarOpostos(contexto: ContextoGeracao, pai: Bloco): void {
+  const horizontal = pai.width >= pai.height;
+  const margem = 5;
+  const limitePrimario = Math.floor(
+    ((horizontal ? pai.width : pai.height) - margem * 3) / 2,
   );
-  const padding = 8;
-  const alturaLinha = Math.max(6, Math.floor(retangulo.height * 0.2));
-  const larguraChip = Math.floor(retangulo.width * 0.11);
-  const alturaChip = retangulo.height - padding * 2 - alturaLinha - 4;
+  const limiteSecundario =
+    (horizontal ? pai.height : pai.width) - margem * 2;
+  const ladoMaximo = Math.max(
+    2,
+    Math.min(
+      limitePrimario,
+      limiteSecundario,
+      Math.floor(Math.min(pai.width, pai.height) * 0.47),
+    ),
+  );
+  const ladoMinimo = Math.max(2, Math.floor(ladoMaximo * 0.85));
 
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + padding,
-      y: retangulo.y + padding,
-      width: larguraChip,
-      height: alturaChip,
-    },
-    proximaCor(contexto, rodape.color),
-    rodape.id,
-    raioAleatorio(contexto),
-  );
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + retangulo.width - padding - larguraChip,
-      y: retangulo.y + padding,
-      width: larguraChip,
-      height: alturaChip,
-    },
-    proximaCor(contexto, rodape.color),
-    rodape.id,
-    raioAleatorio(contexto),
-  );
-  adicionarBloco(
-    contexto,
-    {
-      x: retangulo.x + padding,
-      y: retangulo.y + retangulo.height - padding - alturaLinha,
-      width: retangulo.width - padding * 2,
-      height: alturaLinha,
-    },
-    proximaCor(contexto, rodape.color),
-    rodape.id,
-    raioAleatorio(contexto),
-  );
+  for (let indice = 0; indice < 2; indice++) {
+    const lado = inteiroAleatorio(contexto.aleatorio, ladoMinimo, ladoMaximo);
+    const alinharInicio = contexto.aleatorio() < 0.5;
+    const x = horizontal
+      ? indice === 0
+        ? pai.x + margem
+        : pai.x + pai.width - margem - lado
+      : alinharInicio
+        ? pai.x + margem
+        : pai.x + pai.width - margem - lado;
+    const y = horizontal
+      ? alinharInicio
+        ? pai.y + margem
+        : pai.y + pai.height - margem - lado
+      : indice === 0
+        ? pai.y + margem
+        : pai.y + pai.height - margem - lado;
+
+    adicionarBloco(
+      contexto,
+      { x, y, width: lado, height: lado },
+      gerarCorContrastante(contexto.aleatorio, pai.color),
+      pai.id,
+    );
+  }
 }
 
 function adicionarBloco(
@@ -603,8 +394,6 @@ function adicionarBloco(
   retangulo: Retangulo,
   color: string,
   parentId?: number,
-  borderRadius = 0,
-  shape: Bloco["shape"] = "rectangle",
 ): Bloco {
   const bloco: Bloco = {
     id: contexto.proximoId++,
@@ -614,37 +403,52 @@ function adicionarBloco(
     width: Math.max(1, Math.round(retangulo.width)),
     height: Math.max(1, Math.round(retangulo.height)),
     color,
-    borderRadius: shape === "circle" ? 0 : Math.max(0, Math.round(borderRadius)),
-    shape,
+    borderRadius: 0,
+    shape: "rectangle",
   };
-
   contexto.blocks.push(bloco);
   return bloco;
 }
 
-function proximaCor(contexto: ContextoGeracao, evitar?: string): string {
-  for (let tentativa = 0; tentativa < CORES_VIVAS.length; tentativa++) {
-    const cor = CORES_VIVAS[contexto.indiceCor % CORES_VIVAS.length];
-    contexto.indiceCor += inteiroAleatorio(contexto.aleatorio, 1, 3);
+function gerarCorContrastante(aleatorio: Aleatorio, evitar: string): string {
+  const corEvitada = hexParaRgb(evitar);
 
-    if (cor !== evitar) {
-      return cor;
+  for (let tentativa = 0; tentativa < 20; tentativa++) {
+    const rgb = {
+      r: inteiroAleatorio(aleatorio, 0, 255),
+      g: inteiroAleatorio(aleatorio, 0, 255),
+      b: inteiroAleatorio(aleatorio, 0, 255),
+    };
+    const diferenca =
+      Math.abs(rgb.r - corEvitada.r) +
+      Math.abs(rgb.g - corEvitada.g) +
+      Math.abs(rgb.b - corEvitada.b);
+
+    if (diferenca >= 180) {
+      return rgbParaHex(rgb.r, rgb.g, rgb.b);
     }
   }
 
-  return CORES_VIVAS[0];
+  return rgbParaHex(
+    255 - corEvitada.r,
+    255 - corEvitada.g,
+    255 - corEvitada.b,
+  );
 }
 
-function raioAleatorio(contexto: ContextoGeracao): number {
-  if (contexto.aleatorio() >= contexto.configuracao.chanceArredondado) {
-    return 0;
-  }
+function hexParaRgb(cor: string): { r: number; g: number; b: number } {
+  const valor = Number.parseInt(cor.replace("#", ""), 16);
+  return {
+    r: (valor >> 16) & 255,
+    g: (valor >> 8) & 255,
+    b: valor & 255,
+  };
+}
 
-  return inteiroAleatorio(
-    contexto.aleatorio,
-    4,
-    contexto.configuracao.raioMaximo,
-  );
+function rgbParaHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b]
+    .map((canal) => limitarInteiro(canal, 0, 255).toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 function criarIdDesafio(aleatorio: Aleatorio): string {
@@ -659,9 +463,14 @@ function inteiroAleatorio(
   minimo: number,
   maximo: number,
 ): number {
-  const inicio = Math.ceil(minimo);
-  const fim = Math.max(inicio, Math.floor(maximo));
+  const inicio = Math.ceil(Math.min(minimo, maximo));
+  const fim = Math.floor(Math.max(minimo, maximo));
   return Math.floor(aleatorio() * (fim - inicio + 1)) + inicio;
+}
+
+function limitarInteiro(valor: number, minimo: number, maximo: number): number {
+  const limiteSuperior = Math.max(minimo, maximo);
+  return Math.max(minimo, Math.min(limiteSuperior, Math.round(valor)));
 }
 
 function faixa(aleatorio: Aleatorio, minimo: number, maximo: number): number {

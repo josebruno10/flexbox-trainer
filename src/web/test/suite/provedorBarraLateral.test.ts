@@ -81,7 +81,7 @@ suite("Provedor da barra lateral", () => {
 
     interno.prepararPastaDoAluno = async () => undefined;
     interno.testarConexaoServidor = async () => undefined;
-    await provedor.iniciarNovoDesafio(false, "dificil");
+    await provedor.iniciarNovoDesafio();
 
     assert.strictEqual(interno.fimTentativaMs, undefined);
     assert.strictEqual(interno.inicioTentativaMs, 20_000);
@@ -182,7 +182,7 @@ suite("Provedor da barra lateral", () => {
 
     interno.prepararPastaDoAluno = async () => undefined;
     interno.testarConexaoServidor = async () => undefined;
-    await provedor.iniciarNovoDesafio(false, "medio");
+    await provedor.iniciarNovoDesafio();
     assert.notStrictEqual(
       interno.desafioAtual?.challengeId,
       challengeIdAnterior,

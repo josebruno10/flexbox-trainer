@@ -171,30 +171,6 @@ export function obterHtmlWebview(
       flex-wrap: wrap;
     }
 
-    .nivel-desafio {
-      display: grid;
-      gap: 5px;
-      margin-top: 10px;
-    }
-
-    .nivel-desafio label {
-      color: #9fb4d1;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    select {
-      width: 100%;
-      border: 1px solid #2a3140;
-      border-radius: 6px;
-      padding: 7px 9px;
-      background: #0b0d12;
-      color: #e8edf5;
-      font: inherit;
-      font-size: 12px;
-    }
-
     button {
       border: 0;
       border-radius: 999px;
@@ -233,16 +209,8 @@ export function obterHtmlWebview(
       <div id="avatarFallback" class="avatar-fallback">${escapeHtml((nomeUsuario || "U").trim().charAt(0).toUpperCase() || "U")}</div>
       <div class="status-auth-texto" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
     </div>
-    <div class="nivel-desafio">
-      <label for="seletorDificuldade">Nível do desafio</label>
-      <select id="seletorDificuldade">
-        <option value="facil">Fácil</option>
-        <option value="medio">Médio</option>
-        <option value="dificil">Difícil</option>
-      </select>
-    </div>
     <div class="acoes">
-      <button id="botaoNovoDesafio">Gerar desafio</button>
+      <button id="botaoNovoDesafio">Gerar novo desafio</button>
       <button id="botaoEncerrarDesafio" class="perigo" disabled>Encerrar desafio</button>
       <button id="botaoTestarConexao" class="secundario">Testar servidor</button>
     </div>

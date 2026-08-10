@@ -47,6 +47,22 @@ suite("Interface do desafio", () => {
     assert.ok(html.includes("Encerrar desafio"));
   });
 
+  test("gera desafios aleatórios sem seletor de dificuldade", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlWebview(
+      webview,
+      vscode.Uri.parse("file:///extensao"),
+      "Aluno",
+    );
+
+    assert.ok(html.includes("Gerar novo desafio"));
+    assert.ok(!html.includes("seletorDificuldade"));
+    assert.ok(!html.includes("Nível do desafio"));
+  });
+
   test("não exibe um título para o desafio gerado", () => {
     const webview = {
       cspSource: "vscode-webview://teste",

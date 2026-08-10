@@ -3,7 +3,6 @@ import { AuthService } from "../auth/authService";
 import { LoginProvider } from "../auth/loginProvider";
 import {
   Desafio,
-  DificuldadeDesafio,
   EstadoAutenticacao,
   MensagemRecebidaBarraLateral,
   ResumoWorkspace,
@@ -34,8 +33,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private readonly loginProvider: LoginProvider;
 
   private visualizacaoWebview?: vscode.WebviewView;
-
-  private dificuldadeAtual: DificuldadeDesafio = "facil";
 
   private desafioAtual?: Desafio;
 
@@ -162,7 +159,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "novoDesafio") {
-          void this.iniciarNovoDesafio(true, mensagem.dificuldade);
+          void this.iniciarNovoDesafio();
           void this.atualizarPreviewWorkspace();
           return;
         }
@@ -203,32 +200,16 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  public async iniciarNovoDesafio(
-    confirmar = true,
-    dificuldade = this.dificuldadeAtual,
-  ): Promise<void> {
+  public async iniciarNovoDesafio(): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
-    }
-
-    if (confirmar && this.desafioAtual) {
-      const confirmacao = await vscode.window.showInformationMessage(
-        "Deseja iniciar um novo desafio? O progresso atual será perdido.",
-        { modal: true },
-        "Sim",
-      );
-
-      if (confirmacao !== "Sim") {
-        return;
-      }
     }
 
     const configuracao = lerConfiguracaoServidor();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
-    this.dificuldadeAtual = dificuldade;
     this.desafioAtual = {
-      ...criarDesafioGerado({ dificuldade }),
+      ...criarDesafioGerado(),
       captureWidth: configuracao.captureWidth,
       captureHeight: configuracao.captureHeight,
     };
