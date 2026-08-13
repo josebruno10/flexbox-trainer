@@ -354,18 +354,6 @@ export function obterHtmlAutenticacao(
       filter: brightness(1.1);
     }
 
-    .btn-github {
-      background: #24292e;
-      color: white;
-      border: 1px solid #444d56;
-    }
-
-    .btn-microsoft {
-      background: #00a4ef;
-      color: white;
-      border: 1px solid #0078d4;
-    }
-
     .btn-google {
       background: white;
       color: #444;
@@ -399,15 +387,13 @@ export function obterHtmlAutenticacao(
   <main class="cartao">
     <p class="eyebrow">FlexBox Trainer</p>
     <h1>Acesse sua conta 🚀</h1>
-    <p class="descricao">Escolha um provedor para conectar à sua conta do IFMS.</p>
-    <div class="status" id="statusAutenticacao">Selecione uma opção para entrar.</div>
+    <p class="descricao">Entre com o Google. O token recebido será validado pela API do torneio antes de liberar a extensão.</p>
+    <div class="status" id="statusAutenticacao">Use sua conta Google para continuar.</div>
     <div class="acoes">
-      <button id="botaoGitHub" class="btn-github">Entrar com GitHub</button>
-      <button id="botaoMicrosoft" class="btn-microsoft">Entrar com Microsoft</button>
       <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
       <button id="botaoSair" class="terciario">Desconectar</button>
     </div>
-    <div class="meta">A validação é feita com a API configurada e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
+    <div class="meta">A credencial Google é trocada por um token próprio do servidor. Somente esse novo token fica salvo no SecretStorage do VS Code.</div>
   </main>
   <script src="${scriptUri}"></script>
 </body>

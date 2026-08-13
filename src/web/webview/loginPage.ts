@@ -10,14 +10,6 @@ type EstadoAutenticacaoRecebido = {
 const vscode = acquireVsCodeApi();
 const statusAutenticacao = document.getElementById("statusAutenticacao") as HTMLDivElement;
 
-document.getElementById("botaoGitHub")?.addEventListener("click", () => {
-  vscode.postMessage({ type: "loginGitHub" });
-});
-
-document.getElementById("botaoMicrosoft")?.addEventListener("click", () => {
-  vscode.postMessage({ type: "loginMicrosoft" });
-});
-
 document.getElementById("botaoGoogle")?.addEventListener("click", () => {
   vscode.postMessage({ type: "loginGoogle" });
 });
@@ -39,7 +31,8 @@ window.addEventListener("message", (event: MessageEvent<{ type: string; payload:
     } else if (estado.status === "error") {
       statusAutenticacao.textContent = estado.message || "Erro.";
     } else {
-      statusAutenticacao.textContent = "Escolha um provedor para continuar.";
+      statusAutenticacao.textContent =
+        estado.message || "Entre com sua conta Google para continuar.";
     }
   }
 });

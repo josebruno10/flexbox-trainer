@@ -27,17 +27,15 @@ export type ResultadoAvaliacao = {
   precision: number;
   score: number;
   source:
-    | "mock-local"
-    | "local-visual"
     | "servidor"
     | "servidor-sem-nota"
     | "api-error"
+    | "authentication-error"
     | "missing-files"
     | "config-missing"
-    | "capture-error"
     | "folder-error";
   error?: string;
-  serverMessage?: string;
+  httpStatus?: number;
 };
 
 export type EstadoAutenticacao = {
@@ -87,16 +85,8 @@ export type MensagemRecebidaBarraLateral =
   | { type: "encerrarDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }
-  | {
-      type: "solicitarVerificacao";
-      challengeId: string;
-      precisaoLocal?: number;
-      erroCorrecaoLocal?: string;
-    }
+  | { type: "solicitarVerificacao"; challengeId: string }
   | { type: "abrirLogin" }
-  | { type: "abrirCadastro" }
-  | { type: "loginGitHub" }
-  | { type: "loginMicrosoft" }
   | { type: "loginGoogle" }
   | { type: "revalidarSessao" }
   | {

@@ -1,5 +1,4 @@
 import html2canvas from "html2canvas";
-import { calcularPrecisaoImagem } from "../services/comparacaoImagem";
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -44,7 +43,6 @@ type ResultadoAvaliacaoRecebido = {
   score: number;
   source: string;
   error?: string;
-  serverMessage?: string;
 };
 
 type StatusConexaoServidorRecebido = {
@@ -115,7 +113,6 @@ let tempoBaseMs = 0;
 let instanteTempoRecebido = Date.now();
 let confirmarAtualizacaoWorkspace: (() => void) | undefined;
 let componenteSelecionadoId: number | undefined;
-let capturaWorkspaceAtual: Promise<HTMLCanvasElement> | undefined;
 let versaoWorkspace = 0;
 
 botaoNovoDesafio?.addEventListener("click", () => {
@@ -417,7 +414,6 @@ function renderizarWorkspace(
     prepararSuperficieAvaliacao(resumoWorkspace.htmlPreview);
     const versaoDaCaptura = ++versaoWorkspace;
     const captura = capturarCanvasAluno();
-    capturaWorkspaceAtual = captura;
     void captura
       .then((canvasAluno) => {
         if (versaoDaCaptura === versaoWorkspace) {
@@ -432,7 +428,6 @@ function renderizarWorkspace(
         }
       });
   } catch (error) {
-    capturaWorkspaceAtual = undefined;
     const mensagem =
       error instanceof Error ? error.message : "Falha ao preparar o preview.";
     desenharMensagemPreview(mensagem);
@@ -450,37 +445,28 @@ async function solicitarVerificacao(): Promise<void> {
   const challengeId = desafioAtual.challengeId;
   botaoVerificar.disabled = true;
   caixaResultado.textContent =
-    "Atualizando o preview e calculando a precisão...";
+    "Atualizando os arquivos antes de enviar ao servidor...";
 
   try {
     await atualizarWorkspaceAntesDaVerificacao();
-    const precisaoLocal = await calcularPrecisaoVisualLocal();
-
-    if (desafioAtual?.challengeId !== challengeId) {
-      return;
-    }
-
-    caixaResultado.textContent =
-      `Precisão visual local: ${precisaoLocal.toFixed(2)}%` +
-      " | Enviando o HTML e o CSS ao servidor...";
-    vscode.postMessage({
-      type: "solicitarVerificacao",
-      challengeId,
-      precisaoLocal,
-    });
   } catch (error) {
     if (desafioAtual?.challengeId !== challengeId) {
       return;
     }
 
     const mensagem =
-      error instanceof Error ? error.message : "Falha desconhecida na captura.";
-    vscode.postMessage({
-      type: "solicitarVerificacao",
-      challengeId,
-      erroCorrecaoLocal: mensagem,
-    });
+      error instanceof Error ? error.message : "Falha ao atualizar o preview.";
+    caixaResultado.textContent =
+      `Aviso do preview: ${mensagem} Enviando os arquivos mesmo assim...`;
   }
+
+  if (desafioAtual?.challengeId !== challengeId) {
+    return;
+  }
+
+  caixaResultado.textContent =
+    "Enviando o HTML e o CSS para correção no servidor...";
+  vscode.postMessage({ type: "solicitarVerificacao", challengeId });
 }
 
 async function atualizarWorkspaceAntesDaVerificacao(): Promise<void> {
@@ -512,23 +498,6 @@ async function atualizarWorkspaceAntesDaVerificacao(): Promise<void> {
 
     vscode.postMessage({ type: "atualizarPreview" });
   });
-}
-
-async function calcularPrecisaoVisualLocal(): Promise<number> {
-  const canvasAluno = await (
-    capturaWorkspaceAtual ?? capturarCanvasAluno()
-  );
-  desenharPreviewAluno(canvasAluno);
-  const contextoAlvo = canvasAlvo.getContext("2d", { willReadFrequently: true });
-  const contextoAluno = canvasAluno.getContext("2d", { willReadFrequently: true });
-
-  if (!contextoAlvo || !contextoAluno) {
-    throw new Error("O navegador não disponibilizou o contexto de comparação.");
-  }
-
-  const alvo = contextoAlvo.getImageData(0, 0, 960, 540).data;
-  const atual = contextoAluno.getImageData(0, 0, 960, 540).data;
-  return calcularPrecisaoImagem(alvo, atual).precisao;
 }
 
 async function capturarCanvasAluno(): Promise<HTMLCanvasElement> {
@@ -665,21 +634,11 @@ function renderizarResultado(
   if (
     resultado.source === "missing-files" ||
     resultado.source === "config-missing" ||
-    resultado.source === "capture-error" ||
     resultado.source === "folder-error" ||
     resultado.source === "servidor-sem-nota"
   ) {
     caixaResultado.textContent =
       resultado.error || "Erro ao verificar a tentativa.";
-    return;
-  }
-
-  if (resultado.source === "local-visual") {
-    caixaResultado.textContent =
-      "Precisão visual local (experimental): " +
-      resultado.precision.toFixed(2) +
-      "%" +
-      (resultado.serverMessage ? " | Servidor: " + resultado.serverMessage : "");
     return;
   }
 
@@ -689,7 +648,10 @@ function renderizarResultado(
     return;
   }
 
-  if (resultado.source === "api-error") {
+  if (
+    resultado.source === "api-error" ||
+    resultado.source === "authentication-error"
+  ) {
     caixaResultado.textContent =
       "Erro na API: " + (resultado.error || "erro desconhecido");
     return;

@@ -18,8 +18,10 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       handleUri: async (uri: vscode.Uri) => {
-        // Correção: Usa includes para evitar bugs com barras no final (trailing slashes)
-        if (!uri.path.includes("/auth/callback")) {
+        if (
+          uri.authority !== context.extension.id ||
+          uri.path !== "/auth/callback"
+        ) {
           return;
         }
 
@@ -67,15 +69,6 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "flexbox-trainer.criarConta",
-      async () => {
-        await authService.abrirFluxoAutenticacao("register");
-      },
-    ),
-  );
-
-  context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.logout", async () => {
       await authService.logout();
     }),
@@ -89,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
           "workbench.view.extension.flexboxTrainer",
         );
         vscode.window.showInformationMessage(
-          "Você precisa criar uma conta ou fazer login para usar esta extensão.",
+          "Você precisa entrar com o Google para usar esta extensão.",
         );
         return;
       }

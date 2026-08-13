@@ -4,7 +4,25 @@ import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 import { log } from "./logger";
 
-export function lerConfiguracaoServidor(): ConfiguracaoServidor {
+export type IdentidadeServidor = {
+  userId?: number;
+  teamId?: number;
+};
+
+export class ErroHttpServidor extends Error {
+  public constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ErroHttpServidor";
+  }
+}
+
+export function lerConfiguracaoServidor(
+  apiToken = "",
+  identidade: IdentidadeServidor = {},
+): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
   let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
@@ -16,10 +34,16 @@ export function lerConfiguracaoServidor(): ConfiguracaoServidor {
 
   return {
     apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
-    apiToken: config.get<string>("apiToken", "").trim(),
+    apiToken: apiToken.trim(),
     dinamicaId: config.get<string>("dinamicaId", "").trim(),
-    userId: config.get<number>("userId", 0),
-    teamId: config.get<number>("teamId", 0),
+    userId:
+      identidade.userId && identidade.userId > 0
+        ? identidade.userId
+        : 0,
+    teamId:
+      identidade.teamId && identidade.teamId > 0
+        ? identidade.teamId
+        : 0,
     captureWidth: config.get<number>("captureWidth", 960),
     captureHeight: config.get<number>("captureHeight", 540),
   };
@@ -30,6 +54,7 @@ export function temConfiguracaoServidorMinima(
 ): boolean {
   return Boolean(
     configuracao.apiBaseUrl &&
+      configuracao.apiToken &&
       configuracao.dinamicaId &&
       configuracao.userId > 0 &&
       configuracao.teamId > 0,
@@ -43,14 +68,18 @@ export async function verificarConexaoServidor(
     throw new Error("A URL base da API não está configurada.");
   }
 
+  if (!configuracao.apiToken) {
+    throw new Error("Faça login com o Google antes de testar o servidor.");
+  }
+
   const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
-  const rotaUsuarios = `${apiBaseUrl}/usuarios`;
+  const rotaPerfil = `${apiBaseUrl}/auth/me`;
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 10000);
 
-  log.info(`Testando conexão com o servidor: ${rotaUsuarios}`);
+  log.info(`Testando sessão com o servidor: ${rotaPerfil}`);
 
-  const resposta = await fetch(rotaUsuarios, {
+  const resposta = await fetch(rotaPerfil, {
     method: "GET",
     mode: "cors",
     headers: montarCabecalhos(configuracao),
@@ -72,7 +101,10 @@ export async function verificarConexaoServidor(
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Servidor respondeu com erro: ${detalhe}`);
+    throw new ErroHttpServidor(
+      `Servidor respondeu com erro (HTTP ${resposta.status}): ${detalhe}`,
+      resposta.status,
+    );
   }
 
   return `Conexão realizada com sucesso (HTTP ${resposta.status}).`;
@@ -111,7 +143,10 @@ export async function criarPastaDoAluno(
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(`Falha ao criar pasta (HTTP ${resposta.status}): ${detalhe}`);
+    throw new ErroHttpServidor(
+      `Falha ao criar pasta (HTTP ${resposta.status}): ${detalhe}`,
+      resposta.status,
+    );
   }
 
   const dados = await extrairCorpoResposta(resposta);
@@ -169,29 +204,21 @@ export async function enviarConteudoDaTentativa(
 
   if (!resposta.ok) {
     const detalhe = await extrairDetalheDeErro(resposta);
-    throw new Error(
+    throw new ErroHttpServidor(
       `Falha ao enviar conteúdo (HTTP ${resposta.status}): ${detalhe}`,
+      resposta.status,
     );
   }
 
-  const dados = (await extrairCorpoResposta(resposta)) as {
-    message?: string;
-    nota?: number;
-    score?: number;
-    precisao?: number;
-    precision?: number;
-  };
+  const dados = await extrairCorpoResposta(resposta);
+  const nota = extrairNotaServidor(dados);
 
-  const nota = dados.nota ?? dados.score ?? dados.precisao ?? dados.precision;
-
-  if (typeof nota !== "number") {
+  if (nota === undefined) {
     return {
       precision: 0,
       score: 0,
       source: "servidor-sem-nota",
-      error:
-        dados.message ||
-        "Conteúdo salvo, mas a API não retornou nota/precisão nesta rota.",
+      error: extrairMensagemServidor(dados),
     };
   }
 
@@ -200,6 +227,71 @@ export async function enviarConteudoDaTentativa(
     score: nota,
     source: "servidor",
   };
+}
+
+export function extrairNotaServidor(dados: unknown): number | undefined {
+  if (!dados || typeof dados !== "object") {
+    return undefined;
+  }
+
+  const fila: unknown[] = [dados];
+  const visitados = new Set<object>();
+  const chavesNota = new Set([
+    "nota",
+    "score",
+    "precisao",
+    "precision",
+    "porcentagem",
+    "percentage",
+    "acuracia",
+    "accuracy",
+  ]);
+
+  while (fila.length > 0) {
+    const atual = fila.shift();
+
+    if (!atual || typeof atual !== "object" || visitados.has(atual)) {
+      continue;
+    }
+
+    visitados.add(atual);
+
+    for (const [chave, valor] of Object.entries(
+      atual as Record<string, unknown>,
+    )) {
+      if (chavesNota.has(chave.toLowerCase())) {
+        const numero =
+          typeof valor === "number"
+            ? valor
+            : typeof valor === "string" && valor.trim()
+              ? Number(valor)
+              : undefined;
+
+        if (numero !== undefined && Number.isFinite(numero)) {
+          return numero;
+        }
+      }
+
+      if (valor && typeof valor === "object") {
+        fila.push(valor);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extrairMensagemServidor(dados: unknown): string {
+  if (dados && typeof dados === "object") {
+    const resposta = dados as Record<string, unknown>;
+    const mensagem = resposta.message ?? resposta.mensagem ?? resposta.detail;
+
+    if (typeof mensagem === "string" && mensagem.trim()) {
+      return mensagem.trim();
+    }
+  }
+
+  return "Conteúdo salvo, mas a API não retornou nota/precisão nesta rota.";
 }
 
 async function extrairDetalheDeErro(response: Response): Promise<string> {
@@ -273,6 +365,15 @@ export function extrairCodigoPasta(dados: unknown): string | undefined {
 
 function normalizarApiBaseUrl(apiBaseUrl: string): string {
   const url = new URL(apiBaseUrl);
+
+  if (url.protocol !== "https:") {
+    throw new Error("A URL base da API precisa usar HTTPS.");
+  }
+
+  if (url.username || url.password) {
+    throw new Error("A URL base da API não pode conter credenciais.");
+  }
+
   url.hash = "";
   url.search = "";
   url.pathname = url.pathname.replace(/\/docs\/?$/, "").replace(/\/+$/, "");
@@ -292,7 +393,21 @@ function montarCabecalhos(
     cabecalhos.Authorization = `Bearer ${configuracao.apiToken}`;
   }
 
-  log.info("[FlexBox Trainer] Cabeçalhos da requisição:", cabecalhos);
+  log.info(
+    "[FlexBox Trainer] Cabeçalhos enviados:",
+    resumirCabecalhosParaLog(cabecalhos),
+  );
 
   return cabecalhos;
+}
+
+export function resumirCabecalhosParaLog(
+  cabecalhos: Record<string, string>,
+): { nomes: string[]; authorization?: string } {
+  return {
+    nomes: Object.keys(cabecalhos),
+    authorization: cabecalhos.Authorization
+      ? "Bearer [PROTEGIDO]"
+      : undefined,
+  };
 }

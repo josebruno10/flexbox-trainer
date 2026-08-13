@@ -3,8 +3,10 @@ import { ConfiguracaoServidor } from "../../types";
 import {
   temConfiguracaoServidorMinima,
   extrairCodigoPasta,
+  extrairNotaServidor,
   criarPastaDoAluno,
   enviarConteudoDaTentativa,
+  resumirCabecalhosParaLog,
   verificarConexaoServidor,
 } from "../../services/servidor";
 
@@ -13,7 +15,7 @@ function criarConfiguracao(
 ): ConfiguracaoServidor {
   return {
     apiBaseUrl: "https://api.teste.com/api",
-    apiToken: "",
+    apiToken: "token-servidor",
     dinamicaId: "KOTI",
     userId: 1,
     teamId: 10,
@@ -49,6 +51,17 @@ suite("Servidor Service Test Suite", () => {
     assert.strictEqual(temConfiguracaoServidorMinima(configInvalida), false);
   });
 
+  test("Deve ocultar o token ao resumir cabeçalhos para o log", () => {
+    const resumo = resumirCabecalhosParaLog({
+      Accept: "application/json",
+      Authorization: "Bearer token-secreto",
+    });
+    const textoLog = JSON.stringify(resumo);
+
+    assert.ok(textoLog.includes("Bearer [PROTEGIDO]"));
+    assert.ok(!textoLog.includes("token-secreto"));
+  });
+
   test("Deve extrair o código da pasta de diferentes formatos de resposta", () => {
     // Teste com string direta
     assert.strictEqual(extrairCodigoPasta("PASTA123"), "PASTA123");
@@ -67,6 +80,17 @@ suite("Servidor Service Test Suite", () => {
 
     // Teste com falha
     assert.strictEqual(extrairCodigoPasta(null), undefined);
+  });
+
+  test("Deve extrair nota normalizada mesmo quando vier aninhada", () => {
+    assert.strictEqual(
+      extrairNotaServidor({ resultado: { correcao: { precision: "87.5" } } }),
+      87.5,
+    );
+    assert.strictEqual(extrairNotaServidor({ message: "Conteúdo salvo" }), undefined);
+    assert.strictEqual(extrairNotaServidor({ nota: null }), undefined);
+    assert.strictEqual(extrairNotaServidor({ nota: 0 }), 0);
+    assert.strictEqual(extrairNotaServidor({ precision: "0" }), 0);
   });
 
   test("Configuração deve remover espaços sem alterar maiúsculas/minúsculas do dinamicaId", () => {
@@ -170,7 +194,7 @@ suite("Servidor Service Test Suite", () => {
     }
   });
 
-  test("Deve testar a conexão sem exigir IDs do torneio", async () => {
+  test("Deve validar a sessão sem exigir IDs do torneio", async () => {
     const config = criarConfiguracao({
       apiBaseUrl: "https://api.teste.com/api/",
       dinamicaId: "",
@@ -193,9 +217,13 @@ suite("Servidor Service Test Suite", () => {
     try {
       const mensagem = await verificarConexaoServidor(config);
 
-      assert.strictEqual(urlRecebida, "https://api.teste.com/api/usuarios");
+      assert.strictEqual(urlRecebida, "https://api.teste.com/api/auth/me");
       assert.strictEqual(opcoesRecebidas?.method, "GET");
       assert.strictEqual(opcoesRecebidas?.mode, "cors");
+      assert.strictEqual(
+        (opcoesRecebidas?.headers as Record<string, string>).Authorization,
+        "Bearer token-servidor",
+      );
       assert.strictEqual(
         mensagem,
         "Conexão realizada com sucesso (HTTP 200).",
@@ -222,10 +250,17 @@ suite("Servidor Service Test Suite", () => {
 
     try {
       await verificarConexaoServidor(config);
-      assert.strictEqual(urlRecebida, "https://ifms.pro.br:6005/usuarios");
+      assert.strictEqual(urlRecebida, "https://ifms.pro.br:6005/auth/me");
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("Deve recusar teste de conexão sem token de sessão", async () => {
+    await assert.rejects(
+      verificarConexaoServidor(criarConfiguracao({ apiToken: "" })),
+      /Faça login com o Google/,
+    );
   });
 
   test("Deve enviar HTML e CSS no formulário esperado pelo servidor", async () => {
@@ -306,6 +341,34 @@ suite("Servidor Service Test Suite", () => {
         score: 0,
         source: "servidor-sem-nota",
         error: "Conteúdo salvo",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Deve aceitar zero como nota oficial do servidor", async () => {
+    const config = criarConfiguracao();
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ resultado: { nota: 0 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    try {
+      const resultado = await enviarConteudoDaTentativa(
+        config,
+        "PASTA-42",
+        "<main></main>",
+        "main { display: flex; }",
+      );
+
+      assert.deepStrictEqual(resultado, {
+        precision: 0,
+        score: 0,
+        source: "servidor",
       });
     } finally {
       globalThis.fetch = originalFetch;

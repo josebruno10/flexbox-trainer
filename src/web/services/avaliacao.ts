@@ -1,20 +1,34 @@
 import { ResultadoAvaliacao, TentativaPayload } from "../types";
 import {
+  ErroHttpServidor,
   enviarConteudoDaTentativa,
+  IdentidadeServidor,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
 } from "./servidor";
 
 export async function avaliarTentativa(
   payload: TentativaPayload,
+  apiToken: string,
+  identidade: IdentidadeServidor = {},
 ): Promise<ResultadoAvaliacao> {
-  const configuracao = lerConfiguracaoServidor();
+  const configuracao = lerConfiguracaoServidor(apiToken, identidade);
 
   if (!configuracao.apiBaseUrl) {
     return {
-      precision: criarPrecisaoMock(payload.html, payload.css),
+      precision: 0,
       score: 0,
-      source: "mock-local",
+      source: "config-missing",
+      error: "Configure a URL base da API para verificar a tentativa.",
+    };
+  }
+
+  if (!configuracao.apiToken) {
+    return {
+      precision: 0,
+      score: 0,
+      source: "authentication-error",
+      error: "Faça login com o Google antes de verificar a tentativa.",
     };
   }
 
@@ -24,7 +38,7 @@ export async function avaliarTentativa(
       score: 0,
       source: "config-missing",
       error:
-        "Preencha dinamicaId, userId e teamId nas configurações da extensão.",
+        "Informe a dinâmica. O servidor também precisa associar sua conta a um usuário e uma equipe.",
     };
   }
 
@@ -47,16 +61,17 @@ export async function avaliarTentativa(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido";
-    return { precision: 0, score: 0, source: "api-error", error: message };
+    return {
+      precision: 0,
+      score: 0,
+      source:
+        error instanceof ErroHttpServidor &&
+        (error.status === 401 || error.status === 403)
+          ? "authentication-error"
+          : "api-error",
+      error: message,
+      httpStatus:
+        error instanceof ErroHttpServidor ? error.status : undefined,
+    };
   }
-}
-
-function criarPrecisaoMock(html: string, css: string): number {
-  const texto = `${html.trim()}|${css.trim()}`;
-  if (!texto.trim()) {
-    return 0;
-  }
-
-  const base = Math.min(100, Math.max(10, texto.length / 20));
-  return Number(base.toFixed(2));
 }

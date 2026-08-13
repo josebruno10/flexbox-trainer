@@ -26,11 +26,7 @@ type ProvedorInterno = {
   preparandoPasta: Promise<void>;
   enviarEstado(): void;
   encerrarDesafioAtual(): void;
-  verificarTentativaAtual(
-    challengeId: string,
-    precisaoLocal?: number,
-    erroCorrecaoLocal?: string,
-  ): Promise<void>;
+  verificarTentativaAtual(challengeId: string): Promise<void>;
   prepararPastaDoAluno(): Promise<void>;
   testarConexaoServidor(): Promise<void>;
 };
@@ -92,12 +88,16 @@ suite("Provedor da barra lateral", () => {
     );
   });
 
-  test("prioriza a nota oficial retornada pelo servidor sobre a precisão local", async () => {
+  test("usa exclusivamente a nota retornada por salvar-conteudo", async () => {
     mockarConfiguracaoServidorValida();
-    globalThis.fetch = async (input) => {
+    globalThis.fetch = async (input, init) => {
       assert.strictEqual(
         String(input),
         "https://api.teste.com/api/salvar-conteudo",
+      );
+      assert.strictEqual(
+        (init?.headers as Record<string, string>).Authorization,
+        "Bearer token-servidor",
       );
       return new Response(JSON.stringify({ nota: 73.25 }), {
         status: 200,
@@ -123,10 +123,7 @@ suite("Provedor da barra lateral", () => {
     interno.codigoPastaAluno = "gref_2/46_74";
     interno.preparandoPasta = Promise.resolve();
 
-    await interno.verificarTentativaAtual(
-      interno.desafioAtual.challengeId,
-      99.9,
-    );
+    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
 
     assert.deepStrictEqual(interno.avaliacaoAtual, {
       precision: 73.25,
@@ -137,6 +134,80 @@ suite("Provedor da barra lateral", () => {
       ultimaMensagem(mensagens, "resultadoAvaliacao")?.payload,
       interno.avaliacaoAtual,
     );
+  });
+
+  test("não cria nota local quando salvar-conteudo responde sem precisão", async () => {
+    mockarConfiguracaoServidorValida();
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ message: "Conteúdo salvo com sucesso." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens);
+    const interno = provedor as unknown as ProvedorInterno;
+    interno.desafioAtual = criarDesafioGerado({
+      aleatorio: criarAleatorioTeste(212),
+    });
+    interno.resumoWorkspaceAtual = {
+      caminhoHtml: "/projeto/index.html",
+      caminhoCss: "/projeto/style.css",
+      textoHtml: "<main></main>",
+      textoCss: "main { display: flex; }",
+      htmlPreview: "<main></main>",
+      temArquivoHtml: true,
+      temArquivoCss: true,
+    };
+    interno.codigoPastaAluno = "gref_2/46_74";
+    interno.preparandoPasta = Promise.resolve();
+
+    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
+
+    assert.deepStrictEqual(interno.avaliacaoAtual, {
+      precision: 0,
+      score: 0,
+      source: "servidor-sem-nota",
+      error: "Conteúdo salvo com sucesso.",
+    });
+  });
+
+  test("invalida a sessão quando salvar-conteudo retorna 401", async () => {
+    mockarConfiguracaoServidorValida();
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ detail: "Token expirado" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    const mensagens: MensagemWebview[] = [];
+    const invalidacoes: string[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, (mensagem) => {
+      invalidacoes.push(mensagem);
+    });
+    const interno = provedor as unknown as ProvedorInterno;
+    interno.desafioAtual = criarDesafioGerado({
+      aleatorio: criarAleatorioTeste(222),
+    });
+    interno.resumoWorkspaceAtual = {
+      caminhoHtml: "/projeto/index.html",
+      caminhoCss: "/projeto/style.css",
+      textoHtml: "<main></main>",
+      textoCss: "main { display: flex; }",
+      htmlPreview: "<main></main>",
+      temArquivoHtml: true,
+      temArquivoCss: true,
+    };
+    interno.codigoPastaAluno = "gref_2/46_74";
+    interno.preparandoPasta = Promise.resolve();
+
+    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
+
+    assert.strictEqual(interno.avaliacaoAtual?.source, "authentication-error");
+    assert.strictEqual(interno.avaliacaoAtual?.httpStatus, 401);
+    assert.deepStrictEqual(invalidacoes, [
+      "O servidor recusou a sessão. Entre novamente com o Google.",
+    ]);
   });
 
   test("descarta a resposta de uma verificação pertencente ao desafio anterior", async () => {
@@ -174,10 +245,8 @@ suite("Provedor da barra lateral", () => {
     interno.preparandoPasta = Promise.resolve();
     const challengeIdAnterior = interno.desafioAtual.challengeId;
 
-    const verificacaoPendente = interno.verificarTentativaAtual(
-      challengeIdAnterior,
-      91,
-    );
+    const verificacaoPendente =
+      interno.verificarTentativaAtual(challengeIdAnterior);
     await fetchIniciado;
 
     interno.prepararPastaDoAluno = async () => undefined;
@@ -212,6 +281,7 @@ suite("Provedor da barra lateral", () => {
 
 function criarProvedorParaTeste(
   mensagens: MensagemWebview[],
+  aoInvalidarSessao: (mensagem: string) => void = () => undefined,
 ): ProvedorBarraLateralFlexBox {
   const estado: EstadoAutenticacao = {
     status: "authenticated",
@@ -221,7 +291,16 @@ function criarProvedorParaTeste(
     getEstadoAtual: () => estado,
     onDidChangeEstado: () => ({ dispose: () => undefined }),
     isAutenticado: () => true,
-    getSessaoAtual: () => ({ displayName: "Aluno de teste" }),
+    getAccessToken: () => "token-servidor",
+    getSessaoAtual: () => ({
+      accessToken: "token-servidor",
+      displayName: "Aluno de teste",
+      userId: 74,
+      teamId: 46,
+    }),
+    invalidarSessao: async (mensagem: string) => {
+      aoInvalidarSessao(mensagem);
+    },
   } as unknown as AuthService;
   const provedor = new ProvedorBarraLateralFlexBox(
     vscode.Uri.parse("file:///extensao"),
@@ -275,7 +354,6 @@ function mockarConfiguracaoServidorValida(): void {
 
       const valores: Record<string, unknown> = {
         apiBaseUrl: "https://api.teste.com/api",
-        apiToken: "",
         dinamicaId: "gref",
         userId: 74,
         teamId: 46,

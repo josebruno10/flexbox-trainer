@@ -17,6 +17,7 @@ import {
 import { avaliarTentativa } from "../services/avaliacao";
 import {
   criarPastaDoAluno,
+  ErroHttpServidor,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
   verificarConexaoServidor,
@@ -100,32 +101,23 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "abrirLogin") {
-          void this.loginProvider.abrirLogin();
-          return;
-        }
-
-        if (mensagem.type === "abrirCadastro") {
-          void this.loginProvider.abrirCadastro();
-          return;
-        }
-
-        if (mensagem.type === "loginGitHub") {
-          void this.authService.loginComProvedorVSCode("github");
-          return;
-        }
-
-        if (mensagem.type === "loginMicrosoft") {
-          void this.authService.loginComProvedorVSCode("microsoft");
+          void this.executarAcaoAutenticacao(() =>
+            this.loginProvider.abrirLogin(),
+          );
           return;
         }
 
         if (mensagem.type === "loginGoogle") {
-          void this.authService.abrirLoginGoogle();
+          void this.executarAcaoAutenticacao(() =>
+            this.authService.abrirLoginGoogle(),
+          );
           return;
         }
 
         if (mensagem.type === "revalidarSessao") {
-          void this.loginProvider.revalidarSessao();
+          void this.executarAcaoAutenticacao(() =>
+            this.loginProvider.revalidarSessao(),
+          );
           return;
         }
 
@@ -184,11 +176,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
             return;
           }
 
-          void this.verificarTentativaAtual(
-            mensagem.challengeId,
-            mensagem.precisaoLocal,
-            mensagem.erroCorrecaoLocal,
-          );
+          void this.verificarTentativaAtual(mensagem.challengeId);
         }
       },
       undefined,
@@ -205,7 +193,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoAutenticada();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
@@ -241,11 +229,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarEstado();
   }
 
-  private async verificarTentativaAtual(
-    challengeId: string,
-    precisaoLocal?: number,
-    erroCorrecaoLocal?: string,
-  ): Promise<void> {
+  private async verificarTentativaAtual(challengeId: string): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
@@ -254,7 +238,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const resumoWorkspace = this.resumoWorkspaceAtual;
     const preparandoPasta = this.preparandoPasta;
     const inicioTentativaMs = this.inicioTentativaMs;
     const fimTentativaMs = this.fimTentativaMs;
@@ -263,6 +246,20 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.desafioAtual?.challengeId === challengeId;
 
     try {
+      // A verificação sempre relê os arquivos; assim, um atraso ou falha na
+      // atualização visual da webview não envia uma versão antiga ao servidor.
+      const resumoLido = await lerResumoWorkspace();
+      const resumoWorkspace =
+        resumoLido.temArquivoHtml && resumoLido.temArquivoCss
+          ? resumoLido
+          : this.resumoWorkspaceAtual;
+
+      if (!desafioAindaEhAtual()) {
+        return;
+      }
+
+      this.resumoWorkspaceAtual = resumoWorkspace;
+
       if (
         !resumoWorkspace.temArquivoHtml ||
         !resumoWorkspace.temArquivoCss
@@ -285,45 +282,35 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
       const codigoPasta = this.codigoPastaAluno;
 
-      const resultadoServidor = await avaliarTentativa({
-        html: resumoWorkspace.textoHtml,
-        css: resumoWorkspace.textoCss,
-        elapsedMs:
-          (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
-        challengeId,
-        codigoPasta,
-      });
+      const resultadoServidor = await avaliarTentativa(
+        {
+          html: resumoWorkspace.textoHtml,
+          css: resumoWorkspace.textoCss,
+          elapsedMs:
+            (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
+          challengeId,
+          codigoPasta,
+        },
+        this.authService.getAccessToken() ?? "",
+        {
+          userId: this.authService.getSessaoAtual()?.userId,
+          teamId: this.authService.getSessaoAtual()?.teamId,
+        },
+      );
 
       if (!desafioAindaEhAtual()) {
         return;
       }
 
-      if (resultadoServidor.source === "servidor") {
-        this.avaliacaoAtual = resultadoServidor;
-      } else if (
-        typeof precisaoLocal === "number" &&
-        Number.isFinite(precisaoLocal)
-      ) {
-        const precisaoNormalizada = Math.min(100, Math.max(0, precisaoLocal));
-        this.avaliacaoAtual = {
-          precision: precisaoNormalizada,
-          score: precisaoNormalizada,
-          source: "local-visual",
-          serverMessage: this.descreverResultadoServidor(resultadoServidor),
-        };
-      } else {
-        const detalheServidor = this.descreverResultadoServidor(resultadoServidor);
-        this.avaliacaoAtual = {
-          precision: 0,
-          score: 0,
-          source: "capture-error",
-          error:
-            `Não foi possível calcular a precisão visual: ${erroCorrecaoLocal || "falha na captura do preview."}` +
-            (detalheServidor ? ` Servidor: ${detalheServidor}` : ""),
-        };
-      }
+      this.avaliacaoAtual = resultadoServidor;
 
       this.enviarEstado();
+
+      if (resultadoServidor.source === "authentication-error") {
+        await this.authService.invalidarSessao(
+          "O servidor recusou a sessão. Entre novamente com o Google.",
+        );
+      }
     } catch (error) {
       if (!desafioAindaEhAtual()) {
         return;
@@ -341,29 +328,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  private descreverResultadoServidor(resultado: ResultadoAvaliacao): string {
-    if (resultado.source === "servidor") {
-      return `nota retornada: ${resultado.precision.toFixed(2)}%.`;
-    }
-
-    if (resultado.source === "servidor-sem-nota") {
-      return resultado.error || "conteúdo salvo, sem nota retornada.";
-    }
-
-    if (resultado.source === "mock-local") {
-      return "API não configurada; conteúdo não enviado.";
-    }
-
-    return resultado.error || "envio não concluído.";
-  }
-
   private async prepararPastaDoAluno(): Promise<void> {
     if (!this.authService.isAutenticado()) {
       this.codigoPastaAluno = undefined;
       return;
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoAutenticada();
 
     if (!temConfiguracaoServidorMinima(configuracao)) {
       this.codigoPastaAluno = undefined;
@@ -386,11 +357,20 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         error: `Falha ao preparar a pasta do aluno: ${mensagem}`,
       };
       this.enviarEstado();
+
+      if (
+        error instanceof ErroHttpServidor &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        await this.authService.invalidarSessao(
+          "O servidor recusou a sessão. Entre novamente com o Google.",
+        );
+      }
     }
   }
 
   private async testarConexaoServidor(): Promise<void> {
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoAutenticada();
     let status: StatusConexaoServidor;
 
     try {
@@ -400,11 +380,28 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";
       status = { ok: false, mensagem };
+
+      if (
+        error instanceof ErroHttpServidor &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        await this.authService.invalidarSessao(
+          "O servidor recusou a sessão. Entre novamente com o Google.",
+        );
+      }
     }
 
     void this.visualizacaoWebview?.webview.postMessage({
       type: "statusServidor",
       payload: status,
+    });
+  }
+
+  private lerConfiguracaoAutenticada() {
+    const sessao = this.authService.getSessaoAtual();
+    return lerConfiguracaoServidor(this.authService.getAccessToken() ?? "", {
+      userId: sessao?.userId,
+      teamId: sessao?.teamId,
     });
   }
 
@@ -465,5 +462,19 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.visualizacaoWebview.webview,
       this.extensionUri,
     );
+  }
+
+  private async executarAcaoAutenticacao(
+    acao: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await acao();
+    } catch (error) {
+      const mensagem =
+        error instanceof Error ? error.message : "Falha na autenticação.";
+      await vscode.window.showErrorMessage(
+        `FlexBox Trainer: ${mensagem}`,
+      );
+    }
   }
 }
