@@ -5,8 +5,8 @@ export type SessaoAutenticacao = {
   email: string;
   displayName: string;
   avatarUrl?: string;
+  tokenGmail: string;
   userId?: number;
-  teamId?: number;
   remember: boolean;
   authenticatedAt: number;
   expiresAt: number;

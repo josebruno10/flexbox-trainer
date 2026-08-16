@@ -7,6 +7,10 @@ export class LoginProvider {
     await this.authService.abrirFluxoAutenticacao("login");
   }
 
+  public async abrirCadastro(): Promise<void> {
+    await this.authService.abrirFluxoAutenticacao("register");
+  }
+
   public async revalidarSessao(): Promise<void> {
     await this.authService.revalidarSessao();
   }

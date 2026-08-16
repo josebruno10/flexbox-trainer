@@ -87,6 +87,9 @@ export type MensagemRecebidaBarraLateral =
   | { type: "atualizarPreview" }
   | { type: "solicitarVerificacao"; challengeId: string }
   | { type: "abrirLogin" }
+  | { type: "abrirCadastro" }
+  | { type: "loginGitHub" }
+  | { type: "loginMicrosoft" }
   | { type: "loginGoogle" }
   | { type: "revalidarSessao" }
   | {

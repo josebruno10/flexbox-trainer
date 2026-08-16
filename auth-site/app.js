@@ -1,127 +1,223 @@
 const params = new URLSearchParams(window.location.search);
 const callbackUrl = params.get("callback") || "";
-const state = params.get("state") || "";
-const clientId = params.get("clientId") || "";
-const flowVersion = params.get("flowVersion") || "";
-const AUTH_FLOW_VERSION = "2";
+const apiBaseUrl = (params.get("apiBaseUrl") || "https://ifms.pro.br:6005").replace(/\/+$/, "");
+const emailInicial = params.get("email") || "";
 
 const notice = document.getElementById("notice");
 const statusBox = document.getElementById("status");
-const googleButton = document.getElementById("googleButton");
-const googleScript = document.querySelector(
-  'script[src="https://accounts.google.com/gsi/client"]',
-);
-let tentativasGoogle = 0;
-const MAX_TENTATIVAS_GOOGLE = 100;
-const CALLBACK_PROTOCOLS = new Set(["vscode:", "vscode-insiders:"]);
-const CALLBACK_HOSTS = new Set([
-  "josebruno10.flexbox-trainer",
-  "undefined_publisher.flexbox-trainer",
-]);
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+const tabs = Array.from(document.querySelectorAll(".tab"));
+
+const loginEmail = loginForm.querySelector('input[name="email"]');
+const registerEmail = registerForm.querySelector('input[name="email"]');
+
+loginEmail.value = emailInicial;
+registerEmail.value = emailInicial;
+
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const target = tab.dataset.tab;
+    tabs.forEach((item) => item.classList.toggle("active", item === tab));
+    loginForm.classList.toggle("active", target === "login");
+    registerForm.classList.toggle("active", target === "register");
+    setStatus(target === "login"
+      ? "Faça login com seu e-mail e token do Gmail."
+      : "Crie sua conta usando os dados exigidos pela API do IFMS.");
+  });
+});
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const dados = new FormData(loginForm);
+  const email = sanitizarTexto(dados.get("email"));
+  const tokenGmail = sanitizarTexto(dados.get("token_gmail"));
+  const remember = dados.get("remember") === "on";
+
+  try {
+    setBusy(loginForm, true);
+    setStatus("Validando login no IFMS...");
+    const usuario = await buscarUsuarioPorEmail(email);
+
+    if (!usuario) {
+      throw new Error("Conta não encontrada. Crie uma conta antes de fazer login.");
+    }
+
+    if (usuario.tokenGmail !== tokenGmail) {
+      throw new Error("Token Gmail inválido.");
+    }
+
+    redirecionarParaExtensao({
+      nome: usuario.nome,
+      email: usuario.email,
+      tokenGmail: usuario.tokenGmail,
+      avatarUrl: usuario.avatarUrl,
+      remember,
+      mode: "login",
+    });
+  } catch (error) {
+    setStatus(erroTexto(error), true);
+  } finally {
+    setBusy(loginForm, false);
+  }
+});
+
+registerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const dados = new FormData(registerForm);
+  const payload = {
+    nome: sanitizarTexto(dados.get("nome")),
+    email: sanitizarTexto(dados.get("email")),
+    token_gmail: sanitizarTexto(dados.get("token_gmail")),
+    turma: toNumber(dados.get("turma")),
+    periodo: toNumber(dados.get("periodo")),
+    url_image_perfil: sanitizarTexto(dados.get("url_image_perfil")),
+  };
+  const remember = dados.get("remember") === "on";
+
+  try {
+    setBusy(registerForm, true);
+    setStatus("Criando conta no IFMS...");
+
+    const existente = await buscarUsuarioPorEmail(payload.email);
+    if (existente) {
+      throw new Error("Este e-mail já possui uma conta. Use o login.");
+    }
+
+    const resposta = await fetch(`${apiBaseUrl}/usuarios`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: new URLSearchParams({
+        nome: payload.nome,
+        email: payload.email,
+        token_gmail: payload.token_gmail,
+        turma: payload.turma ? String(payload.turma) : "",
+        periodo: payload.periodo ? String(payload.periodo) : "",
+        url_image_perfil: payload.url_image_perfil,
+      }).toString(),
+    });
+
+    if (!resposta.ok) {
+      throw new Error(await extrairDetalheDeErro(resposta));
+    }
+
+    redirecionarParaExtensao({
+      nome: payload.nome,
+      email: payload.email,
+      tokenGmail: payload.token_gmail,
+      avatarUrl: payload.url_image_perfil,
+      remember,
+      mode: "register",
+    });
+  } catch (error) {
+    setStatus(erroTexto(error), true);
+  } finally {
+    setBusy(registerForm, false);
+  }
+});
+
+async function buscarUsuarioPorEmail(email) {
+  const resposta = await fetch(`${apiBaseUrl}/usuarios/por-email?email=${encodeURIComponent(email)}`, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!resposta.ok) {
+    if (resposta.status === 404) {
+      return undefined;
+    }
+    throw new Error(await extrairDetalheDeErro(resposta));
+  }
+
+  const dados = await resposta.json();
+  return normalizarUsuario(dados);
+}
+
+function normalizarUsuario(dados) {
+  if (!dados) {
+    return undefined;
+  }
+
+  const registro = Array.isArray(dados) ? dados[0] : dados;
+  if (!registro) {
+    return undefined;
+  }
+
+  const nome = sanitizarTexto(registro.nome || registro.name || registro.nome_completo);
+  const email = sanitizarTexto(registro.email);
+  const tokenGmail = sanitizarTexto(registro.token_gmail || registro.tokenGmail);
+  const avatarUrl = sanitizarTexto(
+    registro.url_image_perfil || registro.avatarUrl || registro.avatar || registro.picture,
+  );
+
+  if (!nome || !email || !tokenGmail) {
+    return undefined;
+  }
+
+  return { nome, email, tokenGmail, avatarUrl };
+}
+
+function redirecionarParaExtensao(dados) {
+  if (!callbackUrl) {
+    throw new Error("Callback da extensão não informado.");
+  }
+
+  const url = new URL(callbackUrl);
+  url.searchParams.set("email", dados.email);
+  url.searchParams.set("nome", dados.nome);
+  url.searchParams.set("token_gmail", dados.tokenGmail);
+  url.searchParams.set("remember", dados.remember ? "1" : "0");
+  url.searchParams.set("mode", dados.mode);
+  if (dados.avatarUrl) {
+    url.searchParams.set("avatarUrl", dados.avatarUrl);
+  }
+  window.location.href = url.toString();
+}
+
+function setBusy(form, busy) {
+  form.querySelectorAll("input, button").forEach((node) => {
+    node.disabled = busy;
+  });
+}
 
 function setStatus(message, isError = false) {
   statusBox.textContent = message;
   statusBox.classList.toggle("error", Boolean(isError));
-}
-
-function validarParametros() {
-  if (!callbackUrl) {
-    throw new Error(
-      "Callback da extensão não informado. Inicie o login pelo VS Code.",
-    );
-  }
-
-  if (!state) {
-    throw new Error("Estado de segurança ausente. Inicie o login novamente.");
-  }
-
-  if (!clientId) {
-    throw new Error("Client ID do Google não configurado na extensão.");
-  }
-
-  if (flowVersion !== AUTH_FLOW_VERSION) {
-    throw new Error(
-      "Versão do fluxo de autenticação incompatível. Atualize a extensão e tente novamente.",
-    );
-  }
-
-  const callback = new URL(callbackUrl);
-
-  if (
-    !CALLBACK_PROTOCOLS.has(callback.protocol) ||
-    !CALLBACK_HOSTS.has(callback.host) ||
-    callback.pathname !== "/auth/callback"
-  ) {
-    throw new Error("Callback da extensão não reconhecido.");
+  if (notice) {
+    notice.textContent = isError
+      ? "Verifique os dados e tente novamente."
+      : "Preencha seus dados para continuar. A validação é feita diretamente na API do IFMS.";
   }
 }
 
-function redirecionarParaExtensao(googleToken) {
-  const url = new URL(callbackUrl);
-  const fragmento = new URLSearchParams({
-    state,
-    google_token: googleToken,
-    remember: "1",
-  });
-
-  // O fragmento evita registrar a credencial Google em query strings do
-  // servidor web. A extensão a troca imediatamente por um token próprio da API.
-  url.hash = fragmento.toString();
-  window.location.replace(url.toString());
+function sanitizarTexto(valor) {
+  return String(valor || "").trim();
 }
 
-function inicializarGoogle() {
+function toNumber(valor) {
+  const texto = sanitizarTexto(valor);
+  if (!texto) {
+    return undefined;
+  }
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? numero : undefined;
+}
+
+async function extrairDetalheDeErro(resposta) {
   try {
-    validarParametros();
-  } catch (error) {
-    setStatus(error instanceof Error ? error.message : "Parâmetros inválidos.", true);
-    return;
+    const dados = await resposta.json();
+    return dados?.message || dados?.detail || `HTTP ${resposta.status}`;
+  } catch {
+    return `HTTP ${resposta.status}`;
   }
-
-  if (!window.google?.accounts?.id) {
-    tentativasGoogle += 1;
-
-    if (tentativasGoogle >= MAX_TENTATIVAS_GOOGLE) {
-      setStatus(
-        "O autenticador do Google não carregou em 10 segundos. Verifique a conexão e recarregue a página.",
-        true,
-      );
-      return;
-    }
-
-    window.setTimeout(inicializarGoogle, 100);
-    return;
-  }
-
-  window.google.accounts.id.initialize({
-    client_id: clientId,
-    callback: (response) => {
-      const credential = String(response?.credential || "").trim();
-
-      if (!credential) {
-        setStatus("O Google não devolveu uma credencial válida.", true);
-        return;
-      }
-
-      setStatus("Login concluído. Voltando ao VS Code...");
-      redirecionarParaExtensao(credential);
-    },
-  });
-  window.google.accounts.id.renderButton(googleButton, {
-    type: "standard",
-    theme: "filled_black",
-    size: "large",
-    text: "signin_with",
-    shape: "pill",
-    width: 280,
-  });
-  setStatus("Pronto. Entre com sua conta Google.");
 }
 
-notice.textContent =
-  "A credencial Google será validada pela API do torneio e não ficará armazenada no site.";
-googleScript?.addEventListener("error", () => {
-  tentativasGoogle = MAX_TENTATIVAS_GOOGLE;
-  setStatus("Não foi possível carregar o autenticador do Google.", true);
-});
-inicializarGoogle();
+function erroTexto(error) {
+  return error instanceof Error ? error.message : "Erro inesperado ao autenticar.";
+}
+
+setStatus("Pronto. Escolha entre login ou cadastro.");

@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { obterHtmlAutenticacao, obterHtmlWebview } from "../../webview/html";
+import { obterHtmlWebview } from "../../webview/html";
 
 suite("Interface do desafio", () => {
   test("mantém uma camada transparente para clicar no gabarito limpo", () => {
@@ -94,20 +94,5 @@ suite("Interface do desafio", () => {
       ),
     );
     assert.ok(!html.includes('id="quadroPreview"'));
-  });
-
-  test("oferece somente autenticação pelo Google", () => {
-    const webview = {
-      cspSource: "vscode-webview://teste",
-      asWebviewUri: (uri: vscode.Uri) => uri,
-    } as unknown as vscode.Webview;
-    const html = obterHtmlAutenticacao(
-      webview,
-      vscode.Uri.parse("file:///extensao"),
-    );
-
-    assert.ok(html.includes('id="botaoGoogle"'));
-    assert.ok(!html.includes("botaoGitHub"));
-    assert.ok(!html.includes("botaoMicrosoft"));
   });
 });

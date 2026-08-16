@@ -2,17 +2,14 @@ import { ResultadoAvaliacao, TentativaPayload } from "../types";
 import {
   ErroHttpServidor,
   enviarConteudoDaTentativa,
-  IdentidadeServidor,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
 } from "./servidor";
 
 export async function avaliarTentativa(
   payload: TentativaPayload,
-  apiToken: string,
-  identidade: IdentidadeServidor = {},
 ): Promise<ResultadoAvaliacao> {
-  const configuracao = lerConfiguracaoServidor(apiToken, identidade);
+  const configuracao = lerConfiguracaoServidor();
 
   if (!configuracao.apiBaseUrl) {
     return {
@@ -28,7 +25,7 @@ export async function avaliarTentativa(
       precision: 0,
       score: 0,
       source: "authentication-error",
-      error: "Faça login com o Google antes de verificar a tentativa.",
+      error: "Configure o token da API antes de verificar a tentativa.",
     };
   }
 
@@ -38,7 +35,7 @@ export async function avaliarTentativa(
       score: 0,
       source: "config-missing",
       error:
-        "Informe a dinâmica. O servidor também precisa associar sua conta a um usuário e uma equipe.",
+        "Preencha dinamicaId, userId e teamId nas configurações da extensão.",
     };
   }
 

@@ -256,10 +256,10 @@ suite("Servidor Service Test Suite", () => {
     }
   });
 
-  test("Deve recusar teste de conexão sem token de sessão", async () => {
+  test("Deve recusar teste de conexão sem token da API", async () => {
     await assert.rejects(
       verificarConexaoServidor(criarConfiguracao({ apiToken: "" })),
-      /Faça login com o Google/,
+      /Configure o token da API/,
     );
   });
 

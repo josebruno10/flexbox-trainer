@@ -172,19 +172,16 @@ suite("Provedor da barra lateral", () => {
     });
   });
 
-  test("invalida a sessão quando salvar-conteudo retorna 401", async () => {
+  test("mantém o erro 401 restrito à avaliação do servidor", async () => {
     mockarConfiguracaoServidorValida();
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ detail: "Token expirado" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
-      });
+    });
 
     const mensagens: MensagemWebview[] = [];
-    const invalidacoes: string[] = [];
-    const provedor = criarProvedorParaTeste(mensagens, (mensagem) => {
-      invalidacoes.push(mensagem);
-    });
+    const provedor = criarProvedorParaTeste(mensagens);
     const interno = provedor as unknown as ProvedorInterno;
     interno.desafioAtual = criarDesafioGerado({
       aleatorio: criarAleatorioTeste(222),
@@ -205,9 +202,6 @@ suite("Provedor da barra lateral", () => {
 
     assert.strictEqual(interno.avaliacaoAtual?.source, "authentication-error");
     assert.strictEqual(interno.avaliacaoAtual?.httpStatus, 401);
-    assert.deepStrictEqual(invalidacoes, [
-      "O servidor recusou a sessão. Entre novamente com o Google.",
-    ]);
   });
 
   test("descarta a resposta de uma verificação pertencente ao desafio anterior", async () => {
@@ -281,7 +275,6 @@ suite("Provedor da barra lateral", () => {
 
 function criarProvedorParaTeste(
   mensagens: MensagemWebview[],
-  aoInvalidarSessao: (mensagem: string) => void = () => undefined,
 ): ProvedorBarraLateralFlexBox {
   const estado: EstadoAutenticacao = {
     status: "authenticated",
@@ -291,16 +284,13 @@ function criarProvedorParaTeste(
     getEstadoAtual: () => estado,
     onDidChangeEstado: () => ({ dispose: () => undefined }),
     isAutenticado: () => true,
-    getAccessToken: () => "token-servidor",
     getSessaoAtual: () => ({
       accessToken: "token-servidor",
       displayName: "Aluno de teste",
-      userId: 74,
-      teamId: 46,
+      email: "aluno@teste.com",
+      provider: "google",
+      tokenGmail: "token-google",
     }),
-    invalidarSessao: async (mensagem: string) => {
-      aoInvalidarSessao(mensagem);
-    },
   } as unknown as AuthService;
   const provedor = new ProvedorBarraLateralFlexBox(
     vscode.Uri.parse("file:///extensao"),
@@ -354,6 +344,7 @@ function mockarConfiguracaoServidorValida(): void {
 
       const valores: Record<string, unknown> = {
         apiBaseUrl: "https://api.teste.com/api",
+        apiToken: "token-servidor",
         dinamicaId: "gref",
         userId: 74,
         teamId: 46,

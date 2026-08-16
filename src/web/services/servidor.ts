@@ -4,11 +4,6 @@ import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 import { log } from "./logger";
 
-export type IdentidadeServidor = {
-  userId?: number;
-  teamId?: number;
-};
-
 export class ErroHttpServidor extends Error {
   public constructor(
     message: string,
@@ -19,10 +14,7 @@ export class ErroHttpServidor extends Error {
   }
 }
 
-export function lerConfiguracaoServidor(
-  apiToken = "",
-  identidade: IdentidadeServidor = {},
-): ConfiguracaoServidor {
+export function lerConfiguracaoServidor(): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
   let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
@@ -34,16 +26,10 @@ export function lerConfiguracaoServidor(
 
   return {
     apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
-    apiToken: apiToken.trim(),
+    apiToken: config.get<string>("apiToken", "").trim(),
     dinamicaId: config.get<string>("dinamicaId", "").trim(),
-    userId:
-      identidade.userId && identidade.userId > 0
-        ? identidade.userId
-        : 0,
-    teamId:
-      identidade.teamId && identidade.teamId > 0
-        ? identidade.teamId
-        : 0,
+    userId: config.get<number>("userId", 0),
+    teamId: config.get<number>("teamId", 0),
     captureWidth: config.get<number>("captureWidth", 960),
     captureHeight: config.get<number>("captureHeight", 540),
   };
@@ -69,7 +55,7 @@ export async function verificarConexaoServidor(
   }
 
   if (!configuracao.apiToken) {
-    throw new Error("Faça login com o Google antes de testar o servidor.");
+    throw new Error("Configure o token da API antes de testar o servidor.");
   }
 
   const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);

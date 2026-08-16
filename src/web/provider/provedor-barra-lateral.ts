@@ -17,7 +17,6 @@ import {
 import { avaliarTentativa } from "../services/avaliacao";
 import {
   criarPastaDoAluno,
-  ErroHttpServidor,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
   verificarConexaoServidor,
@@ -101,23 +100,32 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "abrirLogin") {
-          void this.executarAcaoAutenticacao(() =>
-            this.loginProvider.abrirLogin(),
-          );
+          void this.loginProvider.abrirLogin();
+          return;
+        }
+
+        if (mensagem.type === "abrirCadastro") {
+          void this.loginProvider.abrirCadastro();
+          return;
+        }
+
+        if (mensagem.type === "loginGitHub") {
+          void this.authService.loginComProvedorVSCode("github");
+          return;
+        }
+
+        if (mensagem.type === "loginMicrosoft") {
+          void this.authService.loginComProvedorVSCode("microsoft");
           return;
         }
 
         if (mensagem.type === "loginGoogle") {
-          void this.executarAcaoAutenticacao(() =>
-            this.authService.abrirLoginGoogle(),
-          );
+          void this.authService.abrirLoginGoogle();
           return;
         }
 
         if (mensagem.type === "revalidarSessao") {
-          void this.executarAcaoAutenticacao(() =>
-            this.loginProvider.revalidarSessao(),
-          );
+          void this.loginProvider.revalidarSessao();
           return;
         }
 
@@ -193,7 +201,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = this.lerConfiguracaoAutenticada();
+    const configuracao = lerConfiguracaoServidor();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
@@ -282,21 +290,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
       const codigoPasta = this.codigoPastaAluno;
 
-      const resultadoServidor = await avaliarTentativa(
-        {
-          html: resumoWorkspace.textoHtml,
-          css: resumoWorkspace.textoCss,
-          elapsedMs:
-            (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
-          challengeId,
-          codigoPasta,
-        },
-        this.authService.getAccessToken() ?? "",
-        {
-          userId: this.authService.getSessaoAtual()?.userId,
-          teamId: this.authService.getSessaoAtual()?.teamId,
-        },
-      );
+      const resultadoServidor = await avaliarTentativa({
+        html: resumoWorkspace.textoHtml,
+        css: resumoWorkspace.textoCss,
+        elapsedMs:
+          (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
+        challengeId,
+        codigoPasta,
+      });
 
       if (!desafioAindaEhAtual()) {
         return;
@@ -305,12 +306,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.avaliacaoAtual = resultadoServidor;
 
       this.enviarEstado();
-
-      if (resultadoServidor.source === "authentication-error") {
-        await this.authService.invalidarSessao(
-          "O servidor recusou a sessão. Entre novamente com o Google.",
-        );
-      }
     } catch (error) {
       if (!desafioAindaEhAtual()) {
         return;
@@ -334,7 +329,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = this.lerConfiguracaoAutenticada();
+    const configuracao = lerConfiguracaoServidor();
 
     if (!temConfiguracaoServidorMinima(configuracao)) {
       this.codigoPastaAluno = undefined;
@@ -357,20 +352,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         error: `Falha ao preparar a pasta do aluno: ${mensagem}`,
       };
       this.enviarEstado();
-
-      if (
-        error instanceof ErroHttpServidor &&
-        (error.status === 401 || error.status === 403)
-      ) {
-        await this.authService.invalidarSessao(
-          "O servidor recusou a sessão. Entre novamente com o Google.",
-        );
-      }
     }
   }
 
   private async testarConexaoServidor(): Promise<void> {
-    const configuracao = this.lerConfiguracaoAutenticada();
+    const configuracao = lerConfiguracaoServidor();
     let status: StatusConexaoServidor;
 
     try {
@@ -380,28 +366,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";
       status = { ok: false, mensagem };
-
-      if (
-        error instanceof ErroHttpServidor &&
-        (error.status === 401 || error.status === 403)
-      ) {
-        await this.authService.invalidarSessao(
-          "O servidor recusou a sessão. Entre novamente com o Google.",
-        );
-      }
     }
 
     void this.visualizacaoWebview?.webview.postMessage({
       type: "statusServidor",
       payload: status,
-    });
-  }
-
-  private lerConfiguracaoAutenticada() {
-    const sessao = this.authService.getSessaoAtual();
-    return lerConfiguracaoServidor(this.authService.getAccessToken() ?? "", {
-      userId: sessao?.userId,
-      teamId: sessao?.teamId,
     });
   }
 
@@ -462,19 +431,5 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.visualizacaoWebview.webview,
       this.extensionUri,
     );
-  }
-
-  private async executarAcaoAutenticacao(
-    acao: () => Promise<void>,
-  ): Promise<void> {
-    try {
-      await acao();
-    } catch (error) {
-      const mensagem =
-        error instanceof Error ? error.message : "Falha na autenticação.";
-      await vscode.window.showErrorMessage(
-        `FlexBox Trainer: ${mensagem}`,
-      );
-    }
   }
 }

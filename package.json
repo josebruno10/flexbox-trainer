@@ -36,6 +36,10 @@
         "title": "FlexBox Trainer: Fazer Login"
       },
       {
+        "command": "flexbox-trainer.criarConta",
+        "title": "FlexBox Trainer: Criar Conta"
+      },
+      {
         "command": "flexbox-trainer.logout",
         "title": "FlexBox Trainer: Sair"
       },
@@ -50,20 +54,12 @@
         "flexboxTrainer.authApiBaseUrl": {
           "type": "string",
           "default": "https://frontendteamscup.com.br/api",
-          "scope": "application",
-          "description": "URL HTTPS da API usada para login e validação de sessão. Só pode ser alterada nas configurações do usuário."
+          "description": "URL base da API usada para cadastro, login e validação de sessão."
         },
         "flexboxTrainer.authSiteUrl": {
           "type": "string",
           "default": "https://kevyngreenn.github.io/authserviceflexbox/",
-          "scope": "application",
-          "description": "URL HTTPS do site auxiliar que obtém a credencial Google e retorna ao VS Code. O site precisa publicar auth-flow.json na versão 2."
-        },
-        "flexboxTrainer.googleClientId": {
-          "type": "string",
-          "default": "248632474679-8663hgsnun8q5ddq98cc2kf23u23844p.apps.googleusercontent.com",
-          "scope": "application",
-          "description": "Client ID OAuth 2.0 da aplicação Web cadastrada no Google Cloud para o site auxiliar."
+          "description": "URL pública do site externo de autenticação que será aberto no navegador padrão."
         },
         "flexboxTrainer.apiBaseUrl": {
           "type": "string",
@@ -71,10 +67,25 @@
           "scope": "application",
           "description": "URL HTTPS da API usada para avaliar tentativas. Só pode ser alterada nas configurações do usuário."
         },
+        "flexboxTrainer.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Token opcional para autenticar as requisições na API do torneio."
+        },
         "flexboxTrainer.dinamicaId": {
           "type": "string",
           "default": "",
           "description": "Código da dinâmica do torneio informado pelo professor (exemplo: KOTI)."
+        },
+        "flexboxTrainer.userId": {
+          "type": "number",
+          "default": 0,
+          "description": "Identificador numérico do aluno no servidor do torneio."
+        },
+        "flexboxTrainer.teamId": {
+          "type": "number",
+          "default": 0,
+          "description": "Identificador numérico da equipe no servidor do torneio."
         },
         "flexboxTrainer.captureWidth": {
           "type": "number",
