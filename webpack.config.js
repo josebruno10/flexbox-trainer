@@ -42,6 +42,10 @@ const webExtensionConfig = {
   module: {
     rules: [
       {
+        resourceQuery: /raw/,
+        type: "asset/source",
+      },
+      {
         test: /\.ts$/,
         exclude: /node_modules/,
         use: [

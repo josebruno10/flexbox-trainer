@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { ConfiguracaoServidor, ResultadoAvaliacao } from "../types";
 import { log } from "./logger";
 
-export function lerConfiguracaoServidor(): ConfiguracaoServidor {
+export function lerConfiguracaoServidor(tokenSessao?: string): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
   let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
@@ -16,7 +16,7 @@ export function lerConfiguracaoServidor(): ConfiguracaoServidor {
 
   return {
     apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
-    apiToken: config.get<string>("apiToken", "").trim(),
+    apiToken: tokenSessao || config.get<string>("apiToken", "").trim(),
     dinamicaId: config.get<string>("dinamicaId", "").trim(),
     userId: config.get<number>("userId", 0),
     teamId: config.get<number>("teamId", 0),
@@ -291,8 +291,6 @@ function montarCabecalhos(
   if (configuracao.apiToken) {
     cabecalhos.Authorization = `Bearer ${configuracao.apiToken}`;
   }
-
-  log.info("[FlexBox Trainer] Cabeçalhos da requisição:", cabecalhos);
 
   return cabecalhos;
 }

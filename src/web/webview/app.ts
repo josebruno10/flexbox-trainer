@@ -59,7 +59,7 @@ type MensagemDaExtensao =
 
 const vscode = acquireVsCodeApi();
 
-const canvasAlvo = document.getElementById("canvasAlvo") as HTMLCanvasElement;
+const canvasAlvo = document.getElementById("canvasAlvo") as HTMLIFrameElement;
 const metaDesafio = document.getElementById("metaDesafio") as HTMLDivElement;
 const listaWorkspace = document.getElementById(
   "listaWorkspace",
@@ -79,6 +79,7 @@ const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById("botaoVerificar");
 const botaoSair = document.getElementById("botaoSair");
+let desafioRenderizadoId = "";
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
@@ -102,23 +103,12 @@ botaoSair?.addEventListener("click", () => {
 });
 
 function desenharDesafio(desafio: DesafioRecebido): void {
-  canvasAlvo.width = desafio.width;
-  canvasAlvo.height = desafio.height;
-
-  const contexto = canvasAlvo.getContext("2d");
-
-  if (!contexto) {
-    return;
+  if (desafioRenderizadoId && desafioRenderizadoId !== desafio.challengeId) {
+    canvasAlvo.srcdoc = canvasAlvo.srcdoc;
   }
-
-  contexto.clearRect(0, 0, canvasAlvo.width, canvasAlvo.height);
-  contexto.fillStyle = "#f2f2f2";
-  contexto.fillRect(0, 0, canvasAlvo.width, canvasAlvo.height);
-
-  desafio.blocks.forEach((bloco) => {
-    contexto.fillStyle = bloco.color;
-    contexto.fillRect(bloco.x, bloco.y, bloco.width, bloco.height);
-  });
+  if (desafioRenderizadoId !== desafio.challengeId) {
+    desafioRenderizadoId = desafio.challengeId;
+  }
 
   metaDesafio.textContent =
     "Titulo: " +

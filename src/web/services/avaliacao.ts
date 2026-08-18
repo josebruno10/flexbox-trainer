@@ -1,4 +1,8 @@
-import { ResultadoAvaliacao, TentativaPayload } from "../types";
+import {
+  ConfiguracaoServidor,
+  ResultadoAvaliacao,
+  TentativaPayload,
+} from "../types";
 import {
   enviarConteudoDaTentativa,
   lerConfiguracaoServidor,
@@ -7,8 +11,9 @@ import {
 
 export async function avaliarTentativa(
   payload: TentativaPayload,
+  configuracaoAtual?: ConfiguracaoServidor,
 ): Promise<ResultadoAvaliacao> {
-  const configuracao = lerConfiguracaoServidor();
+  const configuracao = configuracaoAtual || lerConfiguracaoServidor();
 
   if (!configuracao.apiBaseUrl) {
     return {

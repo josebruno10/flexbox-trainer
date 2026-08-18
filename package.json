@@ -61,6 +61,11 @@
           "default": "https://kevyngreenn.github.io/authserviceflexbox/",
           "description": "URL pública do site externo de autenticação que será aberto no navegador padrão."
         },
+        "flexboxTrainer.googleClientId": {
+          "type": "string",
+          "default": "248632474679-8663hgsnun8q5ddq98cc2kf23u23844p.apps.googleusercontent.com",
+          "description": "Client ID OAuth 2.0 da aplicação no Google Cloud Console para habilitar login com Gmail."
+        },
         "flexboxTrainer.apiBaseUrl": {
           "type": "string",
           "default": "https://frontendteamscup.com.br/api/docs",

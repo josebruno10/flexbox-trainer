@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import geradorScript from "../../../resources/gerador-css/script.js?raw";
 
 export function obterHtmlWebview(
   webview: vscode.Webview,
@@ -8,6 +9,7 @@ export function obterHtmlWebview(
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
   );
+  const geradorHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>* { margin: 0; padding: 0; box-sizing: border-box; } canvas { width: 100%; height: 100%; display: block; }</style></head><body style="background-color: black;"><canvas id="canva"></canvas><script>${geradorScript}</script></body></html>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -20,7 +22,7 @@ export function obterHtmlWebview(
     script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';
     style-src ${webview.cspSource} 'unsafe-inline' https: http:;
     connect-src ${webview.cspSource} https: http: ws: wss:;
-    frame-src 'self' https: http: data:;
+    frame-src ${webview.cspSource} 'self' https: http: data:;
   ">
   <title>FlexBox Trainer</title>
   <style>
@@ -72,8 +74,10 @@ export function obterHtmlWebview(
       margin-bottom: 2px;
     }
 
-    canvas {
+    .desafio-gerado {
       width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
       background: #fff;
       border-radius: 6px;
       border: 1px solid #2a3140;
@@ -133,7 +137,7 @@ export function obterHtmlWebview(
 
   <section class="bloco">
     <h2 class="titulo">Desafio alvo</h2>
-    <canvas id="canvasAlvo" width="640" height="360"></canvas>
+    <iframe id="canvasAlvo" class="desafio-gerado" srcdoc="${escapeHtml(geradorHtml)}" sandbox="allow-scripts allow-same-origin"></iframe>
     <div class="linha" id="metaDesafio"></div>
   </section>
 

@@ -71,7 +71,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     visualizacaoWebview: vscode.WebviewView,
   ): void | Thenable<void> {
     this.visualizacaoWebview = visualizacaoWebview;
-    visualizacaoWebview.webview.options = { enableScripts: true };
+    visualizacaoWebview.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.extensionUri, "dist"),
+        vscode.Uri.joinPath(this.extensionUri, "resources"),
+      ],
+    };
     this.renderizarWebviewAtual();
 
     visualizacaoWebview.webview.onDidReceiveMessage(
@@ -171,7 +177,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       }
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
@@ -237,7 +243,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         challengeId: this.desafioAtual.challengeId,
         seed: this.desafioAtual.seed,
         codigoPasta: this.codigoPastaAluno,
-      });
+      }, this.lerConfiguracaoServidorAtual());
 
       this.enviarEstado();
     } catch (error) {
@@ -259,7 +265,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
 
     if (!temConfiguracaoServidorMinima(configuracao)) {
       this.codigoPastaAluno = undefined;
@@ -286,7 +292,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   private async testarConexaoServidor(): Promise<void> {
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
     let status: StatusConexaoServidor;
 
     try {
@@ -302,6 +308,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       type: "statusServidor",
       payload: status,
     });
+  }
+
+  private lerConfiguracaoServidorAtual() {
+    const sessao = this.authService.getSessaoAtual();
+    const configuracao = lerConfiguracaoServidor(sessao?.serverToken);
+
+    return sessao?.userId
+      ? { ...configuracao, userId: sessao.userId }
+      : configuracao;
   }
 
   private enviarEstado(): void {

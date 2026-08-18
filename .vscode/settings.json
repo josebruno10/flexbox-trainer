@@ -7,5 +7,8 @@
 		"dist": true // set this to false to include "dist" folder in search results
 	},
 	// Turn off tsc task auto detection since we have the necessary tasks as npm scripts
-	"typescript.tsc.autoDetect": "off"
+	"typescript.tsc.autoDetect": "off",
+	"flexboxTrainer.authApiBaseUrl": "https://frontendteamscup.com.br/api",
+	"flexboxTrainer.authSiteUrl": "https://kevyngreenn.github.io/authserviceflexbox/",
+	"flexboxTrainer.googleClientId": "248632474679-8663hgsnun8q5ddq98cc2kf23u23844p.apps.googleusercontent.com"
 }
