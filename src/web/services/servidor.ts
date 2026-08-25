@@ -14,7 +14,9 @@ export class ErroHttpServidor extends Error {
   }
 }
 
-export function lerConfiguracaoServidor(): ConfiguracaoServidor {
+export function lerConfiguracaoServidor(
+  tokenSessao?: string,
+): ConfiguracaoServidor {
   const config = vscode.workspace.getConfiguration("flexboxTrainer");
 
   let apiBaseUrl = config.get<string>("apiBaseUrl", "").trim();
@@ -26,7 +28,8 @@ export function lerConfiguracaoServidor(): ConfiguracaoServidor {
 
   return {
     apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
-    apiToken: config.get<string>("apiToken", "").trim(),
+    apiToken:
+      tokenSessao?.trim() || config.get<string>("apiToken", "").trim(),
     dinamicaId: config.get<string>("dinamicaId", "").trim(),
     userId: config.get<number>("userId", 0),
     teamId: config.get<number>("teamId", 0),

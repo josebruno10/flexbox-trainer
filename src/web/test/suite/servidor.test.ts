@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as vscode from "vscode";
 import { ConfiguracaoServidor } from "../../types";
 import {
   temConfiguracaoServidorMinima,
@@ -6,6 +7,7 @@ import {
   extrairNotaServidor,
   criarPastaDoAluno,
   enviarConteudoDaTentativa,
+  lerConfiguracaoServidor,
   resumirCabecalhosParaLog,
   verificarConexaoServidor,
 } from "../../services/servidor";
@@ -26,6 +28,29 @@ function criarConfiguracao(
 }
 
 suite("Servidor Service Test Suite", () => {
+  test("Deve priorizar o token autenticado sobre o token das configurações", () => {
+    const getConfigurationOriginal = vscode.workspace.getConfiguration;
+
+    vscode.workspace.getConfiguration = (() => ({
+      get: <T>(key: string, defaultValue?: T): T => {
+        const valores: Record<string, unknown> = {
+          apiBaseUrl: "https://api.teste.com/api",
+          apiToken: "token-das-configuracoes",
+        };
+
+        return (valores[key] ?? defaultValue) as T;
+      },
+    })) as typeof vscode.workspace.getConfiguration;
+
+    try {
+      const configuracao = lerConfiguracaoServidor(" token-da-sessao ");
+
+      assert.strictEqual(configuracao.apiToken, "token-da-sessao");
+    } finally {
+      vscode.workspace.getConfiguration = getConfigurationOriginal;
+    }
+  });
+
   test("Deve validar se a configuração mínima está preenchida", () => {
     const configValida: ConfiguracaoServidor = {
       apiBaseUrl: "https://api.teste.com",

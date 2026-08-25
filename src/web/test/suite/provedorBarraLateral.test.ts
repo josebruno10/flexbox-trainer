@@ -4,6 +4,7 @@ import { AuthService } from "../../auth/authService";
 import { ProvedorBarraLateralFlexBox } from "../../provider/provedor-barra-lateral";
 import { criarDesafioGerado } from "../../services/desafio";
 import {
+  ConfiguracaoServidor,
   Desafio,
   EstadoAutenticacao,
   ResultadoAvaliacao,
@@ -29,6 +30,14 @@ type ProvedorInterno = {
   verificarTentativaAtual(challengeId: string): Promise<void>;
   prepararPastaDoAluno(): Promise<void>;
   testarConexaoServidor(): Promise<void>;
+  lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
+};
+
+type OpcoesProvedorTeste = {
+  invalidacoes?: string[];
+  serverToken?: string;
+  userId?: number;
+  teamId?: number;
 };
 
 suite("Provedor da barra lateral", () => {
@@ -97,7 +106,7 @@ suite("Provedor da barra lateral", () => {
       );
       assert.strictEqual(
         (init?.headers as Record<string, string>).Authorization,
-        "Bearer token-servidor",
+        "Bearer token-da-sessao",
       );
       return new Response(JSON.stringify({ nota: 73.25 }), {
         status: 200,
@@ -172,7 +181,7 @@ suite("Provedor da barra lateral", () => {
     });
   });
 
-  test("mantém o erro 401 restrito à avaliação do servidor", async () => {
+  test("invalida a sessão quando salvar-conteudo responde 401", async () => {
     mockarConfiguracaoServidorValida();
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ detail: "Token expirado" }), {
@@ -181,7 +190,8 @@ suite("Provedor da barra lateral", () => {
     });
 
     const mensagens: MensagemWebview[] = [];
-    const provedor = criarProvedorParaTeste(mensagens);
+    const invalidacoes: string[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, { invalidacoes });
     const interno = provedor as unknown as ProvedorInterno;
     interno.desafioAtual = criarDesafioGerado({
       aleatorio: criarAleatorioTeste(222),
@@ -202,6 +212,94 @@ suite("Provedor da barra lateral", () => {
 
     assert.strictEqual(interno.avaliacaoAtual?.source, "authentication-error");
     assert.strictEqual(interno.avaliacaoAtual?.httpStatus, 401);
+    assert.deepStrictEqual(invalidacoes, [
+      "O servidor recusou a sessão. Entre novamente.",
+    ]);
+  });
+
+  test("usa token, usuário e equipe da sessão nas rotas do servidor", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes: Array<{
+      url: string;
+      authorization?: string;
+    }> = [];
+
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      requisicoes.push({
+        url,
+        authorization: (init?.headers as Record<string, string>)
+          .Authorization,
+      });
+
+      if (url.endsWith("/auth/me")) {
+        return new Response(JSON.stringify({ id: 74 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ code_pasta: "gref_2/46_74" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, {
+      serverToken: "token-autenticado",
+      userId: 74,
+      teamId: 46,
+    });
+    const interno = provedor as unknown as ProvedorInterno;
+
+    const configuracao = interno.lerConfiguracaoServidorAtual();
+    assert.strictEqual(configuracao.apiToken, "token-autenticado");
+    assert.strictEqual(configuracao.userId, 74);
+    assert.strictEqual(configuracao.teamId, 46);
+
+    await interno.prepararPastaDoAluno();
+    await interno.testarConexaoServidor();
+
+    assert.strictEqual(interno.codigoPastaAluno, "gref_2/46_74");
+    assert.deepStrictEqual(requisicoes, [
+      {
+        url: "https://api.teste.com/api/criar-pasta/gref/46/74",
+        authorization: "Bearer token-autenticado",
+      },
+      {
+        url: "https://api.teste.com/api/auth/me",
+        authorization: "Bearer token-autenticado",
+      },
+    ]);
+  });
+
+  test("invalida a sessão quando auth/me responde 403", async () => {
+    mockarConfiguracaoServidorValida();
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ detail: "Acesso negado" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    const mensagens: MensagemWebview[] = [];
+    const invalidacoes: string[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, { invalidacoes });
+    const interno = provedor as unknown as ProvedorInterno;
+
+    await interno.testarConexaoServidor();
+
+    assert.deepStrictEqual(invalidacoes, [
+      "O servidor recusou a sessão. Entre novamente.",
+    ]);
+    assert.deepStrictEqual(
+      ultimaMensagem(mensagens, "statusServidor")?.payload,
+      {
+        ok: false,
+        mensagem:
+          "Servidor respondeu com erro (HTTP 403): Acesso negado",
+      },
+    );
   });
 
   test("descarta a resposta de uma verificação pertencente ao desafio anterior", async () => {
@@ -275,6 +373,7 @@ suite("Provedor da barra lateral", () => {
 
 function criarProvedorParaTeste(
   mensagens: MensagemWebview[],
+  opcoes: OpcoesProvedorTeste = {},
 ): ProvedorBarraLateralFlexBox {
   const estado: EstadoAutenticacao = {
     status: "authenticated",
@@ -284,13 +383,17 @@ function criarProvedorParaTeste(
     getEstadoAtual: () => estado,
     onDidChangeEstado: () => ({ dispose: () => undefined }),
     isAutenticado: () => true,
+    getAccessToken: () => opcoes.serverToken ?? "token-da-sessao",
     getSessaoAtual: () => ({
-      accessToken: "token-servidor",
       displayName: "Aluno de teste",
       email: "aluno@teste.com",
-      provider: "google",
       tokenGmail: "token-google",
+      userId: opcoes.userId ?? 74,
+      teamId: opcoes.teamId ?? 46,
     }),
+    invalidarSessao: async (mensagem: string) => {
+      opcoes.invalidacoes?.push(mensagem);
+    },
   } as unknown as AuthService;
   const provedor = new ProvedorBarraLateralFlexBox(
     vscode.Uri.parse("file:///extensao"),
@@ -344,10 +447,10 @@ function mockarConfiguracaoServidorValida(): void {
 
       const valores: Record<string, unknown> = {
         apiBaseUrl: "https://api.teste.com/api",
-        apiToken: "token-servidor",
+        apiToken: "token-das-configuracoes",
         dinamicaId: "gref",
-        userId: 74,
-        teamId: 46,
+        userId: 7,
+        teamId: 42,
         captureWidth: 960,
         captureHeight: 540,
       };

@@ -18,8 +18,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       handleUri: async (uri: vscode.Uri) => {
-        // Correção: Usa includes para evitar bugs com barras no final (trailing slashes)
-        if (!uri.path.includes("/auth/callback")) {
+        const caminhoCallback = uri.path.replace(/\/+$/, "");
+        if (
+          uri.authority !== context.extension.id ||
+          caminhoCallback !== "/auth/callback"
+        ) {
           return;
         }
 

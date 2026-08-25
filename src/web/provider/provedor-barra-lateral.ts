@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { AuthService } from "../auth/authService";
 import { LoginProvider } from "../auth/loginProvider";
 import {
+  ConfiguracaoServidor,
   Desafio,
   EstadoAutenticacao,
   MensagemRecebidaBarraLateral,
@@ -17,6 +18,7 @@ import {
 import { avaliarTentativa } from "../services/avaliacao";
 import {
   criarPastaDoAluno,
+  ErroHttpServidor,
   lerConfiguracaoServidor,
   temConfiguracaoServidorMinima,
   verificarConexaoServidor,
@@ -201,7 +203,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
 
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = {
@@ -290,14 +292,17 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
       const codigoPasta = this.codigoPastaAluno;
 
-      const resultadoServidor = await avaliarTentativa({
-        html: resumoWorkspace.textoHtml,
-        css: resumoWorkspace.textoCss,
-        elapsedMs:
-          (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
-        challengeId,
-        codigoPasta,
-      });
+      const resultadoServidor = await avaliarTentativa(
+        {
+          html: resumoWorkspace.textoHtml,
+          css: resumoWorkspace.textoCss,
+          elapsedMs:
+            (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
+          challengeId,
+          codigoPasta,
+        },
+        this.lerConfiguracaoServidorAtual(),
+      );
 
       if (!desafioAindaEhAtual()) {
         return;
@@ -306,6 +311,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.avaliacaoAtual = resultadoServidor;
 
       this.enviarEstado();
+
+      if (resultadoServidor.source === "authentication-error") {
+        await this.invalidarSessaoSeRecusada(
+          resultadoServidor.httpStatus,
+        );
+      }
     } catch (error) {
       if (!desafioAindaEhAtual()) {
         return;
@@ -320,6 +331,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         error: mensagem,
       };
       this.enviarEstado();
+
+      if (error instanceof ErroHttpServidor) {
+        await this.invalidarSessaoSeRecusada(error.status);
+      }
     }
   }
 
@@ -329,7 +344,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
 
     if (!temConfiguracaoServidorMinima(configuracao)) {
       this.codigoPastaAluno = undefined;
@@ -352,11 +367,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         error: `Falha ao preparar a pasta do aluno: ${mensagem}`,
       };
       this.enviarEstado();
+
+      if (error instanceof ErroHttpServidor) {
+        await this.invalidarSessaoSeRecusada(error.status);
+      }
     }
   }
 
   private async testarConexaoServidor(): Promise<void> {
-    const configuracao = lerConfiguracaoServidor();
+    const configuracao = this.lerConfiguracaoServidorAtual();
     let status: StatusConexaoServidor;
 
     try {
@@ -366,12 +385,50 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       const mensagem =
         error instanceof Error ? error.message : "Erro desconhecido";
       status = { ok: false, mensagem };
+
+      if (error instanceof ErroHttpServidor) {
+        await this.invalidarSessaoSeRecusada(error.status, true);
+      }
     }
 
     void this.visualizacaoWebview?.webview.postMessage({
       type: "statusServidor",
       payload: status,
     });
+  }
+
+  private lerConfiguracaoServidorAtual(): ConfiguracaoServidor {
+    const sessao = this.authService.getSessaoAtual();
+    const configuracao = lerConfiguracaoServidor(
+      this.authService.getAccessToken(),
+    );
+    const userIdSessao = sessao?.userId;
+    const teamIdSessao = sessao?.teamId;
+
+    return {
+      ...configuracao,
+      userId:
+        typeof userIdSessao === "number" && userIdSessao > 0
+          ? userIdSessao
+          : configuracao.userId,
+      teamId:
+        typeof teamIdSessao === "number" && teamIdSessao > 0
+          ? teamIdSessao
+          : configuracao.teamId,
+    };
+  }
+
+  private async invalidarSessaoSeRecusada(
+    httpStatus?: number,
+    incluirAcessoNegado = false,
+  ): Promise<void> {
+    if (httpStatus !== 401 && !(incluirAcessoNegado && httpStatus === 403)) {
+      return;
+    }
+
+    await this.authService.invalidarSessao(
+      "O servidor recusou a sessão. Entre novamente.",
+    );
   }
 
   private enviarEstado(): void {

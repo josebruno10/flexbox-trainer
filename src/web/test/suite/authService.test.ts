@@ -4,7 +4,37 @@ import { AuthService } from "../../auth/authService";
 
 type MockStorage = {
   valor?: string;
+  exclusoes?: number;
 };
+
+const getConfigurationOriginal = vscode.workspace.getConfiguration;
+
+function mockarConfiguracaoAutenticacao(): void {
+  vscode.workspace.getConfiguration = (section?: string) => {
+    const configuracaoOriginal = getConfigurationOriginal.call(
+      vscode.workspace,
+      section,
+    );
+
+    return {
+      ...configuracaoOriginal,
+      get: <T>(chave: string, valorPadrao?: T): T => {
+        if (section === "flexboxTrainer") {
+          const valores: Record<string, string> = {
+            authSiteUrl: "https://auth.example.com/login/",
+            authApiBaseUrl: "https://frontendteamscup.com.br/api",
+            googleClientId: "client-id-google",
+          };
+          if (chave in valores) {
+            return valores[chave] as T;
+          }
+        }
+
+        return configuracaoOriginal.get(chave, valorPadrao as T) as T;
+      },
+    } as vscode.WorkspaceConfiguration;
+  };
+}
 
 function criarContextoFalso(storage: MockStorage = {}): vscode.ExtensionContext {
   const secretos = {
@@ -14,6 +44,7 @@ function criarContextoFalso(storage: MockStorage = {}): vscode.ExtensionContext 
     },
     delete: async () => {
       storage.valor = undefined;
+      storage.exclusoes = (storage.exclusoes || 0) + 1;
     },
     onDidChange: undefined,
   } as unknown as vscode.SecretStorage;
@@ -22,28 +53,62 @@ function criarContextoFalso(storage: MockStorage = {}): vscode.ExtensionContext 
     secrets: secretos,
     extension: {
       id: "flexbox-trainer.test",
-    } as vscode.Extension<any>,
+    } as vscode.Extension<unknown>,
   } as vscode.ExtensionContext;
 }
 
-function mockarConfiguracao(chave: string, valor: string): void {
-  const workspace = vscode.workspace as unknown as {
-    getConfiguration: (section: string) => { get: <T>(key: string, defaultValue?: T) => T };
+function respostaJson(dados: unknown, status = 200): Response {
+  return new Response(JSON.stringify(dados), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function assertBearer(init: RequestInit | undefined, token: string): void {
+  const headers = init?.headers as Record<string, string> | undefined;
+  assert.strictEqual(headers?.Authorization, `Bearer ${token}`);
+}
+
+function perfilServidor(
+  sobrescritas: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 74,
+    nome: "Aluno Servidor",
+    email: "aluno@example.com",
+    time_id: 46,
+    url_image_perfil: "https://example.com/avatar.png",
+    ...sobrescritas,
+  };
+}
+
+async function iniciarFluxoGoogle(authService: AuthService): Promise<string> {
+  mockarConfiguracaoAutenticacao();
+  let urlAberta: vscode.Uri | undefined;
+  vscode.env.asExternalUri = async (uri) => uri;
+  vscode.env.openExternal = async (uri) => {
+    urlAberta = uri;
+    return true;
   };
 
-  const original = workspace.getConfiguration;
-  workspace.getConfiguration = (section: string) => {
-    const configuracaoOriginal = original.call(vscode.workspace, section);
-    return {
-      ...configuracaoOriginal,
-      get: <T>(key: string, defaultValue?: T) => {
-        if (section === "flexboxTrainer" && key === chave) {
-          return valor as unknown as T;
-        }
-        return configuracaoOriginal.get(key, defaultValue);
-      },
-    };
-  };
+  await authService.abrirLoginGoogle();
+
+  assert.ok(urlAberta);
+  const parametros = new URLSearchParams(urlAberta.query);
+  const state = parametros.get("state") || "";
+  assert.match(state, /^[a-f0-9]{48}$/);
+  assert.ok(parametros.get("callback")?.includes("/auth/callback"));
+  assert.strictEqual(parametros.get("mode"), "login");
+  assert.strictEqual(
+    parametros.get("apiBaseUrl"),
+    "https://frontendteamscup.com.br/api",
+  );
+  assert.strictEqual(parametros.get("clientId"), "client-id-google");
+  assert.strictEqual(
+    parametros.get("googleClientId"),
+    "client-id-google",
+  );
+  return state;
 }
 
 suite("AuthService", () => {
@@ -59,9 +124,250 @@ suite("AuthService", () => {
     vscode.window.showErrorMessage = originalShowErrorMessage;
     vscode.env.openExternal = originalOpenExternal;
     vscode.env.asExternalUri = originalAsExternalUri;
+    vscode.workspace.getConfiguration = getConfigurationOriginal;
   });
 
-  test("inicializar não impede a extensão de abrir quando o armazenamento seguro falha", async () => {
+  test("envia state seguro e configuração ao site de autenticação", async () => {
+    const authService = new AuthService(criarContextoFalso());
+
+    await iniciarFluxoGoogle(authService);
+
+    assert.strictEqual(authService.getEstadoAtual().status, "checking");
+    authService.dispose();
+  });
+
+  test("aceita server_token no fragmento, valida state e consulta auth/me", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    const state = await iniciarFluxoGoogle(authService);
+    let loginChamado = false;
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/login")) {
+        loginChamado = true;
+      }
+      if (url.pathname.endsWith("/auth/me")) {
+        assert.strictEqual(init?.method, "GET");
+        assertBearer(init, "token-servidor");
+        return respostaJson(perfilServidor());
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&provider=gmail&remember=1&state=${state}`,
+      ),
+    );
+
+    assert.strictEqual(loginChamado, false);
+    assert.strictEqual(authService.isAutenticado(), true);
+    assert.strictEqual(authService.getAccessToken(), "token-servidor");
+    const sessao = authService.getSessaoAtual();
+    assert.strictEqual(sessao?.email, "aluno@example.com");
+    assert.strictEqual(sessao?.userId, 74);
+    assert.strictEqual(sessao?.teamId, 46);
+    assert.strictEqual(sessao?.avatarUrl, "https://example.com/avatar.png");
+    assert.strictEqual("accessToken" in (sessao || {}), false);
+    assert.strictEqual("serverToken" in (sessao || {}), false);
+    assert.ok(storage.valor);
+    const persistida = JSON.parse(storage.valor || "{}") as Record<string, unknown>;
+    assert.strictEqual(persistida.accessToken, "token-servidor");
+    assert.strictEqual(persistida.serverToken, "token-servidor");
+  });
+
+  test("troca token Gmail no POST /login e nunca persiste a credencial do provedor", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    const state = await iniciarFluxoGoogle(authService);
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/login")) {
+        assert.strictEqual(init?.method, "POST");
+        assert.deepStrictEqual(JSON.parse(String(init?.body)), {
+          provider: "gmail",
+          token: "credencial-google",
+        });
+        return respostaJson({ access_token: "token-api", expires_in: 3600 });
+      }
+      if (url.pathname.endsWith("/auth/me")) {
+        assertBearer(init, "token-api");
+        return respostaJson(perfilServidor());
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback?state=${state}#provider=google&credential=credencial-google`,
+      ),
+    );
+
+    assert.strictEqual(authService.getAccessToken(), "token-api");
+    assert.ok(storage.valor);
+    assert.strictEqual(storage.valor?.includes("credencial-google"), false);
+    assert.strictEqual(authService.getSessaoAtual()?.tokenGmail, "gmail");
+  });
+
+  test("rejeita state diferente antes de chamar o servidor", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    await iniciarFluxoGoogle(authService);
+    let fetchChamado = false;
+    globalThis.fetch = async () => {
+      fetchChamado = true;
+      return respostaJson({});
+    };
+
+    await assert.rejects(
+      authService.processarCallback(
+        vscode.Uri.parse(
+          "vscode://flexbox-trainer.test/auth/callback#server_token=x&state=incorreto",
+        ),
+      ),
+      /não iniciado por esta extensão/i,
+    );
+
+    assert.strictEqual(fetchChamado, false);
+    assert.strictEqual(authService.isAutenticado(), false);
+  });
+
+  test("rejeita token recebido na query para não expor credenciais na URL", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    const state = await iniciarFluxoGoogle(authService);
+    let fetchChamado = false;
+    globalThis.fetch = async () => {
+      fetchChamado = true;
+      return respostaJson({});
+    };
+
+    await assert.rejects(
+      authService.processarCallback(
+        vscode.Uri.parse(
+          `vscode://flexbox-trainer.test/auth/callback?server_token=exposto&state=${state}`,
+        ),
+      ),
+      /não devolveu um token válido/i,
+    );
+
+    assert.strictEqual(fetchChamado, false);
+    assert.strictEqual(authService.isAutenticado(), false);
+  });
+
+  test("não cria sessão quando /login omite o token do servidor", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    const state = await iniciarFluxoGoogle(authService);
+    globalThis.fetch = async () => respostaJson({ usuario: perfilServidor() });
+
+    await assert.rejects(
+      authService.processarCallback(
+        vscode.Uri.parse(
+          `vscode://flexbox-trainer.test/auth/callback#provider=gmail&token=google&state=${state}`,
+        ),
+      ),
+      /não retornou token de acesso/i,
+    );
+
+    assert.strictEqual(storage.valor, undefined);
+    assert.strictEqual(authService.getAccessToken(), undefined);
+  });
+
+  test("remember=false mantém a sessão somente em memória", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    const state = await iniciarFluxoGoogle(authService);
+    globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      assertBearer(init, "token-temporario");
+      return respostaJson(perfilServidor());
+    };
+
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token-temporario&remember=0&state=${state}`,
+      ),
+    );
+
+    assert.strictEqual(storage.valor, undefined);
+    assert.strictEqual(authService.getAccessToken(), "token-temporario");
+    assert.strictEqual(authService.getSessaoAtual()?.remember, false);
+  });
+
+  test("inicializar restaura apenas sessão com token do servidor e valida auth/me", async () => {
+    const sessao = {
+      accessToken: "token-restaurado",
+      serverToken: "token-restaurado",
+      email: "antigo@example.com",
+      displayName: "Nome antigo",
+      avatarUrl: "https://example.com/antigo.png",
+      tokenGmail: "gmail",
+      userId: 1,
+      remember: true,
+      authenticatedAt: Date.now(),
+      expiresAt: Date.now() + 60_000,
+    };
+    const storage: MockStorage = { valor: JSON.stringify(sessao) };
+    const authService = new AuthService(criarContextoFalso(storage));
+    globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      assertBearer(init, "token-restaurado");
+      return respostaJson(perfilServidor({ nome: "Nome atualizado" }));
+    };
+
+    await authService.inicializar();
+
+    assert.strictEqual(authService.isAutenticado(), true);
+    assert.strictEqual(authService.getAccessToken(), "token-restaurado");
+    assert.strictEqual(
+      authService.getSessaoAtual()?.displayName,
+      "Nome atualizado",
+    );
+  });
+
+  test("inicializar remove sessão legada sem serverToken", async () => {
+    const storage: MockStorage = {
+      valor: JSON.stringify({
+        accessToken: "uuid-local-antigo",
+        email: "aluno@example.com",
+        displayName: "Aluno",
+        tokenGmail: "credencial-antiga",
+        remember: true,
+        authenticatedAt: Date.now(),
+        expiresAt: Date.now() + 60_000,
+      }),
+    };
+    const authService = new AuthService(criarContextoFalso(storage));
+
+    await authService.inicializar();
+
+    assert.strictEqual(storage.valor, undefined);
+    assert.strictEqual(authService.getEstadoAtual().status, "unauthenticated");
+  });
+
+  test("inicializar apaga sessão quando auth/me responde 401", async () => {
+    const storage: MockStorage = {
+      valor: JSON.stringify({
+        accessToken: "expirado",
+        serverToken: "expirado",
+        email: "aluno@example.com",
+        displayName: "Aluno",
+        tokenGmail: "gmail",
+        remember: true,
+        authenticatedAt: Date.now(),
+        expiresAt: Date.now() + 60_000,
+      }),
+    };
+    const authService = new AuthService(criarContextoFalso(storage));
+    globalThis.fetch = async () => respostaJson({ detail: "Inválido" }, 401);
+
+    await authService.inicializar();
+
+    assert.strictEqual(storage.valor, undefined);
+    assert.strictEqual(authService.getEstadoAtual().status, "unauthenticated");
+    assert.match(authService.getEstadoAtual().message || "", /expirou/i);
+  });
+
+  test("inicializar não impede a extensão de abrir quando SecretStorage falha", async () => {
     const contexto = criarContextoFalso();
     contexto.secrets.get = async () => {
       throw new Error("armazenamento indisponível");
@@ -77,394 +383,119 @@ suite("AuthService", () => {
     );
   });
 
-  test("loginComProvedorVSCode autentica via GitHub e persiste sessão", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-vscode",
-      account: { label: "Aluno GitHub" },
-    } as vscode.AuthenticationSession);
+  test("GitHub troca a credencial no /login e preserva o avatar", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    vscode.authentication.getSession = async () =>
+      ({
+        accessToken: "oauth-github",
+        account: { label: "Aluno GitHub" },
+      }) as vscode.AuthenticationSession;
+    vscode.window.showErrorMessage = async () => undefined;
 
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
-
       if (url.hostname === "api.github.com" && url.pathname === "/user") {
-        assert.strictEqual(init?.headers && (init.headers as Record<string, string>).Authorization, "Bearer token-vscode");
-        return new Response(
-          JSON.stringify({
-            login: "aluno-github",
-            name: "Aluno GitHub",
-            email: "aluno@example.com",
-            avatar_url: "https://avatars.githubusercontent.com/u/123",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
+        assertBearer(init, "oauth-github");
+        return respostaJson({
+          login: "aluno",
+          email: "aluno@example.com",
+          avatar_url: "https://avatars.githubusercontent.com/u/123",
         });
       }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        return new Response(
-          JSON.stringify({
-            id: 12,
-            nome: "Aluno GitHub",
-            email: "aluno@example.com",
-            token_gmail: "github-token",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
+      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
+        return respostaJson([]);
+      }
+      if (url.pathname.endsWith("/login")) {
+        assert.deepStrictEqual(JSON.parse(String(init?.body)), {
+          provider: "github",
+          token: "oauth-github",
+        });
+        return respostaJson({ access_token: "token-github-servidor" });
+      }
+      if (url.pathname.endsWith("/auth/me")) {
+        assertBearer(init, "token-github-servidor");
+        return respostaJson(
+          perfilServidor({ url_image_perfil: undefined }),
         );
       }
-
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
 
     await authService.loginComProvedorVSCode("github");
 
-    assert.strictEqual(authService.isAutenticado(), true);
-    const sessao = authService.getSessaoAtual();
-    assert.ok(sessao);
-    assert.strictEqual(sessao?.email, "aluno@example.com");
-    assert.strictEqual(sessao?.displayName, "Aluno GitHub");
-    assert.strictEqual(sessao?.tokenGmail, "github-token");
+    assert.strictEqual(authService.getAccessToken(), "token-github-servidor");
     assert.strictEqual(
-      sessao?.avatarUrl,
+      authService.getSessaoAtual()?.avatarUrl,
       "https://avatars.githubusercontent.com/u/123",
     );
+    assert.strictEqual(storage.valor?.includes("oauth-github"), false);
   });
 
-  test("loginComProvedorVSCode cadastra automaticamente via GitHub quando não existe conta", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-github-cadastro",
-      account: { label: "Aluno GitHub" },
-    } as vscode.AuthenticationSession);
-
-    let cadastroEfetuado = false;
+  test("Microsoft troca a credencial no /login", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    vscode.authentication.getSession = async () =>
+      ({
+        accessToken: "oauth-microsoft",
+        account: { label: "aluno.microsoft@example.com" },
+      }) as vscode.AuthenticationSession;
+    vscode.window.showErrorMessage = async () => undefined;
 
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
-
-      if (url.hostname === "api.github.com" && url.pathname === "/user") {
-        return new Response(
-          JSON.stringify({
-            login: "aluno-github",
-            name: "Aluno GitHub",
-            email: "aluno@example.com",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
-        return new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        return new Response(JSON.stringify({ detail: "Não encontrado" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      if (url.pathname === "/api/usuarios" || url.pathname === "/usuarios") {
-        cadastroEfetuado = true;
-        assert.strictEqual(init?.method, "POST");
-
-        const corpo = String(init?.body || "");
-        assert.ok(corpo.includes("email=aluno%40example.com") || corpo.includes("email=aluno@example.com"));
-
-        return new Response(
-          JSON.stringify({
-            id: 99,
-            nome: "Aluno GitHub",
-            email: "aluno@example.com",
-            token_gmail: "github",
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      throw new Error(`Fetch inesperado: ${url.toString()}`);
-    };
-
-    await authService.loginComProvedorVSCode("github");
-
-    assert.strictEqual(cadastroEfetuado, true);
-    assert.strictEqual(authService.isAutenticado(), true);
-    assert.strictEqual(authService.getSessaoAtual()?.email, "aluno@example.com");
-  });
-
-  test("loginComProvedorVSCode tenta e-mails verificados do GitHub até achar cadastro", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-    const emailsConsultados: string[] = [];
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-github-emails",
-      account: { label: "Aluno GitHub" },
-    } as vscode.AuthenticationSession);
-
-    globalThis.fetch = async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
-
-      if (url.hostname === "api.github.com" && url.pathname === "/user") {
-        return new Response(
-          JSON.stringify({
-            login: "aluno-github",
-            name: "Aluno GitHub",
-            email: null,
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
-        return new Response(
-          JSON.stringify([
-            {
-              email: "pessoal@example.com",
-              primary: true,
-              verified: true,
-            },
-            {
-              email: "aluno.ifms@estudante.ifms.edu.br",
-              primary: false,
-              verified: true,
-            },
-          ]),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        const email = url.searchParams.get("email") || "";
-        emailsConsultados.push(email);
-
-        if (email === "pessoal@example.com") {
-          return new Response(JSON.stringify({ detail: "Não encontrado" }), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-
-        return new Response(
-          JSON.stringify({
-            id: 74,
-            nome: "Aluno IFMS",
-            email: "aluno.ifms@estudante.ifms.edu.br",
-            token_gmail: "github-ifms-token",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      throw new Error(`Fetch inesperado: ${url.toString()}`);
-    };
-
-    await authService.loginComProvedorVSCode("github");
-
-    assert.deepStrictEqual(emailsConsultados, [
-      "pessoal@example.com",
-      "aluno.ifms@estudante.ifms.edu.br",
-    ]);
-    assert.strictEqual(authService.isAutenticado(), true);
-    assert.strictEqual(
-      authService.getSessaoAtual()?.email,
-      "aluno.ifms@estudante.ifms.edu.br",
-    );
-  });
-
-  test("loginComProvedorVSCode autentica via Microsoft e persiste sessão", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-ms",
-      account: { label: "Aluno Microsoft" },
-    } as vscode.AuthenticationSession);
-
-    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-
       if (url.hostname === "graph.microsoft.com" && url.pathname === "/v1.0/me") {
-        assert.strictEqual(init?.headers && (init.headers as Record<string, string>).Authorization, "Bearer token-ms");
-        return new Response(
-          JSON.stringify({
-            displayName: "Aluno Microsoft",
-            mail: "aluno.microsoft@example.com",
-            userPrincipalName: "aluno.microsoft@example.com",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (
-        url.hostname === "graph.microsoft.com" &&
-        url.pathname === "/v1.0/me/photo/$value"
-      ) {
-        return new Response(new Uint8Array([1, 2, 3]), {
-          status: 200,
-          headers: { "Content-Type": "image/jpeg" },
+        assertBearer(init, "oauth-microsoft");
+        return respostaJson({
+          displayName: "Aluno Microsoft",
+          mail: "aluno.microsoft@example.com",
         });
       }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        return new Response(
-          JSON.stringify({
-            id: 34,
+      if (url.hostname === "graph.microsoft.com" && url.pathname.endsWith("/photo/$value")) {
+        return new Response(null, { status: 404 });
+      }
+      if (url.pathname.endsWith("/login")) {
+        assert.deepStrictEqual(JSON.parse(String(init?.body)), {
+          provider: "microsoft",
+          token: "oauth-microsoft",
+        });
+        return respostaJson({ server_token: "token-ms-servidor" });
+      }
+      if (url.pathname.endsWith("/auth/me")) {
+        assertBearer(init, "token-ms-servidor");
+        return respostaJson(
+          perfilServidor({
             nome: "Aluno Microsoft",
             email: "aluno.microsoft@example.com",
-            token_gmail: "microsoft-token",
           }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
 
     await authService.loginComProvedorVSCode("microsoft");
 
-    assert.strictEqual(authService.isAutenticado(), true);
-    const sessao = authService.getSessaoAtual();
-    assert.ok(sessao);
-    assert.strictEqual(sessao?.email, "aluno.microsoft@example.com");
-    assert.strictEqual(sessao?.displayName, "Aluno Microsoft");
-    assert.strictEqual(sessao?.avatarUrl, "data:image/jpeg;base64,AQID");
+    assert.strictEqual(authService.getAccessToken(), "token-ms-servidor");
+    assert.strictEqual(authService.getSessaoAtual()?.tokenGmail, "microsoft");
+    assert.strictEqual(storage.valor?.includes("oauth-microsoft"), false);
   });
 
-  test("loginComProvedorVSCode cadastra automaticamente via Microsoft quando não existe conta", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-ms-cadastro",
-      account: { label: "Aluno Microsoft" },
-    } as vscode.AuthenticationSession);
-
-    let cadastroEfetuado = false;
-
-    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-
-      if (url.hostname === "graph.microsoft.com" && url.pathname === "/v1.0/me") {
-        return new Response(
-          JSON.stringify({
-            displayName: "Aluno Microsoft",
-            mail: "aluno.microsoft@example.com",
-            userPrincipalName: "aluno.microsoft@example.com",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        return new Response(JSON.stringify({ detail: "Não encontrado" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      if (url.pathname === "/api/usuarios" || url.pathname === "/usuarios") {
-        cadastroEfetuado = true;
-        assert.strictEqual(init?.method, "POST");
-
-        const corpo = String(init?.body || "");
-        assert.ok(corpo.includes("email=aluno.microsoft%40example.com") || corpo.includes("email=aluno.microsoft@example.com"));
-
-        return new Response(
-          JSON.stringify({
-            id: 100,
-            nome: "Aluno Microsoft",
-            email: "aluno.microsoft@example.com",
-            token_gmail: "microsoft",
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      throw new Error(`Fetch inesperado: ${url.toString()}`);
-    };
-
-    await authService.loginComProvedorVSCode("microsoft");
-
-    assert.strictEqual(cadastroEfetuado, true);
-    assert.strictEqual(authService.isAutenticado(), true);
-    assert.strictEqual(authService.getSessaoAtual()?.email, "aluno.microsoft@example.com");
-  });
-
-  test("loginComProvedorVSCode faz fallback quando Microsoft Graph retorna 400", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
-    vscode.authentication.getSession = async () => ({
-      accessToken: "token-ms-erro",
-      account: { label: "aluno.fallback@example.com" },
-    } as vscode.AuthenticationSession);
-
-    globalThis.fetch = async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
-
-      if (url.hostname === "graph.microsoft.com" && url.pathname === "/v1.0/me") {
-        return new Response(
-          JSON.stringify({ error: { message: "Bad Request" } }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      if (url.pathname === "/api/usuarios/por-email" || url.pathname === "/usuarios/por-email") {
-        assert.strictEqual(url.searchParams.get("email"), "aluno.fallback@example.com");
-        return new Response(
-          JSON.stringify({
-            id: 56,
-            nome: "Aluno Fallback",
-            email: "aluno.fallback@example.com",
-            token_gmail: "microsoft-token",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      throw new Error(`Fetch inesperado: ${url.toString()}`);
-    };
-
-    await authService.loginComProvedorVSCode("microsoft");
-
-    assert.strictEqual(authService.isAutenticado(), true);
-    const sessao = authService.getSessaoAtual();
-    assert.ok(sessao);
-    assert.strictEqual(sessao?.email, "aluno.fallback@example.com");
-    assert.strictEqual(sessao?.displayName, "Aluno Fallback");
-  });
-
-  test("processarCallback usa dados do callback quando presentes", async () => {
-    const contexto = criarContextoFalso();
-    const authService = new AuthService(contexto);
-
+  test("invalidarSessao remove token e metadados", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    const state = await iniciarFluxoGoogle(authService);
+    globalThis.fetch = async () => respostaJson(perfilServidor());
     await authService.processarCallback(
       vscode.Uri.parse(
-        "vscode://flexbox-trainer.test/auth/callback?email=aluno%40example.com&nome=Aluno%20Google&token_gmail=google-token&remember=1&userId=7&avatarUrl=https%3A%2F%2Fexample.com%2Faluno.jpg",
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token&state=${state}`,
       ),
     );
 
-    assert.strictEqual(authService.isAutenticado(), true);
-    const sessao = authService.getSessaoAtual();
-    assert.ok(sessao);
-    assert.strictEqual(sessao?.email, "aluno@example.com");
-    assert.strictEqual(sessao?.displayName, "Aluno Google");
-    assert.strictEqual(sessao?.tokenGmail, "google-token");
-    assert.strictEqual(sessao?.userId, 7);
-    assert.strictEqual(sessao?.avatarUrl, "https://example.com/aluno.jpg");
+    await authService.invalidarSessao("Token recusado.");
+
+    assert.strictEqual(storage.valor, undefined);
+    assert.strictEqual(authService.getAccessToken(), undefined);
+    assert.strictEqual(authService.getSessaoAtual(), undefined);
+    assert.strictEqual(authService.getEstadoAtual().status, "unauthenticated");
   });
 });
