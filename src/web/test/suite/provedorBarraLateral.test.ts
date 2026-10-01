@@ -55,21 +55,23 @@ const CHAVE_REGISTRO = `flexboxTrainer.gabaritoTreino|${BASE_API}|treino|800x800
 const NOME_GABARITO = "gab_treino_tam_800x800.png";
 const FORMAS: FormaMedida[] = [
   {
-    id: "1",
-    tipo: "retangulo",
-    x: 0,
-    y: 0,
+    id: "forma_1",
+    tipo: "retangulo_deitado",
+    x: 400,
+    y: 100,
     width: 800,
     height: 200,
+    area: 160000,
     cor: "#ff0000",
   },
   {
-    id: "2",
+    id: "forma_2",
     tipo: "circulo",
-    x: 40,
-    y: 20,
+    x: 120,
+    y: 100,
     width: 160,
     height: 160,
+    area: 20106,
     cor: "#00ff00",
   },
 ];
@@ -140,7 +142,7 @@ suite("Provedor da barra lateral", () => {
         json({ formas: [] }),
       "POST /tipo-dinamica/treino/corrigir-formas": (init) => {
         corpoCorrecao = JSON.parse(String(init?.body));
-        return json({ resultado: { pontuacao: 73.25 } });
+        return json({ pontuacao: 73.25, pontuacao_total: 2.1, pontuacao_maxima: 7 });
       },
     });
     const registro = criarRegistroFalso();
@@ -187,7 +189,7 @@ suite("Provedor da barra lateral", () => {
   test("reaproveita o gabarito já enviado para o mesmo desafio", async () => {
     mockarConfiguracaoServidorValida();
     const requisicoes = mockarServidor({
-      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ nota: 88 }),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 88 }),
     });
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste([], { registro });
@@ -216,7 +218,7 @@ suite("Provedor da barra lateral", () => {
         json([{ cod: 91, url: `https://api.teste.com/gabaritos/${NOME_GABARITO}` }]),
       "PUT /tipo-dinamica/gabarito/91": () => json({ message: "Atualizado" }),
       [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
-      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ nota: 50 }),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 50 }),
     });
     const registro = criarRegistroFalso();
     await registro.update(CHAVE_REGISTRO, {
@@ -517,7 +519,7 @@ suite("Provedor da barra lateral", () => {
     );
 
     liberarResposta(
-      new Response(JSON.stringify({ nota: 42 }), {
+      new Response(JSON.stringify({ pontuacao: 42 }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),

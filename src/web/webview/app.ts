@@ -642,6 +642,8 @@ function prepararSuperficieAvaliacao(htmlPreview: string): void {
   quadroAvaliacao.style.width = `${largura}px`;
   quadroAvaliacao.style.height = `${altura}px`;
 
+  // Mesmo reset com que a extensão oficial do torneio renderiza a página do
+  // aluno antes de medir as formas.
   const estilo = document.createElement("style");
   estilo.textContent = `
     :host {
@@ -654,7 +656,11 @@ function prepararSuperficieAvaliacao(htmlPreview: string): void {
       width: 100%;
       height: 100%;
       margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #ffffff;
     }
+    * { box-sizing: border-box; }
   `;
 
   documento.querySelectorAll("style").forEach((estiloOriginal) => {

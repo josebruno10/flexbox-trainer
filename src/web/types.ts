@@ -24,14 +24,15 @@ export type Desafio = {
 };
 
 // Elemento visível da página do aluno, no formato de FormaGeometricaPayload
-// da rota corrigir-formas.
+// da rota corrigir-formas: x e y são o centro e cor é #rrggbb.
 export type FormaMedida = {
   id: string;
-  tipo: "retangulo" | "circulo";
+  tipo: "circulo" | "quadrado" | "retangulo_deitado" | "retangulo_em_pe";
   x: number;
   y: number;
   width: number;
   height: number;
+  area: number;
   cor: string;
 };
 

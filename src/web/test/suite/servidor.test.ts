@@ -5,6 +5,7 @@ import {
   temConfiguracaoServidorMinima,
   extrairCodigoPasta,
   extrairNotaServidor,
+  extrairPercentualCorrecao,
   criarPastaDoAluno,
   enviarConteudoDaTentativa,
   lerConfiguracaoServidor,
@@ -138,6 +139,34 @@ suite("Servidor Service Test Suite", () => {
       72.5,
     );
     assert.strictEqual(extrairNotaServidor({ pontuacao_total: 2.37 }), undefined);
+  });
+
+  test("Deve ler a nota de corrigir-formas como a extensão oficial", () => {
+    assert.strictEqual(
+      extrairPercentualCorrecao({ pontuacao: 61.5, pontuacao_total: 4.3 }),
+      61.5,
+    );
+    assert.strictEqual(extrairPercentualCorrecao({ percentual: "0" }), 0);
+    // Pontuação por gabarito: vale a porcentagem informada ou total/máxima.
+    assert.strictEqual(
+      extrairPercentualCorrecao({
+        pontuacao: { "91_800x800": { pontuacao_total: 3.5, pontuacao_maxima: 7 } },
+      }),
+      50,
+    );
+    assert.strictEqual(
+      extrairPercentualCorrecao({
+        por_gabarito: {
+          "91": { percentual: 80 },
+          "92": { pontuacao_total: 1, pontuacao_maxima: 4 },
+        },
+      }),
+      52.5,
+    );
+    assert.strictEqual(extrairPercentualCorrecao({ message: "ok" }), undefined);
+    assert.strictEqual(extrairPercentualCorrecao({ pontuacao_total: 2.37 }), undefined);
+    // Não confunde a nota com campos de outras rotas.
+    assert.strictEqual(extrairPercentualCorrecao({ nota: 88 }), undefined);
   });
 
   test("Configuração deve remover espaços sem alterar maiúsculas/minúsculas do dinamicaId", () => {
