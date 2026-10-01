@@ -2,6 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Run Extension (Desktop)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionDevelopmentKind=web",
+        "${workspaceFolder}/exemplo-treino"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
+      "preLaunchTask": "npm: compile-web",
+      "debugWebWorkerHost": true
+    },
+    {
       "name": "Run Web Extension",
       "type": "pwa-extensionHost",
       "request": "launch",

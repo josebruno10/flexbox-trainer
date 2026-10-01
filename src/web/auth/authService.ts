@@ -176,7 +176,8 @@ export class AuthService implements vscode.Disposable {
     this.estadoOAuthPendente = { valor: estado, criadoEm: Date.now() };
     this.agendarExpiracaoEstadoOAuth(estado);
 
-    url.searchParams.set("callback", callbackExterno.toString());
+    // toString() codificaria = e & da query do callback do vscode.dev.
+    url.searchParams.set("callback", callbackExterno.toString(true));
     url.searchParams.set("state", estado);
     url.searchParams.set("mode", modo);
     url.searchParams.set("apiBaseUrl", this.lerUrlBaseApiAutenticacao());
@@ -198,13 +199,12 @@ export class AuthService implements vscode.Disposable {
     });
 
     try {
-      const uriLogin = vscode.Uri.parse(url.toString()).with({
-        // Mantém os separadores da query e o callback percent-encoded como
-        // componentes da URI, inclusive quando o callback contém ? ou &.
-        query: url.searchParams.toString(),
-      });
+      // Um Uri passa por encodeURI(uri.toString(true)) antes de chegar ao
+      // navegador, o que codifica os parâmetros em dobro (https%253A...) e faz
+      // o site recusar apiBaseUrl e callback. Uma string é aberta como está,
+      // inclusive quando o callback do vscode.dev contém ? e &.
       const abriu = await vscode.env.openExternal(
-        uriLogin,
+        url.toString() as unknown as vscode.Uri,
       );
 
       if (!abriu) {
@@ -228,10 +228,16 @@ export class AuthService implements vscode.Disposable {
         message: `Conectando ao ${provedor}...`,
       });
 
+      // Sem VSCODE_TENANT, o provedor da Microsoft usa "organizations" e
+      // recusa contas pessoais (outlook.com, hotmail.com).
       const scopes =
         provedor === "github"
           ? ["read:user", "user:email"]
-          : ["https://graph.microsoft.com/User.Read", "email"];
+          : [
+              "https://graph.microsoft.com/User.Read",
+              "email",
+              "VSCODE_TENANT:common",
+            ];
       const sessaoProvedor = await vscode.authentication.getSession(
         provedor,
         scopes,

@@ -114,7 +114,7 @@ export function obterHtmlWebview(
     .canvas-desafio {
       position: relative;
       width: 100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: var(--proporcao-desafio, 16 / 9);
       overflow: hidden;
       border: 1px solid #2a3140;
       border-radius: 6px;
@@ -138,7 +138,7 @@ export function obterHtmlWebview(
     .preview {
       width: 100%;
       height: auto;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: var(--proporcao-desafio, 16 / 9);
       display: block;
       border: 1px solid #2a3140;
       border-radius: 6px;

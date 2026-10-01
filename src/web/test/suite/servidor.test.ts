@@ -19,6 +19,7 @@ function criarConfiguracao(
     apiBaseUrl: "https://api.teste.com/api",
     apiToken: "token-servidor",
     dinamicaId: "KOTI",
+    eventoTreino: "",
     userId: 1,
     teamId: 10,
     captureWidth: 960,
@@ -56,6 +57,7 @@ suite("Servidor Service Test Suite", () => {
       apiBaseUrl: "https://api.teste.com",
       apiToken: "token",
       dinamicaId: "KOTI",
+      eventoTreino: "",
       userId: 1,
       teamId: 10,
       captureWidth: 960,
@@ -66,6 +68,7 @@ suite("Servidor Service Test Suite", () => {
       apiBaseUrl: "",
       apiToken: "",
       dinamicaId: "",
+      eventoTreino: "",
       userId: 0,
       teamId: 0,
       captureWidth: 960,
@@ -118,6 +121,25 @@ suite("Servidor Service Test Suite", () => {
     assert.strictEqual(extrairNotaServidor({ precision: "0" }), 0);
   });
 
+  test("Deve reconhecer pontuacao como a nota oficial do servidor", () => {
+    // Formato observado na resposta de ultima-pontuacao: pontuacao é a
+    // porcentagem oficial, enquanto pontuacao_total é outra métrica.
+    assert.strictEqual(
+      extrairNotaServidor({
+        pontuacao: 33.86,
+        pontuacao_total: 2.37,
+        pontuacao_maxima: 7.0,
+        qtd_frames: 1,
+      }),
+      33.86,
+    );
+    assert.strictEqual(
+      extrairNotaServidor({ dados: { pontuacao: "72.5" } }),
+      72.5,
+    );
+    assert.strictEqual(extrairNotaServidor({ pontuacao_total: 2.37 }), undefined);
+  });
+
   test("Configuração deve remover espaços sem alterar maiúsculas/minúsculas do dinamicaId", () => {
     // Simulando dados que viriam do vscode.workspace.getConfiguration
     const mockConfig = {
@@ -159,6 +181,7 @@ suite("Servidor Service Test Suite", () => {
     const config = criarConfiguracao({
       apiBaseUrl: "https://url-invalida.com",
       dinamicaId: "TEST",
+      eventoTreino: "",
     });
 
     // Mock do fetch global para simular erro de rede/CORS
@@ -183,6 +206,7 @@ suite("Servidor Service Test Suite", () => {
     const config = criarConfiguracao({
       apiToken: "token-secreto",
       dinamicaId: "DINAMICA ESPECIAL",
+      eventoTreino: "",
       userId: 7,
       teamId: 42,
     });
@@ -223,6 +247,7 @@ suite("Servidor Service Test Suite", () => {
     const config = criarConfiguracao({
       apiBaseUrl: "https://api.teste.com/api/",
       dinamicaId: "",
+      eventoTreino: "",
       userId: 0,
       teamId: 0,
     });
@@ -262,6 +287,7 @@ suite("Servidor Service Test Suite", () => {
     const config = criarConfiguracao({
       apiBaseUrl: "https://ifms.pro.br:6005/docs#",
       dinamicaId: "",
+      eventoTreino: "",
       userId: 0,
       teamId: 0,
     });

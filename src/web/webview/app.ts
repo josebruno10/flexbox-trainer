@@ -1,4 +1,5 @@
 import html2canvas from "html2canvas";
+import { medirFormas } from "./formas";
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -115,6 +116,29 @@ let confirmarAtualizacaoWorkspace: (() => void) | undefined;
 let componenteSelecionadoId: number | undefined;
 let versaoWorkspace = 0;
 
+// As dimensões vêm do gabarito. Estes valores, iguais aos do gerador, só
+// valem enquanto nenhum desafio foi gerado.
+const LARGURA_PADRAO = 800;
+const ALTURA_PADRAO = 800;
+
+function dimensoesDoDesafio(): { largura: number; altura: number } {
+  return {
+    largura: desafioAtual?.width ?? LARGURA_PADRAO,
+    altura: desafioAtual?.height ?? ALTURA_PADRAO,
+  };
+}
+
+function aplicarProporcaoDoDesafio(largura: number, altura: number): void {
+  if (largura <= 0 || altura <= 0) {
+    return;
+  }
+
+  document.documentElement.style.setProperty(
+    "--proporcao-desafio",
+    `${largura} / ${altura}`,
+  );
+}
+
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
 });
@@ -152,6 +176,7 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   canvasAlvo.height = desafio.height;
   canvasAnotacoes.width = desafio.width;
   canvasAnotacoes.height = desafio.height;
+  aplicarProporcaoDoDesafio(desafio.width, desafio.height);
 
   const contexto = canvasAlvo.getContext("2d");
 
@@ -226,15 +251,16 @@ function renderizarMetaDesafio(): void {
     formatarTempo(tempoDecorrido) +
     " | Status: " +
     (desafioAtual.encerrado ? "Encerrado" : "Em andamento") +
-    " | Captura: " +
-    (desafioAtual.captureWidth ?? 960) +
+    " | Gabarito: " +
+    desafioAtual.width +
     "x" +
-    (desafioAtual.captureHeight ?? 540);
+    desafioAtual.height;
 }
 
 function desenharEstadoInicial(): void {
-  canvasAlvo.width = 960;
-  canvasAlvo.height = 540;
+  canvasAlvo.width = LARGURA_PADRAO;
+  canvasAlvo.height = ALTURA_PADRAO;
+  aplicarProporcaoDoDesafio(LARGURA_PADRAO, ALTURA_PADRAO);
   const contexto = canvasAlvo.getContext("2d");
 
   if (!contexto) {
@@ -255,9 +281,11 @@ function desenharEstadoInicial(): void {
   metaDesafio.textContent = "Nenhum desafio iniciado.";
   detalheComponente.textContent =
     "Gere um desafio para consultar medidas e cores.";
-  canvasAnotacoes.width = 960;
-  canvasAnotacoes.height = 540;
-  canvasAnotacoes.getContext("2d")?.clearRect(0, 0, 960, 540);
+  canvasAnotacoes.width = LARGURA_PADRAO;
+  canvasAnotacoes.height = ALTURA_PADRAO;
+  canvasAnotacoes
+    .getContext("2d")
+    ?.clearRect(0, 0, LARGURA_PADRAO, ALTURA_PADRAO);
   desenharMensagemPreview("O preview aparecerá aqui.");
   botaoVerificar.disabled = true;
   botaoEncerrarDesafio.disabled = true;
@@ -332,8 +360,10 @@ function renderizarDetalheComponente(): void {
   }
 
   detalheComponente.textContent =
-    `Tamanho: ${formatarMedida(bloco.width)} × ` +
-    `${formatarMedida(bloco.height)} px` +
+    (bloco.shape === "circle"
+      ? `Círculo | Diâmetro: ${formatarMedida(bloco.width)} px`
+      : `Tamanho: ${formatarMedida(bloco.width)} × ` +
+        `${formatarMedida(bloco.height)} px`) +
     ` | Cor: ${normalizarHex(bloco.color)}`;
 }
 
@@ -464,9 +494,38 @@ async function solicitarVerificacao(): Promise<void> {
     return;
   }
 
+  // A superfície de avaliação já tem o HTML/CSS recém-lidos; espera o layout
+  // assentar antes de medir.
+  await document.fonts?.ready;
+  await aguardarDoisFrames();
+
+  if (desafioAtual?.challengeId !== challengeId) {
+    return;
+  }
+
   caixaResultado.textContent =
-    "Enviando o HTML e o CSS para correção no servidor...";
-  vscode.postMessage({ type: "solicitarVerificacao", challengeId });
+    "Enviando as formas da sua página para correção no servidor...";
+  vscode.postMessage({
+    type: "solicitarVerificacao",
+    challengeId,
+    formas: medirFormasDoAluno(),
+  });
+}
+
+function medirFormasDoAluno(): ReturnType<typeof medirFormas> {
+  const corpo = quadroAvaliacao.shadowRoot?.querySelector("body");
+
+  if (!corpo) {
+    return [];
+  }
+
+  const { largura, altura } = dimensoesDoDesafio();
+  return medirFormas(
+    corpo,
+    quadroAvaliacao.getBoundingClientRect(),
+    largura,
+    altura,
+  );
 }
 
 async function atualizarWorkspaceAntesDaVerificacao(): Promise<void> {
@@ -504,11 +563,13 @@ async function capturarCanvasAluno(): Promise<HTMLCanvasElement> {
   await document.fonts?.ready;
   await aguardarDoisFrames();
 
+  const { largura, altura } = dimensoesDoDesafio();
+
   return html2canvas(quadroAvaliacao, {
-    width: 960,
-    height: 540,
-    windowWidth: 960,
-    windowHeight: 540,
+    width: largura,
+    height: altura,
+    windowWidth: largura,
+    windowHeight: altura,
     scale: 1,
     useCORS: true,
     imageTimeout: 5000,
@@ -518,21 +579,27 @@ async function capturarCanvasAluno(): Promise<HTMLCanvasElement> {
 }
 
 function desenharPreviewAluno(canvasAluno: HTMLCanvasElement): void {
-  canvasPreviewAluno.width = 960;
-  canvasPreviewAluno.height = 540;
+  canvasPreviewAluno.width = canvasAluno.width;
+  canvasPreviewAluno.height = canvasAluno.height;
   const contexto = canvasPreviewAluno.getContext("2d");
 
   if (!contexto) {
     return;
   }
 
-  contexto.clearRect(0, 0, 960, 540);
-  contexto.drawImage(canvasAluno, 0, 0, 960, 540);
+  contexto.clearRect(
+    0,
+    0,
+    canvasPreviewAluno.width,
+    canvasPreviewAluno.height,
+  );
+  contexto.drawImage(canvasAluno, 0, 0);
 }
 
 function desenharMensagemPreview(mensagem: string): void {
-  canvasPreviewAluno.width = 960;
-  canvasPreviewAluno.height = 540;
+  const { largura, altura } = dimensoesDoDesafio();
+  canvasPreviewAluno.width = largura;
+  canvasPreviewAluno.height = altura;
   const contexto = canvasPreviewAluno.getContext("2d");
 
   if (!contexto) {
@@ -540,12 +607,12 @@ function desenharMensagemPreview(mensagem: string): void {
   }
 
   contexto.fillStyle = "#ffffff";
-  contexto.fillRect(0, 0, 960, 540);
+  contexto.fillRect(0, 0, largura, altura);
   contexto.fillStyle = "#52606d";
   contexto.font = "600 24px sans-serif";
   contexto.textAlign = "center";
   contexto.textBaseline = "middle";
-  contexto.fillText(mensagem, 480, 270, 880);
+  contexto.fillText(mensagem, largura / 2, altura / 2, largura * 0.92);
 }
 
 function prepararSuperficieAvaliacao(htmlPreview: string): void {
@@ -564,17 +631,21 @@ function prepararSuperficieAvaliacao(htmlPreview: string): void {
     .querySelectorAll('meta[http-equiv="Content-Security-Policy" i]')
     .forEach((elemento) => elemento.remove());
 
+  const { largura, altura } = dimensoesDoDesafio();
   const raiz = quadroAvaliacao.shadowRoot ?? quadroAvaliacao.attachShadow({
     mode: "open",
   });
   raiz.replaceChildren();
 
+  // Regras do documento externo vencem :host, então o tamanho da superfície
+  // de captura precisa ir no estilo inline do próprio host.
+  quadroAvaliacao.style.width = `${largura}px`;
+  quadroAvaliacao.style.height = `${altura}px`;
+
   const estilo = document.createElement("style");
   estilo.textContent = `
     :host {
       display: block;
-      width: 960px;
-      height: 540px;
       overflow: hidden;
       background: #fff;
     }
@@ -633,8 +704,9 @@ function renderizarResultado(
 
   if (
     resultado.source === "missing-files" ||
+    resultado.source === "sem-formas" ||
     resultado.source === "config-missing" ||
-    resultado.source === "folder-error" ||
+    resultado.source === "gabarito-error" ||
     resultado.source === "servidor-sem-nota"
   ) {
     caixaResultado.textContent =

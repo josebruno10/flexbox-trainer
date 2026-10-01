@@ -23,6 +23,18 @@ export type Desafio = {
   encerrado?: boolean;
 };
 
+// Elemento visível da página do aluno, no formato de FormaGeometricaPayload
+// da rota corrigir-formas.
+export type FormaMedida = {
+  id: string;
+  tipo: "retangulo" | "circulo";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  cor: string;
+};
+
 export type ResultadoAvaliacao = {
   precision: number;
   score: number;
@@ -32,8 +44,9 @@ export type ResultadoAvaliacao = {
     | "api-error"
     | "authentication-error"
     | "missing-files"
+    | "sem-formas"
     | "config-missing"
-    | "folder-error";
+    | "gabarito-error";
   error?: string;
   httpStatus?: number;
 };
@@ -56,18 +69,25 @@ export type ResumoWorkspace = {
   temArquivoCss: boolean;
 };
 
-export type TentativaPayload = {
-  html: string;
-  css: string;
-  elapsedMs: number;
+export type GabaritoGerado = {
   challengeId: string;
-  codigoPasta?: string;
+  imagemDataUrl: string;
+  width: number;
+  height: number;
+};
+
+export type TentativaPayload = {
+  challengeId: string;
+  formas: FormaMedida[];
+  gabarito: GabaritoGerado;
 };
 
 export type ConfiguracaoServidor = {
   apiBaseUrl: string;
   apiToken: string;
   dinamicaId: string;
+  // Evento só de treino que recebe a imagem de cada desafio gerado.
+  eventoTreino: string;
   userId: number;
   teamId: number;
   captureWidth: number;
@@ -85,7 +105,7 @@ export type MensagemRecebidaBarraLateral =
   | { type: "encerrarDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao"; challengeId: string }
+  | { type: "solicitarVerificacao"; challengeId: string; formas: unknown }
   | { type: "abrirLogin" }
   | { type: "abrirCadastro" }
   | { type: "loginGitHub" }

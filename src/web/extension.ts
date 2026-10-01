@@ -11,6 +11,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const provedor = new ProvedorBarraLateralFlexBox(
     context.extensionUri,
     authService,
+    context.globalState,
   );
 
   context.subscriptions.push(authService);

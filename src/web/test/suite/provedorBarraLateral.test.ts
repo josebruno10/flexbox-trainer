@@ -7,6 +7,8 @@ import {
   ConfiguracaoServidor,
   Desafio,
   EstadoAutenticacao,
+  FormaMedida,
+  GabaritoGerado,
   ResultadoAvaliacao,
   ResumoWorkspace,
 } from "../../types";
@@ -23,12 +25,13 @@ type ProvedorInterno = {
   avaliacaoAtual?: ResultadoAvaliacao;
   inicioTentativaMs: number;
   fimTentativaMs?: number;
-  codigoPastaAluno?: string;
-  preparandoPasta: Promise<void>;
+  gabaritoAtual?: GabaritoGerado;
   enviarEstado(): void;
   encerrarDesafioAtual(): void;
-  verificarTentativaAtual(challengeId: string): Promise<void>;
-  prepararPastaDoAluno(): Promise<void>;
+  verificarTentativaAtual(
+    challengeId: string,
+    formas: FormaMedida[],
+  ): Promise<void>;
   testarConexaoServidor(): Promise<void>;
   lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
 };
@@ -38,7 +41,38 @@ type OpcoesProvedorTeste = {
   serverToken?: string;
   userId?: number;
   teamId?: number;
+  registro?: vscode.Memento;
 };
+
+type Requisicao = {
+  metodo: string;
+  caminho: string;
+  corpo?: BodyInit | null;
+};
+
+const BASE_API = "https://api.teste.com/api";
+const CHAVE_REGISTRO = `flexboxTrainer.gabaritoTreino|${BASE_API}|treino|800x800`;
+const NOME_GABARITO = "gab_treino_tam_800x800.png";
+const FORMAS: FormaMedida[] = [
+  {
+    id: "1",
+    tipo: "retangulo",
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 200,
+    cor: "#ff0000",
+  },
+  {
+    id: "2",
+    tipo: "circulo",
+    x: 40,
+    y: 20,
+    width: 160,
+    height: 160,
+    cor: "#00ff00",
+  },
+];
 
 suite("Provedor da barra lateral", () => {
   const dateNowOriginal = Date.now;
@@ -84,7 +118,6 @@ suite("Provedor da barra lateral", () => {
       "O tempo não deve avançar depois que o desafio for encerrado.",
     );
 
-    interno.prepararPastaDoAluno = async () => undefined;
     interno.testarConexaoServidor = async () => undefined;
     await provedor.iniciarNovoDesafio();
 
@@ -97,118 +130,241 @@ suite("Provedor da barra lateral", () => {
     );
   });
 
-  test("usa exclusivamente a nota retornada por salvar-conteudo", async () => {
+  test("cadastra o gabarito no evento de treino e usa a nota de corrigir-formas", async () => {
     mockarConfiguracaoServidorValida();
-    globalThis.fetch = async (input, init) => {
-      assert.strictEqual(
-        String(input),
-        "https://api.teste.com/api/salvar-conteudo",
-      );
-      assert.strictEqual(
-        (init?.headers as Record<string, string>).Authorization,
-        "Bearer token-da-sessao",
-      );
-      return new Response(JSON.stringify({ nota: 73.25 }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    };
-
-    const mensagens: MensagemWebview[] = [];
-    const provedor = criarProvedorParaTeste(mensagens);
-    const interno = provedor as unknown as ProvedorInterno;
-    interno.desafioAtual = criarDesafioGerado({
-      aleatorio: criarAleatorioTeste(202),
+    let corpoCorrecao: unknown;
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () => json([]),
+      "POST /tipo-dinamica/treino/gabarito": () => json({ cod: 91 }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () =>
+        json({ formas: [] }),
+      "POST /tipo-dinamica/treino/corrigir-formas": (init) => {
+        corpoCorrecao = JSON.parse(String(init?.body));
+        return json({ resultado: { pontuacao: 73.25 } });
+      },
     });
-    interno.resumoWorkspaceAtual = {
-      caminhoHtml: "/projeto/index.html",
-      caminhoCss: "/projeto/style.css",
-      textoHtml: "<main></main>",
-      textoCss: "main { display: flex; }",
-      htmlPreview: "<!doctype html><style>main { display: flex; }</style><main></main>",
-      temArquivoHtml: true,
-      temArquivoCss: true,
-    };
-    interno.codigoPastaAluno = "gref_2/46_74";
-    interno.preparandoPasta = Promise.resolve();
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 202);
 
-    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
 
     assert.deepStrictEqual(interno.avaliacaoAtual, {
       precision: 73.25,
       score: 73.25,
       source: "servidor",
     });
-    assert.deepStrictEqual(
-      ultimaMensagem(mensagens, "resultadoAvaliacao")?.payload,
-      interno.avaliacaoAtual,
+    assert.deepStrictEqual(corpoCorrecao, {
+      time_id: 46,
+      integrante_id: 74,
+      salvar_pontuacao: false,
+      frames: [
+        {
+          gabarito_cod: 91,
+          viewport: { width: 800, height: 800 },
+          formas: FORMAS,
+        },
+      ],
+    });
+    const envio = requisicoes.find(
+      (requisicao) => requisicao.metodo === "POST" && requisicao.caminho.endsWith("/gabarito"),
+    );
+    const arquivo = (envio?.corpo as FormData).get("arquivo") as Blob;
+    assert.strictEqual(arquivo.type, "image/png");
+    assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+    assert.ok(
+      requisicoes.every((requisicao) => !requisicao.caminho.includes("gref")),
+      "O evento da competição nunca deve receber gabaritos.",
     );
   });
 
-  test("não cria nota local quando salvar-conteudo responde sem precisão", async () => {
+  test("reaproveita o gabarito já enviado para o mesmo desafio", async () => {
     mockarConfiguracaoServidorValida();
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ message: "Conteúdo salvo com sucesso." }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-
-    const mensagens: MensagemWebview[] = [];
-    const provedor = criarProvedorParaTeste(mensagens);
-    const interno = provedor as unknown as ProvedorInterno;
-    interno.desafioAtual = criarDesafioGerado({
-      aleatorio: criarAleatorioTeste(212),
+    const requisicoes = mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ nota: 88 }),
     });
-    interno.resumoWorkspaceAtual = {
-      caminhoHtml: "/projeto/index.html",
-      caminhoCss: "/projeto/style.css",
-      textoHtml: "<main></main>",
-      textoCss: "main { display: flex; }",
-      htmlPreview: "<main></main>",
-      temArquivoHtml: true,
-      temArquivoCss: true,
-    };
-    interno.codigoPastaAluno = "gref_2/46_74";
-    interno.preparandoPasta = Promise.resolve();
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 204);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
 
-    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 88);
+    assert.deepStrictEqual(
+      requisicoes.map((requisicao) => requisicao.caminho),
+      ["/tipo-dinamica/treino/corrigir-formas"],
+    );
+  });
+
+  test("substitui via PUT apenas o gabarito criado pela extensão", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json([{ cod: 91, url: `https://api.teste.com/gabaritos/${NOME_GABARITO}` }]),
+      "PUT /tipo-dinamica/gabarito/91": () => json({ message: "Atualizado" }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ nota: 50 }),
+    });
+    const registro = criarRegistroFalso();
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: "desafio-anterior",
+    });
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 206);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 50);
+    assert.deepStrictEqual(
+      requisicoes.map((requisicao) => `${requisicao.metodo} ${requisicao.caminho}`),
+      [
+        "GET /tipo-dinamica/treino/gabaritos",
+        "PUT /tipo-dinamica/gabarito/91",
+        `GET /medidas-gabarito?gabarito=${NOME_GABARITO}`,
+        "POST /tipo-dinamica/treino/corrigir-formas",
+      ],
+    );
+    assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+  });
+
+  test("não envia nada quando o evento já tem um gabarito do mesmo tamanho de outra origem", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json([{ cod: 5, url: `https://api.teste.com/gabaritos/${NOME_GABARITO}` }]),
+    });
+    const provedor = criarProvedorParaTeste([]);
+    const interno = prepararVerificacao(provedor, 208);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.source, "gabarito-error");
+    assert.match(
+      interno.avaliacaoAtual?.error || "",
+      /não foi criado por esta extensão/,
+    );
+    assert.deepStrictEqual(
+      requisicoes.map((requisicao) => requisicao.metodo),
+      ["GET"],
+    );
+  });
+
+  test("recusa o envio quando não identifica o tamanho dos gabaritos do evento", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json([{ cod: 5, arquivo: "imagem-sem-padrao.png" }]),
+    });
+    const provedor = criarProvedorParaTeste([]);
+    const interno = prepararVerificacao(provedor, 210);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.source, "gabarito-error");
+    assert.match(interno.avaliacaoAtual?.error || "", /identificar o tamanho/);
+    assert.strictEqual(requisicoes.length, 1);
+  });
+
+  test("exige um evento de treino e não chama o servidor sem ele", async () => {
+    mockarConfiguracaoServidorValida({ eventoTreino: "" });
+    const requisicoes = mockarServidor({});
+    const provedor = criarProvedorParaTeste([]);
+    const interno = prepararVerificacao(provedor, 212);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.source, "config-missing");
+    assert.match(interno.avaliacaoAtual?.error || "", /eventoTreino/);
+    assert.strictEqual(requisicoes.length, 0);
+  });
+
+  test("não envia uma página sem formas medidas", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({});
+    const provedor = criarProvedorParaTeste([]);
+    const interno = prepararVerificacao(provedor, 214);
+
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, []);
+
+    assert.strictEqual(interno.avaliacaoAtual?.source, "sem-formas");
+    assert.strictEqual(requisicoes.length, 0);
+  });
+
+  test("não cria nota local quando corrigir-formas responde sem precisão", async () => {
+    mockarConfiguracaoServidorValida();
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () =>
+        json({ message: "Correção registrada." }),
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 216);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
 
     assert.deepStrictEqual(interno.avaliacaoAtual, {
       precision: 0,
       score: 0,
       source: "servidor-sem-nota",
-      error: "Conteúdo salvo com sucesso.",
+      error: "Correção registrada.",
     });
   });
 
-  test("invalida a sessão quando salvar-conteudo responde 401", async () => {
+  test("invalida a sessão quando corrigir-formas responde 401", async () => {
     mockarConfiguracaoServidorValida();
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ detail: "Token expirado" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () =>
+        json({ detail: "Token expirado" }, 401),
     });
-
-    const mensagens: MensagemWebview[] = [];
     const invalidacoes: string[] = [];
-    const provedor = criarProvedorParaTeste(mensagens, { invalidacoes });
-    const interno = provedor as unknown as ProvedorInterno;
-    interno.desafioAtual = criarDesafioGerado({
-      aleatorio: criarAleatorioTeste(222),
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { invalidacoes, registro });
+    const interno = prepararVerificacao(provedor, 222);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
     });
-    interno.resumoWorkspaceAtual = {
-      caminhoHtml: "/projeto/index.html",
-      caminhoCss: "/projeto/style.css",
-      textoHtml: "<main></main>",
-      textoCss: "main { display: flex; }",
-      htmlPreview: "<main></main>",
-      temArquivoHtml: true,
-      temArquivoCss: true,
-    };
-    interno.codigoPastaAluno = "gref_2/46_74";
-    interno.preparandoPasta = Promise.resolve();
 
-    await interno.verificarTentativaAtual(interno.desafioAtual.challengeId);
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
 
     assert.strictEqual(interno.avaliacaoAtual?.source, "authentication-error");
     assert.strictEqual(interno.avaliacaoAtual?.httpStatus, 401);
@@ -232,14 +388,7 @@ suite("Provedor da barra lateral", () => {
           .Authorization,
       });
 
-      if (url.endsWith("/auth/me")) {
-        return new Response(JSON.stringify({ id: 74 }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(JSON.stringify({ code_pasta: "gref_2/46_74" }), {
+      return new Response(JSON.stringify({ id: 74 }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -258,20 +407,46 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(configuracao.userId, 74);
     assert.strictEqual(configuracao.teamId, 46);
 
-    await interno.prepararPastaDoAluno();
     await interno.testarConexaoServidor();
 
-    assert.strictEqual(interno.codigoPastaAluno, "gref_2/46_74");
     assert.deepStrictEqual(requisicoes, [
-      {
-        url: "https://api.teste.com/api/criar-pasta/gref/46/74",
-        authorization: "Bearer token-autenticado",
-      },
       {
         url: "https://api.teste.com/api/auth/me",
         authorization: "Bearer token-autenticado",
       },
     ]);
+  });
+
+  test("permite forçar os IDs das configurações quando o override está ligado", () => {
+    mockarConfiguracaoServidorValida({ usarIdsDasConfiguracoes: true });
+
+    // Cenário real: /auth/me devolveu um id do provedor OAuth que não existe
+    // na tabela `usuarios` do servidor.
+    const provedor = criarProvedorParaTeste([], {
+      serverToken: "token-autenticado",
+      userId: 176078921,
+      teamId: 46,
+    });
+    const interno = provedor as unknown as ProvedorInterno;
+    const configuracao = interno.lerConfiguracaoServidorAtual();
+
+    assert.strictEqual(configuracao.userId, 7);
+    assert.strictEqual(configuracao.teamId, 42);
+  });
+
+  test("mantém os IDs da sessão quando o override está desligado", () => {
+    mockarConfiguracaoServidorValida();
+
+    const provedor = criarProvedorParaTeste([], {
+      serverToken: "token-autenticado",
+      userId: 176078921,
+      teamId: 46,
+    });
+    const interno = provedor as unknown as ProvedorInterno;
+    const configuracao = interno.lerConfiguracaoServidorAtual();
+
+    assert.strictEqual(configuracao.userId, 176078921);
+    assert.strictEqual(configuracao.teamId, 46);
   });
 
   test("invalida a sessão quando auth/me responde 403", async () => {
@@ -319,29 +494,21 @@ suite("Provedor da barra lateral", () => {
     };
 
     const mensagens: MensagemWebview[] = [];
-    const provedor = criarProvedorParaTeste(mensagens);
-    const interno = provedor as unknown as ProvedorInterno;
-    interno.desafioAtual = criarDesafioGerado({
-      aleatorio: criarAleatorioTeste(303),
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste(mensagens, { registro });
+    const interno = prepararVerificacao(provedor, 303);
+    const challengeIdAnterior = interno.desafioAtual!.challengeId;
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: challengeIdAnterior,
     });
-    interno.resumoWorkspaceAtual = {
-      caminhoHtml: "/projeto/index.html",
-      caminhoCss: "/projeto/style.css",
-      textoHtml: "<main></main>",
-      textoCss: "main { display: flex; }",
-      htmlPreview: "<!doctype html><style>main { display: flex; }</style><main></main>",
-      temArquivoHtml: true,
-      temArquivoCss: true,
-    };
-    interno.codigoPastaAluno = "gref_2/46_74";
-    interno.preparandoPasta = Promise.resolve();
-    const challengeIdAnterior = interno.desafioAtual.challengeId;
 
-    const verificacaoPendente =
-      interno.verificarTentativaAtual(challengeIdAnterior);
+    const verificacaoPendente = interno.verificarTentativaAtual(
+      challengeIdAnterior,
+      FORMAS,
+    );
     await fetchIniciado;
 
-    interno.prepararPastaDoAluno = async () => undefined;
     interno.testarConexaoServidor = async () => undefined;
     await provedor.iniciarNovoDesafio();
     assert.notStrictEqual(
@@ -398,6 +565,7 @@ function criarProvedorParaTeste(
   const provedor = new ProvedorBarraLateralFlexBox(
     vscode.Uri.parse("file:///extensao"),
     authService,
+    opcoes.registro ?? criarRegistroFalso(),
   );
   const interno = provedor as unknown as ProvedorInterno;
 
@@ -438,7 +606,9 @@ function ultimaMensagem(
   return [...mensagens].reverse().find((mensagem) => mensagem.type === tipo);
 }
 
-function mockarConfiguracaoServidorValida(): void {
+function mockarConfiguracaoServidorValida(
+  extras: Record<string, unknown> = {},
+): void {
   vscode.workspace.getConfiguration = ((section: string) => ({
     get: <T>(key: string, defaultValue?: T): T => {
       if (section !== "flexboxTrainer") {
@@ -446,13 +616,15 @@ function mockarConfiguracaoServidorValida(): void {
       }
 
       const valores: Record<string, unknown> = {
-        apiBaseUrl: "https://api.teste.com/api",
+        apiBaseUrl: BASE_API,
         apiToken: "token-das-configuracoes",
         dinamicaId: "gref",
+        eventoTreino: "treino",
         userId: 7,
         teamId: 42,
         captureWidth: 960,
         captureHeight: 540,
+        ...extras,
       };
       return (valores[key] ?? defaultValue) as T;
     },
@@ -469,4 +641,73 @@ function criarAleatorioTeste(caso: number): () => number {
     valor ^= valor + Math.imul(valor ^ (valor >>> 7), valor | 61);
     return ((valor ^ (valor >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+// Desafio atual com arquivos e imagem do gabarito já prontos para verificar.
+function prepararVerificacao(
+  provedor: ProvedorBarraLateralFlexBox,
+  semente: number,
+): ProvedorInterno {
+  const interno = provedor as unknown as ProvedorInterno;
+  interno.desafioAtual = criarDesafioGerado({
+    aleatorio: criarAleatorioTeste(semente),
+  });
+  interno.resumoWorkspaceAtual = {
+    caminhoHtml: "/projeto/index.html",
+    caminhoCss: "/projeto/style.css",
+    textoHtml: "<main></main>",
+    textoCss: "main { display: flex; }",
+    htmlPreview: "<!doctype html><style>main { display: flex; }</style><main></main>",
+    temArquivoHtml: true,
+    temArquivoCss: true,
+  };
+  interno.gabaritoAtual = {
+    challengeId: interno.desafioAtual.challengeId,
+    // Assinatura PNG: basta para montar o arquivo do formulário.
+    imagemDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+    width: interno.desafioAtual.width,
+    height: interno.desafioAtual.height,
+  };
+  return interno;
+}
+
+function mockarServidor(
+  rotas: Record<string, (init?: RequestInit) => Response>,
+): Requisicao[] {
+  const requisicoes: Requisicao[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const metodo = init?.method ?? "GET";
+    const caminho = String(input).replace(BASE_API, "");
+    requisicoes.push({ metodo, caminho, corpo: init?.body });
+    const rota = rotas[`${metodo} ${caminho}`];
+
+    if (!rota) {
+      throw new Error(`Requisição inesperada: ${metodo} ${caminho}`);
+    }
+
+    return rota(init);
+  };
+
+  return requisicoes;
+}
+
+function json(dados: unknown, status = 200): Response {
+  return new Response(JSON.stringify(dados), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function criarRegistroFalso(): vscode.Memento {
+  const valores = new Map<string, unknown>();
+
+  return {
+    keys: () => Array.from(valores.keys()),
+    get: <T>(chave: string, padrao?: T) =>
+      (valores.has(chave) ? valores.get(chave) : padrao) as T,
+    update: async (chave: string, valor: unknown) => {
+      valores.set(chave, valor);
+    },
+  } as vscode.Memento;
 }
