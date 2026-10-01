@@ -5,6 +5,8 @@ import {
   ConfiguracaoServidor,
   Desafio,
   EstadoAutenticacao,
+  FormaMedida,
+  GabaritoGerado,
   MensagemRecebidaBarraLateral,
   ResumoWorkspace,
   ResultadoAvaliacao,
@@ -17,10 +19,8 @@ import {
 } from "../services/workspace";
 import { avaliarTentativa } from "../services/avaliacao";
 import {
-  criarPastaDoAluno,
   ErroHttpServidor,
   lerConfiguracaoServidor,
-  temConfiguracaoServidorMinima,
   verificarConexaoServidor,
 } from "../services/servidor";
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
@@ -38,12 +38,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private desafioAtual?: Desafio;
 
-  private gabaritoAtual?: {
-    challengeId: string;
-    imagemDataUrl: string;
-    width: number;
-    height: number;
-  };
+  private gabaritoAtual?: GabaritoGerado;
 
   private resumoWorkspaceAtual: ResumoWorkspace = criarResumoWorkspaceVazio();
 
@@ -53,13 +48,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private fimTentativaMs?: number;
 
-  private codigoPastaAluno?: string;
-
-  private preparandoPasta: Promise<void> = Promise.resolve();
-
   private estadoAutenticacao: EstadoAutenticacao;
 
-  public constructor(extensionUri: vscode.Uri, authService: AuthService) {
+  public constructor(
+    extensionUri: vscode.Uri,
+    authService: AuthService,
+    // Guarda qual gabarito do evento de treino esta instalação criou.
+    private readonly registroGabaritos: vscode.Memento,
+  ) {
     this.extensionUri = extensionUri;
     this.authService = authService;
     this.loginProvider = new LoginProvider(authService);
@@ -102,12 +98,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "abrirLogin") {
-          void this.loginProvider.abrirLogin();
+          void this.loginProvider.abrirLogin().catch(mostrarFalhaAoAbrirLogin);
           return;
         }
 
         if (mensagem.type === "abrirCadastro") {
-          void this.loginProvider.abrirCadastro();
+          void this.loginProvider
+            .abrirCadastro()
+            .catch(mostrarFalhaAoAbrirLogin);
           return;
         }
 
@@ -122,7 +120,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
 
         if (mensagem.type === "loginGoogle") {
-          void this.authService.abrirLoginGoogle();
+          void this.authService
+            .abrirLoginGoogle()
+            .catch(mostrarFalhaAoAbrirLogin);
           return;
         }
 
@@ -186,14 +186,16 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
             return;
           }
 
-          void this.verificarTentativaAtual(mensagem.challengeId);
+          void this.verificarTentativaAtual(
+            mensagem.challengeId,
+            sanitizarFormas(mensagem.formas),
+          );
         }
       },
       undefined,
     );
 
     if (this.authService.isAutenticado()) {
-      this.preparandoPasta = this.prepararPastaDoAluno();
       void this.atualizarPreviewWorkspace();
     }
   }
@@ -203,20 +205,19 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const configuracao = this.lerConfiguracaoServidorAtual();
-
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
+    const desafioGerado = criarDesafioGerado();
+    // A captura do aluno precisa casar com o gabarito. As dimensões saem do
+    // próprio desafio, não das settings, porque nem todo gabarito é 960x540.
     this.desafioAtual = {
-      ...criarDesafioGerado(),
-      captureWidth: configuracao.captureWidth,
-      captureHeight: configuracao.captureHeight,
+      ...desafioGerado,
+      captureWidth: desafioGerado.width,
+      captureHeight: desafioGerado.height,
     };
     this.gabaritoAtual = undefined;
     this.avaliacaoAtual = undefined;
-    this.codigoPastaAluno = undefined;
     this.inicioTentativaMs = Date.now();
     this.fimTentativaMs = undefined;
-    this.preparandoPasta = this.prepararPastaDoAluno();
     this.enviarEstado();
     void this.testarConexaoServidor();
   }
@@ -239,7 +240,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarEstado();
   }
 
-  private async verificarTentativaAtual(challengeId: string): Promise<void> {
+  private async verificarTentativaAtual(
+    challengeId: string,
+    formas: FormaMedida[],
+  ): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
@@ -248,16 +252,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    const preparandoPasta = this.preparandoPasta;
-    const inicioTentativaMs = this.inicioTentativaMs;
-    const fimTentativaMs = this.fimTentativaMs;
-    const instanteVerificacaoMs = Date.now();
     const desafioAindaEhAtual = (): boolean =>
       this.desafioAtual?.challengeId === challengeId;
 
     try {
-      // A verificação sempre relê os arquivos; assim, um atraso ou falha na
-      // atualização visual da webview não envia uma versão antiga ao servidor.
       const resumoLido = await lerResumoWorkspace();
       const resumoWorkspace =
         resumoLido.temArquivoHtml && resumoLido.temArquivoCss
@@ -284,24 +282,24 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      await preparandoPasta;
+      const gabarito = this.gabaritoAtual;
 
-      if (!desafioAindaEhAtual()) {
+      if (gabarito?.challengeId !== challengeId) {
+        this.avaliacaoAtual = {
+          precision: 0,
+          score: 0,
+          source: "gabarito-error",
+          error:
+            "A imagem do desafio ainda não foi gerada. Aguarde a barra lateral desenhá-lo.",
+        };
+        this.enviarEstado();
         return;
       }
 
-      const codigoPasta = this.codigoPastaAluno;
-
       const resultadoServidor = await avaliarTentativa(
-        {
-          html: resumoWorkspace.textoHtml,
-          css: resumoWorkspace.textoCss,
-          elapsedMs:
-            (fimTentativaMs ?? instanteVerificacaoMs) - inicioTentativaMs,
-          challengeId,
-          codigoPasta,
-        },
+        { challengeId, formas, gabarito },
         this.lerConfiguracaoServidorAtual(),
+        this.registroGabaritos,
       );
 
       if (!desafioAindaEhAtual()) {
@@ -329,42 +327,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         score: 0,
         source: "api-error",
         error: mensagem,
-      };
-      this.enviarEstado();
-
-      if (error instanceof ErroHttpServidor) {
-        await this.invalidarSessaoSeRecusada(error.status);
-      }
-    }
-  }
-
-  private async prepararPastaDoAluno(): Promise<void> {
-    if (!this.authService.isAutenticado()) {
-      this.codigoPastaAluno = undefined;
-      return;
-    }
-
-    const configuracao = this.lerConfiguracaoServidorAtual();
-
-    if (!temConfiguracaoServidorMinima(configuracao)) {
-      this.codigoPastaAluno = undefined;
-      return;
-    }
-
-    try {
-      this.codigoPastaAluno = await criarPastaDoAluno(configuracao);
-      console.log(
-        `[FlexBox Trainer] Pasta criada com sucesso no servidor! Código: ${this.codigoPastaAluno}`,
-      );
-    } catch (error) {
-      const mensagem =
-        error instanceof Error ? error.message : "Erro desconhecido";
-      this.codigoPastaAluno = undefined;
-      this.avaliacaoAtual = {
-        precision: 0,
-        score: 0,
-        source: "folder-error",
-        error: `Falha ao preparar a pasta do aluno: ${mensagem}`,
       };
       this.enviarEstado();
 
@@ -402,19 +364,30 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     const configuracao = lerConfiguracaoServidor(
       this.authService.getAccessToken(),
     );
-    const userIdSessao = sessao?.userId;
-    const teamIdSessao = sessao?.teamId;
+    // Por padrão a sessão vence, para ninguém submeter com o ID de outra
+    // pessoa. O override existe porque o servidor pode devolver em /auth/me
+    // um id do provedor OAuth que não existe na tabela `usuarios`.
+    const preferirConfiguracoes = vscode.workspace
+      .getConfiguration("flexboxTrainer")
+      .get<boolean>("usarIdsDasConfiguracoes", false);
+
+    const escolherId = (
+      valorConfigurado: number,
+      valorSessao: number | undefined,
+    ): number => {
+      if (preferirConfiguracoes && valorConfigurado > 0) {
+        return valorConfigurado;
+      }
+
+      return typeof valorSessao === "number" && valorSessao > 0
+        ? valorSessao
+        : valorConfigurado;
+    };
 
     return {
       ...configuracao,
-      userId:
-        typeof userIdSessao === "number" && userIdSessao > 0
-          ? userIdSessao
-          : configuracao.userId,
-      teamId:
-        typeof teamIdSessao === "number" && teamIdSessao > 0
-          ? teamIdSessao
-          : configuracao.teamId,
+      userId: escolherId(configuracao.userId, sessao?.userId),
+      teamId: escolherId(configuracao.teamId, sessao?.teamId),
     };
   }
 
@@ -489,4 +462,41 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.extensionUri,
     );
   }
+}
+
+// A mensagem vem da webview; só passam formas com números e cor válidos.
+function sanitizarFormas(formas: unknown): FormaMedida[] {
+  if (!Array.isArray(formas)) {
+    return [];
+  }
+
+  return formas
+    .filter(
+      (forma): forma is FormaMedida =>
+        typeof forma === "object" &&
+        forma !== null &&
+        (forma.tipo === "retangulo" || forma.tipo === "circulo") &&
+        typeof forma.id === "string" &&
+        typeof forma.cor === "string" &&
+        /^#[0-9a-f]{6}$/i.test(forma.cor) &&
+        [forma.x, forma.y, forma.width, forma.height].every(
+          (valor) => typeof valor === "number" && Number.isFinite(valor),
+        ),
+    )
+    .slice(0, 1000)
+    .map(({ id, tipo, x, y, width, height, cor }) => ({
+      id,
+      tipo,
+      x,
+      y,
+      width,
+      height,
+      cor,
+    }));
+}
+
+function mostrarFalhaAoAbrirLogin(error: unknown): void {
+  const mensagem =
+    error instanceof Error ? error.message : "Não foi possível abrir o login.";
+  void vscode.window.showErrorMessage(`Erro no Login: ${mensagem}`);
 }

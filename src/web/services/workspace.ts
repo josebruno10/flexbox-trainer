@@ -53,9 +53,21 @@ async function lerDocumentoDeTreino(
     return documentoAberto;
   }
 
+  // Pastas de build e de teste contêm index.html internos do VS Code; sem
+  // excluí-las, o preview pode capturar um arquivo que não é do aluno.
+  const IGNORAR =
+    "**/{node_modules,.vscode-test-web,.git,dist,out,build}/**";
+
+  // A raiz da workspace tem prioridade sobre qualquer cópia aninhada.
+  const naRaiz = await vscode.workspace.findFiles(nomeArquivo, IGNORAR, 1);
+
+  if (naRaiz.length > 0) {
+    return vscode.workspace.openTextDocument(naRaiz[0]);
+  }
+
   const arquivosEncontrados = await vscode.workspace.findFiles(
     `**/${nomeArquivo}`,
-    "**/node_modules/**",
+    IGNORAR,
     1,
   );
 

@@ -1,64 +1,109 @@
+import type * as vscode from "vscode";
 import {
   ConfiguracaoServidor,
   ResultadoAvaliacao,
   TentativaPayload,
 } from "../types";
 import {
+  corrigirFormas,
+  enviarGabaritoDeTreino,
   ErroHttpServidor,
-  enviarConteudoDaTentativa,
-  lerConfiguracaoServidor,
-  temConfiguracaoServidorMinima,
 } from "./servidor";
 
-export async function avaliarTentativa(
-  payload: TentativaPayload,
-  configuracaoAtual?: ConfiguracaoServidor,
-): Promise<ResultadoAvaliacao> {
-  const configuracao = configuracaoAtual || lerConfiguracaoServidor();
+// Gabarito que esta instalação criou no evento de treino e o desafio que ele
+// representa agora.
+type GabaritoRegistrado = {
+  cod: number;
+  challengeId: string;
+};
 
+export async function avaliarTentativa(
+  tentativa: TentativaPayload,
+  configuracao: ConfiguracaoServidor,
+  registro: vscode.Memento,
+): Promise<ResultadoAvaliacao> {
   if (!configuracao.apiBaseUrl) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "config-missing",
-      error: "Configure a URL base da API para verificar a tentativa.",
-    };
+    return falha(
+      "config-missing",
+      "Configure a URL base da API para verificar a tentativa.",
+    );
   }
 
   if (!configuracao.apiToken) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "authentication-error",
-      error: "Configure o token da API antes de verificar a tentativa.",
-    };
+    return falha(
+      "authentication-error",
+      "Faça login antes de verificar a tentativa.",
+    );
   }
 
-  if (!temConfiguracaoServidorMinima(configuracao)) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "config-missing",
-      error:
-        "Preencha dinamicaId, userId e teamId nas configurações da extensão.",
-    };
+  if (!configuracao.eventoTreino) {
+    return falha(
+      "config-missing",
+      "Configure flexboxTrainer.eventoTreino com um evento só de treino. " +
+        "A extensão cadastra a imagem de cada desafio nesse evento e nunca " +
+        "usa o evento da competição.",
+    );
   }
 
-  if (!payload.codigoPasta) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "folder-error",
-      error: "O código da pasta do aluno ainda não foi criado no servidor.",
-    };
+  if (configuracao.userId <= 0 || configuracao.teamId <= 0) {
+    return falha(
+      "config-missing",
+      "Não foi possível identificar seu usuário e sua equipe no servidor.",
+    );
   }
+
+  if (tentativa.formas.length === 0) {
+    return falha(
+      "sem-formas",
+      "Nenhum elemento com cor de fundo foi encontrado na sua página. " +
+        "Use background-color nos elementos que recriam o desafio.",
+    );
+  }
+
+  const { gabarito } = tentativa;
+  const chave =
+    `flexboxTrainer.gabaritoTreino|${configuracao.apiBaseUrl}|` +
+    `${configuracao.eventoTreino}|${gabarito.width}x${gabarito.height}`;
+  const registrado = registro.get<GabaritoRegistrado>(chave);
 
   try {
-    return await enviarConteudoDaTentativa(
+    let cod =
+      registrado?.challengeId === tentativa.challengeId
+        ? registrado.cod
+        : undefined;
+
+    if (cod === undefined) {
+      try {
+        cod = await enviarGabaritoDeTreino(
+          configuracao,
+          dataUrlParaPng(gabarito.imagemDataUrl),
+          gabarito.width,
+          gabarito.height,
+          registrado?.cod,
+        );
+      } catch (error) {
+        if (error instanceof ErroHttpServidor) {
+          throw error;
+        }
+
+        return falha(
+          "gabarito-error",
+          error instanceof Error ? error.message : "Falha ao enviar o gabarito.",
+        );
+      }
+
+      await registro.update(chave, {
+        cod,
+        challengeId: tentativa.challengeId,
+      } satisfies GabaritoRegistrado);
+    }
+
+    return await corrigirFormas(
       configuracao,
-      payload.codigoPasta,
-      payload.html,
-      payload.css,
+      cod,
+      gabarito.width,
+      gabarito.height,
+      tentativa.formas,
     );
   } catch (error) {
     const message =
@@ -76,4 +121,16 @@ export async function avaliarTentativa(
         error instanceof ErroHttpServidor ? error.status : undefined,
     };
   }
+}
+
+function falha(
+  source: ResultadoAvaliacao["source"],
+  error: string,
+): ResultadoAvaliacao {
+  return { precision: 0, score: 0, source, error };
+}
+
+function dataUrlParaPng(dataUrl: string): Uint8Array<ArrayBuffer> {
+  const binario = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
+  return Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0));
 }

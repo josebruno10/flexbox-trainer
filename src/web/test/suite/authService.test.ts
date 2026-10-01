@@ -82,10 +82,16 @@ function perfilServidor(
   };
 }
 
-async function iniciarFluxoGoogle(authService: AuthService): Promise<string> {
+let ultimosParametrosAbertos: URLSearchParams | undefined;
+
+async function iniciarFluxoGoogle(
+  authService: AuthService,
+  callbackExterno?: string,
+): Promise<string> {
   mockarConfiguracaoAutenticacao();
-  let urlAberta: vscode.Uri | undefined;
-  vscode.env.asExternalUri = async (uri) => uri;
+  let urlAberta: unknown;
+  vscode.env.asExternalUri = async (uri) =>
+    callbackExterno ? vscode.Uri.parse(callbackExterno) : uri;
   vscode.env.openExternal = async (uri) => {
     urlAberta = uri;
     return true;
@@ -93,8 +99,11 @@ async function iniciarFluxoGoogle(authService: AuthService): Promise<string> {
 
   await authService.abrirLoginGoogle();
 
-  assert.ok(urlAberta);
-  const parametros = new URLSearchParams(urlAberta.query);
+  // Um Uri seria recodificado pelo VS Code antes de chegar ao navegador; só
+  // uma string garante que o site lê exatamente estes parâmetros.
+  assert.strictEqual(typeof urlAberta, "string");
+  const parametros = new URL(urlAberta as string).searchParams;
+  ultimosParametrosAbertos = parametros;
   const state = parametros.get("state") || "";
   assert.match(state, /^[a-f0-9]{48}$/);
   assert.ok(parametros.get("callback")?.includes("/auth/callback"));
@@ -133,6 +142,23 @@ suite("AuthService", () => {
     await iniciarFluxoGoogle(authService);
 
     assert.strictEqual(authService.getEstadoAtual().status, "checking");
+    authService.dispose();
+  });
+
+  test("preserva o callback do vscode.dev, que contém ? e &", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    await iniciarFluxoGoogle(
+      authService,
+      "https://vscode.dev/callback?vscode-reqid=7&vscode-scheme=vscode&vscode-path=%2Fauth%2Fcallback",
+    );
+
+    const callback = new URL(ultimosParametrosAbertos?.get("callback") || "");
+    assert.strictEqual(callback.hostname, "vscode.dev");
+    assert.strictEqual(callback.searchParams.get("vscode-reqid"), "7");
+    assert.strictEqual(
+      callback.searchParams.get("vscode-path"),
+      "/auth/callback",
+    );
     authService.dispose();
   });
 
@@ -435,11 +461,17 @@ suite("AuthService", () => {
   test("Microsoft troca a credencial no /login", async () => {
     const storage: MockStorage = {};
     const authService = new AuthService(criarContextoFalso(storage));
-    vscode.authentication.getSession = async () =>
-      ({
+    let escoposSolicitados: readonly string[] = [];
+    vscode.authentication.getSession = (async (
+      _provedor: string,
+      escopos: readonly string[],
+    ) => {
+      escoposSolicitados = escopos;
+      return {
         accessToken: "oauth-microsoft",
         account: { label: "aluno.microsoft@example.com" },
-      }) as vscode.AuthenticationSession;
+      } as vscode.AuthenticationSession;
+    }) as typeof vscode.authentication.getSession;
     vscode.window.showErrorMessage = async () => undefined;
 
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -475,6 +507,8 @@ suite("AuthService", () => {
 
     await authService.loginComProvedorVSCode("microsoft");
 
+    // Aceita contas pessoais e institucionais, não só "organizations".
+    assert.ok(escoposSolicitados.includes("VSCODE_TENANT:common"));
     assert.strictEqual(authService.getAccessToken(), "token-ms-servidor");
     assert.strictEqual(authService.getSessaoAtual()?.tokenGmail, "microsoft");
     assert.strictEqual(storage.valor?.includes("oauth-microsoft"), false);
