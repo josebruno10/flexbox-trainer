@@ -458,6 +458,61 @@ suite("AuthService", () => {
     assert.strictEqual(storage.valor?.includes("oauth-github"), false);
   });
 
+  test("tenta de novo quando o provedor do GitHub demora a registrar", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    let pedidos = 0;
+    vscode.authentication.getSession = (async () => {
+      pedidos++;
+      if (pedidos === 1) {
+        throw new Error(
+          "Timed out waiting for authentication provider 'github' to register.",
+        );
+      }
+      return {
+        accessToken: "oauth-github",
+        account: { label: "Aluno GitHub" },
+      } as vscode.AuthenticationSession;
+    }) as typeof vscode.authentication.getSession;
+    vscode.window.showErrorMessage = async () => undefined;
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.hostname === "api.github.com") {
+        return respostaJson(url.pathname === "/user" ? { login: "aluno" } : []);
+      }
+      if (url.pathname.endsWith("/login")) {
+        return respostaJson({ access_token: "token-github-servidor" });
+      }
+      return respostaJson(perfilServidor());
+    };
+
+    await authService.loginComProvedorVSCode("github");
+
+    assert.strictEqual(pedidos, 2);
+    assert.strictEqual(authService.getAccessToken(), "token-github-servidor");
+  });
+
+  test("explica a falha quando o provedor nunca registra", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    let pedidos = 0;
+    let mensagemExibida = "";
+    vscode.authentication.getSession = (async () => {
+      pedidos++;
+      throw new Error(
+        "Timed out waiting for authentication provider 'github' to register.",
+      );
+    }) as typeof vscode.authentication.getSession;
+    vscode.window.showErrorMessage = (async (mensagem: string) => {
+      mensagemExibida = mensagem;
+      return undefined;
+    }) as typeof vscode.window.showErrorMessage;
+
+    await authService.loginComProvedorVSCode("github");
+
+    assert.strictEqual(pedidos, 3);
+    assert.strictEqual(authService.getEstadoAtual().status, "error");
+    assert.match(mensagemExibida, /"GitHub Authentication" está habilitada/);
+  });
+
   test("Microsoft troca a credencial no /login", async () => {
     const storage: MockStorage = {};
     const authService = new AuthService(criarContextoFalso(storage));

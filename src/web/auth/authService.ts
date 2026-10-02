@@ -33,6 +33,7 @@ const DURACAO_SESSAO_PADRAO_MS = 30 * 24 * 60 * 60 * 1000;
 const DURACAO_ESTADO_OAUTH_MS = 10 * 60 * 1000;
 const TIMEOUT_AUTENTICACAO_MS = 15_000;
 const TIMEOUT_PERFIL_MS = 10_000;
+const TENTATIVAS_PROVEDOR_VSCODE = 3;
 const PROVEDORES_SUPORTADOS = new Set<ProvedorAutenticacao>([
   "gmail",
   "github",
@@ -238,11 +239,7 @@ export class AuthService implements vscode.Disposable {
               "email",
               "VSCODE_TENANT:common",
             ];
-      const sessaoProvedor = await vscode.authentication.getSession(
-        provedor,
-        scopes,
-        { createIfNone: true },
-      );
+      const sessaoProvedor = await this.obterSessaoProvedor(provedor, scopes);
 
       if (!sessaoProvedor) {
         throw new Error("Autenticação cancelada.");
@@ -280,6 +277,45 @@ export class AuthService implements vscode.Disposable {
         error instanceof Error ? error.message : "Falha na autenticação.";
       this.definirEstado({ status: "error", message: mensagem });
       void vscode.window.showErrorMessage(mensagem);
+    }
+  }
+
+  // No primeiro pedido o VS Code ativa a extensão do provedor e espera só 5 s
+  // pelo registro dele. Numa janela recém-aberta isso leva mais (medido: 5,6 s
+  // para o GitHub e 11,4 s para a Microsoft), e o provedor continua
+  // registrando depois do erro; o erro vem antes de qualquer tela de login.
+  private async obterSessaoProvedor(
+    provedor: "github" | "microsoft",
+    scopes: string[],
+  ): Promise<vscode.AuthenticationSession> {
+    for (let tentativa = 1; ; tentativa++) {
+      try {
+        return await vscode.authentication.getSession(provedor, scopes, {
+          createIfNone: true,
+        });
+      } catch (error) {
+        const aguardandoRegistro =
+          error instanceof Error &&
+          /timed out waiting for authentication provider/i.test(error.message);
+
+        if (!aguardandoRegistro) {
+          throw error;
+        }
+
+        if (tentativa >= TENTATIVAS_PROVEDOR_VSCODE) {
+          const nome = provedor === "github" ? "GitHub" : "Microsoft";
+          throw new Error(
+            `O VS Code não disponibilizou o login do ${nome}. Confira se a ` +
+              `extensão embutida "${nome} Authentication" está habilitada e ` +
+              "tente novamente.",
+          );
+        }
+
+        this.definirEstado({
+          status: "checking",
+          message: `Aguardando o login do ${provedor} ficar disponível...`,
+        });
+      }
     }
   }
 
