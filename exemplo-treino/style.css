@@ -1,12 +1,106 @@
-/* Recrie aqui o gabarito mostrado na barra lateral. */
-html, body {
+* {
+  box-sizing: border-box;
   margin: 0;
+  padding: 0;
+}
+
+html,
+body {
   width: 100%;
   height: 100%;
 }
 
-.palco {
-  width: 100%;
-  height: 100%;
-  background: #9ca3af;
+/* Página do tamanho do gabarito: cabeçalho, conteúdo e rodapé. */
+.pagina {
+  width: 800px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+}
+
+.circulo {
+  border-radius: 50%;
+}
+
+/* Cabeçalho (800 x 200): logo à esquerda, menu à direita. */
+.cabecalho {
+  height: 200px;
+  display: flex;
+}
+
+.logo {
+  width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4a259;
+}
+
+.logo .circulo {
+  width: 140px;
+  height: 140px;
+  background: #5b2a86;
+}
+
+.menu {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  padding: 50px 20px;
+  background: #2a9d8f;
+}
+
+.item {
+  flex: 1;
+  background: #e9f5db;
+}
+
+/* Conteúdo (800 x 400): barra lateral e grade de cartões. */
+.conteudo {
+  height: 400px;
+  display: flex;
+}
+
+.lateral {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background: #e76f51;
+}
+
+.bloco {
+  flex: 1;
+  background: #264653;
+}
+
+.cartoes {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 20px;
+  background: #e9c46a;
+}
+
+.cartao {
+  width: 245px;
+  height: 170px;
+  background: #8338ec;
+}
+
+/* Rodapé (800 x 200): fileira de círculos. */
+.rodape {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  background: #023047;
+}
+
+.rodape .circulo {
+  width: 120px;
+  height: 120px;
+  background: #ffb703;
 }
