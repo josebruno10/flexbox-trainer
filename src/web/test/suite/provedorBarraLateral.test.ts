@@ -252,6 +252,34 @@ suite("Provedor da barra lateral", () => {
     });
   });
 
+  test("trata como vazia a lista de uma dinâmica nova que responde 404 dentro de um 500", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json({ detail: "Erro ao buscar gabaritos: 404: Nenhum gabarito encontrado" }, 500),
+      "POST /tipo-dinamica/treino/gabarito": () => json({ cod: 93 }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 55 }),
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 205);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 55);
+    assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
+      cod: 93,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+    assert.ok(
+      requisicoes.some((requisicao) => requisicao.caminho.endsWith("/gabarito")),
+    );
+  });
+
   test("substitui via PUT quando a listagem de gabaritos vem em pares", async () => {
     mockarConfiguracaoServidorValida();
     const requisicoes = mockarServidor({

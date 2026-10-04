@@ -39,9 +39,10 @@ export async function avaliarTentativa(
   if (!configuracao.eventoTreino) {
     return falha(
       "config-missing",
-      "Configure flexboxTrainer.eventoTreino com um evento só de treino. " +
-        "A extensão cadastra a imagem de cada desafio nesse evento e nunca " +
-        "usa o evento da competição.",
+      'Crie sua dinâmica de treino com o comando "FlexBox Trainer: Criar ' +
+        'Dinâmica de Treino" (ou preencha flexboxTrainer.eventoTreino). A ' +
+        "extensão cadastra a imagem de cada desafio nela e nunca usa o " +
+        "evento da competição.",
     );
   }
 

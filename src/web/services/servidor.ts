@@ -355,6 +355,87 @@ export async function corrigirFormas(
   return { precision: nota, score: nota, source: "servidor" };
 }
 
+/** Dados da dinâmica, ou undefined quando ela não existe no servidor. */
+export async function buscarDinamica(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+): Promise<unknown> {
+  try {
+    const dados = await requisitarApi(
+      configuracao,
+      "GET",
+      `/tipoDinamica/${encodeURIComponent(evento)}`,
+      undefined,
+      "consultar a dinâmica",
+    );
+    const vazio =
+      dados === null ||
+      (Array.isArray(dados) && dados.length === 0) ||
+      (ehRegistro(dados) && Object.keys(dados).length === 0);
+    return vazio ? undefined : dados;
+  } catch (error) {
+    if (ehNaoEncontrado(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+// O servidor embrulha alguns 404 num 500, por exemplo "Erro ao obter tipo de
+// dinâmica: 404: Evento não encontrado."
+function ehNaoEncontrado(error: unknown): boolean {
+  return (
+    error instanceof ErroHttpServidor &&
+    (error.status === 404 ||
+      (error.status === 500 && /\b404\b|não encontrad/i.test(error.message)))
+  );
+}
+
+// Tipo 2 (projetos diferentes) dá uma pasta por aluno, como no treino
+// individual; a configuração de correção 1 é a padrão indicada pelo professor.
+export async function criarDinamicaDeTreino(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+): Promise<unknown> {
+  return requisitarApi(
+    configuracao,
+    "POST",
+    "/tipoDinamica",
+    new URLSearchParams({ evento, tipo: "2", config_correcao: "1" }),
+    "criar a dinâmica",
+  );
+}
+
+export async function consultarStatusDinamica(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+): Promise<boolean | undefined> {
+  const dados = await requisitarApi(
+    configuracao,
+    "GET",
+    `/tipo-dinamica/${encodeURIComponent(evento)}/status`,
+    undefined,
+    "consultar o status da dinâmica",
+  );
+  // A extensão oficial só envia correções quando status é true.
+  return ehRegistro(dados) && typeof dados.status === "boolean"
+    ? dados.status
+    : undefined;
+}
+
+export async function abrirDinamica(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+): Promise<void> {
+  await requisitarApi(
+    configuracao,
+    "PUT",
+    `/tipo-dinamica/${encodeURIComponent(evento)}/status`,
+    new URLSearchParams({ status: "true" }),
+    "abrir a dinâmica",
+  );
+}
+
 async function listarGabaritos(
   configuracao: ConfiguracaoServidor,
   evento: string,
@@ -383,7 +464,7 @@ async function listarGabaritos(
     return lista;
   } catch (error) {
     // Evento ainda sem gabaritos.
-    if (error instanceof ErroHttpServidor && error.status === 404) {
+    if (ehNaoEncontrado(error)) {
       return [];
     }
     throw error;
@@ -496,7 +577,7 @@ async function requisitarApi(
   configuracao: ConfiguracaoServidor,
   metodo: "GET" | "POST" | "PUT",
   caminho: string,
-  corpo: string | FormData | undefined,
+  corpo: string | FormData | URLSearchParams | undefined,
   acao: string,
 ): Promise<unknown> {
   const url = `${normalizarApiBaseUrl(configuracao.apiBaseUrl)}${caminho}`;
@@ -511,7 +592,11 @@ async function requisitarApi(
     // FormData define o próprio Content-Type com o boundary.
     headers: montarCabecalhos(
       configuracao,
-      typeof corpo === "string" ? { "Content-Type": "application/json" } : {},
+      typeof corpo === "string"
+        ? { "Content-Type": "application/json" }
+        : corpo instanceof URLSearchParams
+          ? { "Content-Type": "application/x-www-form-urlencoded" }
+          : {},
     ),
     signal: abortController.signal,
     body: corpo,
