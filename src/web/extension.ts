@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
+import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
 import { ehDocumentoDeTreino } from "./services/workspace";
 
@@ -83,6 +84,15 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.logout", async () => {
       await authService.logout();
     }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "flexbox-trainer.criarDinamicaTreino",
+      async () => {
+        await criarDinamicaTreinoInterativa(authService);
+      },
+    ),
   );
 
   context.subscriptions.push(

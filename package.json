@@ -44,6 +44,10 @@
         "title": "FlexBox Trainer: Sair"
       },
       {
+        "command": "flexbox-trainer.criarDinamicaTreino",
+        "title": "FlexBox Trainer: Criar Dinâmica de Treino"
+      },
+      {
         "command": "flexbox-trainer.iniciar",
         "title": "FlexBox Trainer: Iniciar"
       }
@@ -90,7 +94,7 @@
           "type": "string",
           "default": "",
           "scope": "application",
-          "description": "Código de um evento só de treino. Ao verificar, a extensão cadastra nele a imagem do desafio como gabarito e corrige com corrigir-formas, sem salvar pontuação. O servidor guarda um gabarito por tamanho, então cada desafio substitui o anterior criado pela extensão. Nunca use um evento de competição."
+          "description": "Código de um evento só de treino, preenchido pelo comando \"FlexBox Trainer: Criar Dinâmica de Treino\". Ao verificar, a extensão cadastra nele a imagem do desafio como gabarito e corrige com corrigir-formas, sem salvar pontuação. O servidor guarda um gabarito por tamanho, então cada desafio substitui o anterior criado pela extensão. Nunca use um evento de competição."
         },
         "flexboxTrainer.usarIdsDasConfiguracoes": {
           "type": "boolean",
