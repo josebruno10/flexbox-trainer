@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
+import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
-import { ehDocumentoDeTreino } from "./services/workspace";
+import {
+  ehDocumentoDeTreino,
+  escreverArquivosDeTreino,
+} from "./services/workspace";
 
 export async function activate(context: vscode.ExtensionContext) {
   initializeLogger(context);
@@ -91,6 +95,73 @@ export async function activate(context: vscode.ExtensionContext) {
       "flexbox-trainer.criarDinamicaTreino",
       async () => {
         await criarDinamicaTreinoInterativa(authService);
+      },
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "flexbox-trainer.gerarSolucaoTeste",
+      async () => {
+        const desafio = provedor.obterDesafioAtual();
+
+        if (!desafio) {
+          void vscode.window.showInformationMessage(
+            "Gere um desafio na barra lateral antes de gerar a solução.",
+          );
+          return;
+        }
+
+        const montagem = await vscode.window.showQuickPick(
+          [
+            {
+              label: "Flexbox",
+              description: "display: flex, gap, padding e alinhamento; sem position",
+              gerar: gerarSolucaoFlexbox,
+            },
+            {
+              label: "Posição absoluta",
+              description: "cada bloco com left e top dentro do pai",
+              gerar: gerarSolucaoAbsoluta,
+            },
+          ],
+          {
+            title: "Gerar solução exata do desafio (teste)",
+            placeHolder: "Como montar o HTML/CSS?",
+          },
+        );
+
+        if (!montagem) {
+          return;
+        }
+
+        const confirmacao = await vscode.window.showWarningMessage(
+          "Substituir index.html e style.css pela solução exata do desafio atual?",
+          {
+            modal: true,
+            detail: `Montagem: ${montagem.label}. Serve só para testar se a correção chega a 100%.`,
+          },
+          "Substituir",
+        );
+
+        if (confirmacao !== "Substituir") {
+          return;
+        }
+
+        try {
+          const { html, css } = montagem.gerar(desafio);
+          await escreverArquivosDeTreino(html, css);
+          await provedor.atualizarPreviewWorkspace();
+          void vscode.window.showInformationMessage(
+            "Solução exata gravada em index.html e style.css. Clique em Verificar.",
+          );
+        } catch (error) {
+          const mensagem =
+            error instanceof Error ? error.message : "Erro desconhecido";
+          void vscode.window.showErrorMessage(
+            `Não foi possível gravar a solução: ${mensagem}`,
+          );
+        }
       },
     ),
   );

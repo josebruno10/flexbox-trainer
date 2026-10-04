@@ -33,6 +33,49 @@ export async function lerResumoWorkspace(): Promise<ResumoWorkspace> {
   };
 }
 
+// substitui o conteúdo dos arquivos de treino e salva; sem eles, cria na raiz.
+export async function escreverArquivosDeTreino(
+  html: string,
+  css: string,
+): Promise<void> {
+  const arquivos = [
+    ["index.html", html],
+    ["style.css", css],
+  ] as const;
+
+  for (const [nomeArquivo, conteudo] of arquivos) {
+    const documento = await lerDocumentoDeTreino(nomeArquivo);
+
+    if (documento) {
+      const edicao = new vscode.WorkspaceEdit();
+      edicao.replace(
+        documento.uri,
+        new vscode.Range(
+          documento.positionAt(0),
+          documento.positionAt(documento.getText().length),
+        ),
+        conteudo,
+      );
+      await vscode.workspace.applyEdit(edicao);
+      await documento.save();
+      continue;
+    }
+
+    const raiz = vscode.workspace.workspaceFolders?.[0]?.uri;
+
+    if (!raiz) {
+      throw new Error(
+        "Abra uma pasta no VS Code para gravar index.html e style.css.",
+      );
+    }
+
+    await vscode.workspace.fs.writeFile(
+      vscode.Uri.joinPath(raiz, nomeArquivo),
+      new TextEncoder().encode(conteudo),
+    );
+  }
+}
+
 // define se o documento salvo é relevante para atualizar a sidebar.
 export function ehDocumentoDeTreino(document: vscode.TextDocument): boolean {
   return (

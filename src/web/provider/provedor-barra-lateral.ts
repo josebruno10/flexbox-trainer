@@ -222,6 +222,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     void this.testarConexaoServidor();
   }
 
+  public obterDesafioAtual(): Desafio | undefined {
+    return this.desafioAtual;
+  }
+
   public async atualizarPreviewWorkspace(): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;

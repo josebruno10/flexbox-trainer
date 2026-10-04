@@ -48,6 +48,10 @@
         "title": "FlexBox Trainer: Criar Dinâmica de Treino"
       },
       {
+        "command": "flexbox-trainer.gerarSolucaoTeste",
+        "title": "FlexBox Trainer: Gerar Solução Exata do Desafio (teste)"
+      },
+      {
         "command": "flexbox-trainer.iniciar",
         "title": "FlexBox Trainer: Iniciar"
       }
