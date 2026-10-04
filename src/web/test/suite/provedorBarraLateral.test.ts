@@ -159,7 +159,10 @@ suite("Provedor da barra lateral", () => {
       score: 73.25,
       source: "servidor",
     });
-    assert.deepStrictEqual(corpoCorrecao, {
+    const { submissao_id: submissaoId, ...corpoSemSubmissao } =
+      corpoCorrecao as Record<string, unknown>;
+    assert.match(String(submissaoId), /^flexbox-trainer-\d+$/);
+    assert.deepStrictEqual(corpoSemSubmissao, {
       time_id: 46,
       integrante_id: 74,
       salvar_pontuacao: false,
@@ -247,6 +250,69 @@ suite("Provedor da barra lateral", () => {
       cod: 91,
       challengeId: interno.desafioAtual!.challengeId,
     });
+  });
+
+  test("substitui via PUT quando a listagem de gabaritos vem em pares", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json([[91, `gabaritos/${NOME_GABARITO}`]]),
+      "PUT /tipo-dinamica/gabarito/91": () => json({ message: "Atualizado" }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 61 }),
+    });
+    const registro = criarRegistroFalso();
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: "desafio-anterior",
+    });
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 207);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 61);
+    assert.ok(
+      requisicoes.some(
+        (requisicao) =>
+          `${requisicao.metodo} ${requisicao.caminho}` ===
+          "PUT /tipo-dinamica/gabarito/91",
+      ),
+    );
+  });
+
+  test("descobre pela listagem em pares o código que o upload não informou", async () => {
+    mockarConfiguracaoServidorValida();
+    let listagens = 0;
+    const requisicoes = mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () =>
+        json(listagens++ === 0 ? [] : [[92, `gabaritos/${NOME_GABARITO}`]]),
+      "POST /tipo-dinamica/treino/gabarito": () =>
+        json({ message: "Gabarito salvo" }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 40 }),
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 209);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 40);
+    assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
+      cod: 92,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+    assert.strictEqual(
+      requisicoes.filter((requisicao) => requisicao.metodo === "PUT").length,
+      0,
+    );
   });
 
   test("não envia nada quando o evento já tem um gabarito do mesmo tamanho de outra origem", async () => {
