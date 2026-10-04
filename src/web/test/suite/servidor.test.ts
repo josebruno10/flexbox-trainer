@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { ConfiguracaoServidor } from "../../types";
 import {
   temConfiguracaoServidorMinima,
+  extrairCodGabarito,
   extrairCodigoPasta,
   extrairNotaServidor,
   extrairPercentualCorrecao,
@@ -89,6 +90,18 @@ suite("Servidor Service Test Suite", () => {
 
     assert.ok(textoLog.includes("Bearer [PROTEGIDO]"));
     assert.ok(!textoLog.includes("token-secreto"));
+  });
+
+  test("Deve ler o código do gabarito nos formatos da listagem oficial", () => {
+    const caminho = "gabaritos/gab_treino_tam_800x800.png";
+
+    assert.strictEqual(extrairCodGabarito([91, caminho]), 91);
+    assert.strictEqual(extrairCodGabarito([caminho, 91]), 91);
+    assert.strictEqual(extrairCodGabarito({ cod: 91, caminho }), 91);
+    assert.strictEqual(extrairCodGabarito({ codigo: "91", url: caminho }), 91);
+    assert.strictEqual(extrairCodGabarito({ gabarito: { id: 91 } }), 91);
+    assert.strictEqual(extrairCodGabarito([caminho]), undefined);
+    assert.strictEqual(extrairCodGabarito([0, caminho]), undefined);
   });
 
   test("Deve extrair o código da pasta de diferentes formatos de resposta", () => {

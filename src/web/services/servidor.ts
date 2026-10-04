@@ -320,6 +320,8 @@ export async function corrigirFormas(
     JSON.stringify({
       time_id: configuracao.teamId,
       integrante_id: configuracao.userId,
+      // A extensão oficial identifica cada envio assim ("vscode-<instante>").
+      submissao_id: `flexbox-trainer-${Date.now()}`,
       // Treino não entra no ranking do torneio.
       salvar_pontuacao: false,
       frames: [
@@ -447,6 +449,15 @@ function textosDoItem(item: unknown): string[] {
 export function extrairCodGabarito(dados: unknown): number | undefined {
   if (!dados || typeof dados !== "object") {
     return undefined;
+  }
+
+  // A listagem também chega em pares [código, caminho]; a extensão oficial
+  // usa o primeiro número do par como código.
+  if (Array.isArray(dados)) {
+    const cod: unknown = dados.find((valor) => typeof valor === "number");
+    return typeof cod === "number" && Number.isInteger(cod) && cod > 0
+      ? cod
+      : undefined;
   }
 
   const registro = dados as Record<string, unknown>;
