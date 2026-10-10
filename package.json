@@ -56,6 +56,14 @@
         "title": "FlexBox Trainer: Iniciar"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "flexbox-trainer.gerarSolucaoTeste",
+          "when": "config.flexboxTrainer.modoDesenvolvedor"
+        }
+      ]
+    },
     "configuration": {
       "title": "FlexBox Trainer",
       "properties": {
@@ -99,6 +107,12 @@
           "default": "",
           "scope": "application",
           "description": "Código de um evento só de treino, preenchido pelo comando \"FlexBox Trainer: Criar Dinâmica de Treino\". Ao verificar, a extensão cadastra nele a imagem do desafio como gabarito e corrige com corrigir-formas, sem salvar pontuação. O servidor guarda um gabarito por tamanho, então cada desafio substitui o anterior criado pela extensão. Nunca use um evento de competição."
+        },
+        "flexboxTrainer.modoDesenvolvedor": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Mostra ferramentas de teste, como o comando que gera a solução exata do desafio. Deixe desligado para alunos: a solução entrega a resposta."
         },
         "flexboxTrainer.usarIdsDasConfiguracoes": {
           "type": "boolean",
