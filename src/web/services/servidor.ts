@@ -487,7 +487,12 @@ async function registrarMedidasDoGabarito(
       undefined,
       "consultar as medidas do gabarito",
     );
-    log.info(`Medidas do gabarito ${nome}: ${JSON.stringify(medidas).slice(0, 1500)}`);
+    // A rota devolve um ZIP com a imagem rotulada; texto binário só polui o log.
+    log.info(
+      typeof medidas === "string" && medidas.startsWith("PK")
+        ? `Medidas do gabarito ${nome}: arquivo ZIP com ${medidas.length} bytes.`
+        : `Medidas do gabarito ${nome}: ${JSON.stringify(medidas).slice(0, 1500)}`,
+    );
   } catch (error) {
     log.info(
       `Medidas do gabarito ${nome} indisponíveis: ${
