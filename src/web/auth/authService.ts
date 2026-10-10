@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { log } from "../services/logger";
 import { EstadoAutenticacao } from "../types";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
@@ -34,6 +35,8 @@ const DURACAO_ESTADO_OAUTH_MS = 10 * 60 * 1000;
 const TIMEOUT_AUTENTICACAO_MS = 15_000;
 const TIMEOUT_PERFIL_MS = 10_000;
 const TENTATIVAS_PROVEDOR_VSCODE = 3;
+// Evento que a extensão oficial do torneio usa para achar o time da conta.
+const EVENTO_DO_TIME = 2;
 const PROVEDORES_SUPORTADOS = new Set<ProvedorAutenticacao>([
   "gmail",
   "github",
@@ -58,6 +61,8 @@ export class AuthService implements vscode.Disposable {
     message: "Validando sessão...",
   };
   private sessaoAtual?: SessaoAutenticacao;
+  // Preenchido quando o e-mail do login não está cadastrado no torneio.
+  private avisoCadastro?: string;
   private estadoOAuthPendente?: EstadoOAuthPendente;
   private timeoutEstadoOAuth?: ReturnType<typeof setTimeout>;
 
@@ -545,26 +550,115 @@ export class AuthService implements vscode.Disposable {
       throw new Error("A API /auth/me não retornou o e-mail do usuário.");
     }
 
-    if (!perfil.userId) {
-      throw new Error("A API /auth/me não retornou o ID do usuário.");
-    }
+    // O /auth/me pode trazer o ID do provedor de login (o do GitHub, por
+    // exemplo), que não existe na tabela de usuários. A extensão oficial do
+    // torneio identifica o aluno pelo e-mail e busca o time pelo ID dele.
+    const usuarioServidor = await this.buscarUsuarioPorEmail(
+      tokenServidor,
+      perfil.email,
+    );
 
-    if (!perfil.teamId) {
+    const idDoAuthMe = perfil.userId;
+
+    if (usuarioServidor?.userId) {
+      perfil.userId = usuarioServidor.userId;
+      perfil.teamId =
+        (await this.buscarTimeDoUsuario(tokenServidor, perfil.userId)) ??
+        usuarioServidor.teamId ??
+        perfil.teamId;
+    } else if (perfil.userId && !perfil.teamId) {
       perfil.teamId = await this.buscarTimeDoUsuario(
         tokenServidor,
         perfil.userId,
       );
     }
 
+    log.info(
+      usuarioServidor?.userId
+        ? `Aluno identificado pelo e-mail ${perfil.email}: ID ${perfil.userId}, ` +
+            `time ${perfil.teamId ?? "nenhum"} (o /auth/me informou ${idDoAuthMe ?? "nenhum"}).`
+        : `E-mail ${perfil.email} não encontrado em /usuarios/por-email; usando o ` +
+            `/auth/me: ID ${perfil.userId ?? "nenhum"}, time ${perfil.teamId ?? "nenhum"}.`,
+    );
+    // Sem cadastro, o servidor aceita o login mas devolve o ID do provedor,
+    // que não existe no torneio; a correção não funcionaria.
+    this.avisoCadastro = usuarioServidor?.userId
+      ? undefined
+      : `O e-mail ${perfil.email} não está cadastrado no torneio. Saia e entre ` +
+        "com a conta cadastrada (de preferência pelo Google) para poder corrigir.";
+
+    if (!perfil.userId) {
+      throw new Error("O servidor não informou o ID do usuário.");
+    }
+
     return perfil;
+  }
+
+  // Undefined quando o e-mail não está cadastrado no servidor do torneio.
+  private async buscarUsuarioPorEmail(
+    tokenServidor: string,
+    email: string,
+  ): Promise<PerfilServidor | undefined> {
+    const url = new URL(`${this.lerUrlBaseApiAutenticacao()}/usuarios/por-email`);
+    url.searchParams.set("email", email);
+    const resposta = await this.fetchComTimeout(
+      url.toString(),
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${tokenServidor}`,
+        },
+      },
+      TIMEOUT_PERFIL_MS,
+      "buscar o usuário pelo e-mail",
+    );
+
+    if (await this.respostaDeInexistente(resposta, "buscar o usuário pelo e-mail")) {
+      return undefined;
+    }
+
+    return this.extrairPerfil(
+      await this.lerJSONObrigatorio(resposta, "usuário do servidor"),
+    );
+  }
+
+  // O servidor responde alguns 404 dentro de um 500 ("...: 404: ... não
+  // encontrado"). Outros erros viram exceção com o detalhe do servidor.
+  private async respostaDeInexistente(
+    resposta: Response,
+    acao: string,
+  ): Promise<boolean> {
+    if (resposta.ok) {
+      return false;
+    }
+
+    if (resposta.status === 404) {
+      return true;
+    }
+
+    const detalhe = await this.extrairDetalheResposta(resposta);
+
+    if (resposta.status === 500 && /\b404\b|não encontrad/i.test(detalhe)) {
+      return true;
+    }
+
+    throw new ErroApiAutenticacao(
+      `Não foi possível ${acao} (HTTP ${resposta.status}): ${detalhe}`,
+      resposta.status,
+    );
   }
 
   private async buscarTimeDoUsuario(
     tokenServidor: string,
     userId: number,
   ): Promise<number | undefined> {
-    const resposta = await this.fetchComTimeout(
+    const url = new URL(
       `${this.lerUrlBaseApiAutenticacao()}/usuarios/${userId}/time`,
+    );
+    url.searchParams.set("evento", String(EVENTO_DO_TIME));
+    const resposta = await this.fetchComTimeout(
+      url.toString(),
       {
         method: "GET",
         headers: {
@@ -576,16 +670,8 @@ export class AuthService implements vscode.Disposable {
       "consultar a equipe do usuário",
     );
 
-    if (resposta.status === 404) {
+    if (await this.respostaDeInexistente(resposta, "consultar a equipe")) {
       return undefined;
-    }
-
-    if (!resposta.ok) {
-      const detalhe = await this.extrairDetalheResposta(resposta);
-      throw new ErroApiAutenticacao(
-        `Não foi possível consultar a equipe (HTTP ${resposta.status}): ${detalhe}`,
-        resposta.status,
-      );
     }
 
     return this.extrairTimeId(
@@ -784,6 +870,7 @@ export class AuthService implements vscode.Disposable {
       displayName: sessao.displayName,
       avatarUrl: sessao.avatarUrl,
       message: `Conectado como ${sessao.displayName}.`,
+      aviso: this.avisoCadastro,
     });
   }
 
@@ -791,6 +878,7 @@ export class AuthService implements vscode.Disposable {
     this.limparEstadoOAuthPendente();
     await this.tokenManager.limparSessao();
     this.sessaoAtual = undefined;
+    this.avisoCadastro = undefined;
     this.definirEstado({ status: "unauthenticated", message: mensagem });
   }
 

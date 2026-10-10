@@ -72,6 +72,11 @@ export function obterHtmlWebview(
       min-width: 0;
     }
 
+    .aviso-cadastro {
+      display: block;
+      color: #f5c26b;
+    }
+
     .avatar-usuario,
     .avatar-fallback {
       width: 34px;

@@ -57,6 +57,7 @@ type EstadoAutenticacaoRecebido = {
   displayName?: string;
   email?: string;
   avatarUrl?: string;
+  aviso?: string;
 };
 
 type MensagemDaExtensao =
@@ -758,7 +759,11 @@ function renderizarEstadoAutenticacao(
 
   if (estado.status === "authenticated") {
     const nome = estado.displayName || estado.email || "Usuário";
-    statusAutenticacao.innerHTML = `<strong>${escapeHtml(nome)}</strong>Conectado e pronto para usar a extensão.`;
+    statusAutenticacao.innerHTML =
+      `<strong>${escapeHtml(nome)}</strong>` +
+      (estado.aviso
+        ? `<span class="aviso-cadastro">${escapeHtml(estado.aviso)}</span>`
+        : "Conectado e pronto para usar a extensão.");
     renderizarAvatar(nome, estado.avatarUrl);
     return;
   }
