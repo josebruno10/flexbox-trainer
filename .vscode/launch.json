@@ -12,7 +12,10 @@
       ],
       "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
       "preLaunchTask": "npm: compile-web",
-      "debugWebWorkerHost": true
+      // Com o depurador, o extension host Node nasce pausado e os logins
+      // embutidos do GitHub e da Microsoft nunca registram. Assim F5 e
+      // Ctrl+F5 abrem a janela de teste do mesmo jeito.
+      "noDebug": true
     },
     {
       "name": "Run Web Extension",

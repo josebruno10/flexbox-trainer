@@ -103,6 +103,18 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "flexbox-trainer.gerarSolucaoTeste",
       async () => {
+        // O menu já esconde o comando; isto barra atalhos e chamadas diretas.
+        if (
+          !vscode.workspace
+            .getConfiguration("flexboxTrainer")
+            .get<boolean>("modoDesenvolvedor", false)
+        ) {
+          void vscode.window.showInformationMessage(
+            "Este comando é só para testes. Ligue flexboxTrainer.modoDesenvolvedor para usá-lo.",
+          );
+          return;
+        }
+
         const desafio = provedor.obterDesafioAtual();
 
         if (!desafio) {

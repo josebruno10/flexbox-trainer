@@ -81,10 +81,15 @@ suite("Provedor da barra lateral", () => {
   const fetchOriginal = globalThis.fetch;
   const getConfigurationOriginal = vscode.workspace.getConfiguration;
 
+  const showInformationMessageOriginal = vscode.window.showInformationMessage;
+  const executeCommandOriginal = vscode.commands.executeCommand;
+
   teardown(() => {
     Date.now = dateNowOriginal;
     globalThis.fetch = fetchOriginal;
     vscode.workspace.getConfiguration = getConfigurationOriginal;
+    vscode.window.showInformationMessage = showInformationMessageOriginal;
+    vscode.commands.executeCommand = executeCommandOriginal;
   });
 
   test("encerra, congela e reinicia o cronômetro em um novo desafio", async () => {
@@ -389,6 +394,11 @@ suite("Provedor da barra lateral", () => {
 
   test("exige um evento de treino e não chama o servidor sem ele", async () => {
     mockarConfiguracaoServidorValida({ eventoTreino: "" });
+    const perguntas: string[] = [];
+    vscode.window.showInformationMessage = (async (mensagem: string) => {
+      perguntas.push(mensagem);
+      return undefined;
+    }) as typeof vscode.window.showInformationMessage;
     const requisicoes = mockarServidor({});
     const provedor = criarProvedorParaTeste([]);
     const interno = prepararVerificacao(provedor, 212);
@@ -401,6 +411,38 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(interno.avaliacaoAtual?.source, "config-missing");
     assert.match(interno.avaliacaoAtual?.error || "", /eventoTreino/);
     assert.strictEqual(requisicoes.length, 0);
+    assert.deepStrictEqual(perguntas, ["Você ainda não tem uma dinâmica de treino."]);
+  });
+
+  test("oferece criar a dinâmica no primeiro Verificar e segue com a correção", async () => {
+    mockarConfiguracaoServidorValida({ eventoTreino: "" });
+    vscode.window.showInformationMessage = (async () =>
+      "Criar dinâmica de treino") as unknown as typeof vscode.window.showInformationMessage;
+    const comandos: string[] = [];
+    vscode.commands.executeCommand = (async (comando: string) => {
+      comandos.push(comando);
+      // O comando real grava o código criado em flexboxTrainer.eventoTreino.
+      mockarConfiguracaoServidorValida();
+      return undefined;
+    }) as typeof vscode.commands.executeCommand;
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 64 }),
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 213);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+    );
+
+    assert.deepStrictEqual(comandos, ["flexbox-trainer.criarDinamicaTreino"]);
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 64);
   });
 
   test("não envia uma página sem formas medidas", async () => {

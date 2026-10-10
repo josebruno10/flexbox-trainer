@@ -25,6 +25,8 @@ import {
 } from "../services/servidor";
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
 
+const CRIAR_DINAMICA = "Criar dinâmica de treino";
+
 export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public static readonly viewType = "flexbox-trainer.sidebar";
 
@@ -298,6 +300,31 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         };
         this.enviarEstado();
         return;
+      }
+
+      // Primeiro uso: oferece criar a dinâmica aqui mesmo, sem a paleta de
+      // comandos; sem ela, avaliarTentativa explica como configurar.
+      if (!this.lerConfiguracaoServidorAtual().eventoTreino) {
+        const escolha = await vscode.window.showInformationMessage(
+          "Você ainda não tem uma dinâmica de treino.",
+          {
+            modal: true,
+            detail:
+              "A extensão precisa de uma dinâmica só sua no servidor para " +
+              "cadastrar o gabarito e corrigir. Ela é criada uma única vez.",
+          },
+          CRIAR_DINAMICA,
+        );
+
+        if (escolha === CRIAR_DINAMICA) {
+          await vscode.commands.executeCommand(
+            "flexbox-trainer.criarDinamicaTreino",
+          );
+        }
+
+        if (!desafioAindaEhAtual()) {
+          return;
+        }
       }
 
       const resultadoServidor = await avaliarTentativa(
