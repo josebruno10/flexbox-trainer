@@ -58,6 +58,7 @@ export type EstadoAutenticacao = {
   displayName?: string;
   email?: string;
   avatarUrl?: string;
+  aviso?: string;
 };
 
 export type ResumoWorkspace = {

@@ -84,6 +84,20 @@ function perfilServidor(
 
 let ultimosParametrosAbertos: URLSearchParams | undefined;
 
+// Rotas que o login consulta depois do /auth/me: o usuário pelo e-mail e o
+// time dele.
+function responderUsuarioDoServidor(url: URL): Response | undefined {
+  if (url.pathname.endsWith("/usuarios/por-email")) {
+    return respostaJson(perfilServidor());
+  }
+
+  if (url.pathname.endsWith("/usuarios/74/time")) {
+    return respostaJson({ id: 46, nome_time: "Time de teste" });
+  }
+
+  return undefined;
+}
+
 async function iniciarFluxoGoogle(
   authService: AuthService,
   callbackExterno?: string,
@@ -178,6 +192,10 @@ suite("AuthService", () => {
         assertBearer(init, "token-servidor");
         return respostaJson(perfilServidor());
       }
+      const usuario = responderUsuarioDoServidor(url);
+      if (usuario) {
+        return usuario;
+      }
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
 
@@ -203,6 +221,113 @@ suite("AuthService", () => {
     assert.strictEqual(persistida.serverToken, "token-servidor");
   });
 
+  test("identifica o aluno pelo e-mail quando o /auth/me traz o ID do provedor", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    const state = await iniciarFluxoGoogle(authService);
+    const consultas: string[] = [];
+
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      consultas.push(`${url.pathname}${url.search}`);
+      if (url.pathname.endsWith("/auth/me")) {
+        // Cenário real: o login pelo GitHub devolveu o ID do provedor.
+        return respostaJson({
+          id: 176078921,
+          nome: "Aluno",
+          email: "aluno@example.com",
+        });
+      }
+      if (url.pathname.endsWith("/usuarios/por-email")) {
+        return respostaJson({ id: 74, nome: "Aluno", email: "aluno@example.com" });
+      }
+      if (url.pathname.endsWith("/usuarios/74/time")) {
+        return respostaJson({ id: 46, nome_time: "Time de teste" });
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&state=${state}`,
+      ),
+    );
+
+    assert.strictEqual(authService.getSessaoAtual()?.userId, 74);
+    assert.strictEqual(authService.getSessaoAtual()?.teamId, 46);
+    assert.strictEqual(authService.getEstadoAtual().aviso, undefined);
+    assert.deepStrictEqual(consultas, [
+      "/api/auth/me",
+      "/api/usuarios/por-email?email=aluno%40example.com",
+      "/api/usuarios/74/time?evento=2",
+    ]);
+  });
+
+  test("mantém o ID do /auth/me quando o e-mail não está cadastrado no servidor", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    const state = await iniciarFluxoGoogle(authService);
+    const consultas: string[] = [];
+
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      consultas.push(url.pathname);
+      if (url.pathname.endsWith("/auth/me")) {
+        return respostaJson(perfilServidor());
+      }
+      if (url.pathname.endsWith("/usuarios/por-email")) {
+        // O servidor responde "não existe" dentro de um 500.
+        return respostaJson(
+          { detail: "Erro ao buscar usuário: 404: Usuário não encontrado" },
+          500,
+        );
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&state=${state}`,
+      ),
+    );
+
+    assert.strictEqual(authService.getSessaoAtual()?.userId, 74);
+    assert.strictEqual(authService.getSessaoAtual()?.teamId, 46);
+    assert.deepStrictEqual(consultas, ["/api/auth/me", "/api/usuarios/por-email"]);
+    assert.strictEqual(authService.getEstadoAtual().status, "authenticated");
+    assert.match(
+      authService.getEstadoAtual().aviso ?? "",
+      /aluno@example\.com não está cadastrado no torneio/,
+    );
+
+    await authService.invalidarSessao("Saiu.");
+    assert.strictEqual(authService.getEstadoAtual().aviso, undefined);
+  });
+
+  test("não conclui o login quando a busca pelo e-mail falha por outro motivo", async () => {
+    const authService = new AuthService(criarContextoFalso());
+    const state = await iniciarFluxoGoogle(authService);
+
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/auth/me")) {
+        return respostaJson(perfilServidor());
+      }
+      if (url.pathname.endsWith("/usuarios/por-email")) {
+        return respostaJson({ detail: "Acesso negado" }, 403);
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await assert.rejects(
+      authService.processarCallback(
+        vscode.Uri.parse(
+          `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&state=${state}`,
+        ),
+      ),
+      /buscar o usuário pelo e-mail \(HTTP 403\): Acesso negado/,
+    );
+    assert.strictEqual(authService.isAutenticado(), false);
+  });
+
   test("troca token Gmail no POST /login e nunca persiste a credencial do provedor", async () => {
     const storage: MockStorage = {};
     const authService = new AuthService(criarContextoFalso(storage));
@@ -221,6 +346,10 @@ suite("AuthService", () => {
       if (url.pathname.endsWith("/auth/me")) {
         assertBearer(init, "token-api");
         return respostaJson(perfilServidor());
+      }
+      const usuario = responderUsuarioDoServidor(url);
+      if (usuario) {
+        return usuario;
       }
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
@@ -445,6 +574,10 @@ suite("AuthService", () => {
           perfilServidor({ url_image_perfil: undefined }),
         );
       }
+      const usuario = responderUsuarioDoServidor(url);
+      if (usuario) {
+        return usuario;
+      }
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
 
@@ -556,6 +689,10 @@ suite("AuthService", () => {
             email: "aluno.microsoft@example.com",
           }),
         );
+      }
+      const usuario = responderUsuarioDoServidor(url);
+      if (usuario) {
+        return usuario;
       }
       throw new Error(`Fetch inesperado: ${url.toString()}`);
     };
