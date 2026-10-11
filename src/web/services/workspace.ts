@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ResumoWorkspace } from "../types";
+import { registrarGravacaoPropria } from "./alteracoesExternas";
 
 // estado inicial usado antes de localizar arquivos reais.
 export function criarResumoWorkspaceVazio(): ResumoWorkspace {
@@ -34,6 +35,83 @@ export async function lerResumoWorkspace(): Promise<ResumoWorkspace> {
 }
 
 // substitui o conteúdo dos arquivos de treino e salva; sem eles, cria na raiz.
+export type ResultadoCriacao =
+  | { status: "sem-pasta" }
+  | { status: "ja-existiam" }
+  | { status: "criados"; arquivos: vscode.Uri[] };
+
+/**
+ * Cria na raiz da pasta aberta o index.html e o style.css que faltarem, com
+ * uma base mínima, sem pistas do desafio. Nunca sobrescreve um arquivo.
+ */
+export async function criarArquivosDeTreino(
+  largura: number,
+  altura: number,
+): Promise<ResultadoCriacao> {
+  const raiz = vscode.workspace.workspaceFolders?.[0]?.uri;
+
+  if (!raiz) {
+    return { status: "sem-pasta" };
+  }
+
+  const arquivos = [
+    [
+      "index.html",
+      `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->
+</body>
+</html>
+`,
+    ],
+    [
+      "style.css",
+      `/* A página tem o tamanho do gabarito: ${largura} × ${altura} px. */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+`,
+    ],
+  ] as const;
+  const criados: vscode.Uri[] = [];
+
+  for (const [nomeArquivo, conteudo] of arquivos) {
+    const destino = vscode.Uri.joinPath(raiz, nomeArquivo);
+
+    // A busca ignora pastas de build; o disco confirma antes de gravar.
+    if ((await lerDocumentoDeTreino(nomeArquivo)) || (await existe(destino))) {
+      continue;
+    }
+
+    registrarGravacaoPropria(destino, conteudo);
+    await vscode.workspace.fs.writeFile(
+      destino,
+      new TextEncoder().encode(conteudo),
+    );
+    criados.push(destino);
+  }
+
+  return criados.length > 0
+    ? { status: "criados", arquivos: criados }
+    : { status: "ja-existiam" };
+}
+
+async function existe(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function escreverArquivosDeTreino(
   html: string,
   css: string,
@@ -69,8 +147,10 @@ export async function escreverArquivosDeTreino(
       );
     }
 
+    const destino = vscode.Uri.joinPath(raiz, nomeArquivo);
+    registrarGravacaoPropria(destino, conteudo);
     await vscode.workspace.fs.writeFile(
-      vscode.Uri.joinPath(raiz, nomeArquivo),
+      destino,
       new TextEncoder().encode(conteudo),
     );
   }

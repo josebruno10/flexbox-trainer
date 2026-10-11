@@ -2,19 +2,36 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // Como na instalação dos alunos: no desktop a extensão roda no host
+      // Node, ao lado das suas outras extensões. As de IA bloqueiam o
+      // Verificar, como no torneio.
       "name": "Run Extension (Desktop)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionDevelopmentKind=web",
         "${workspaceFolder}/exemplo-treino"
       ],
-      "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/node/**/*.js"],
       "preLaunchTask": "npm: compile-web",
       // Com o depurador, o extension host Node nasce pausado e os logins
       // embutidos do GitHub e da Microsoft nunca registram. Assim F5 e
       // Ctrl+F5 abrem a janela de teste do mesmo jeito.
+      "noDebug": true
+    },
+    {
+      // Para desenvolver: a janela de teste abre sem as suas extensões
+      // instaladas (as embutidas continuam), então as de IA não bloqueiam.
+      "name": "Run Extension (Desktop, sem outras extensões)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extensions",
+        "${workspaceFolder}/exemplo-treino"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/node/**/*.js"],
+      "preLaunchTask": "npm: compile-web",
       "noDebug": true
     },
     {

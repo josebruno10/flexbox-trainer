@@ -31,6 +31,7 @@ type ProvedorInterno = {
   verificarTentativaAtual(
     challengeId: string,
     formas: FormaMedida[],
+    verificacaoId?: number,
   ): Promise<void>;
   testarConexaoServidor(): Promise<void>;
   lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
@@ -42,6 +43,7 @@ type OpcoesProvedorTeste = {
   userId?: number;
   teamId?: number;
   registro?: vscode.Memento;
+  extensoesIa?: { id: string; nome: string }[];
 };
 
 type Requisicao = {
@@ -82,6 +84,7 @@ suite("Provedor da barra lateral", () => {
   const getConfigurationOriginal = vscode.workspace.getConfiguration;
 
   const showInformationMessageOriginal = vscode.window.showInformationMessage;
+  const showWarningMessageOriginal = vscode.window.showWarningMessage;
   const executeCommandOriginal = vscode.commands.executeCommand;
 
   teardown(() => {
@@ -89,6 +92,7 @@ suite("Provedor da barra lateral", () => {
     globalThis.fetch = fetchOriginal;
     vscode.workspace.getConfiguration = getConfigurationOriginal;
     vscode.window.showInformationMessage = showInformationMessageOriginal;
+    vscode.window.showWarningMessage = showWarningMessageOriginal;
     vscode.commands.executeCommand = executeCommandOriginal;
   });
 
@@ -457,6 +461,254 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(requisicoes.length, 0);
   });
 
+  test("não reenvia uma página igual à da última correção e repete a nota", async () => {
+    mockarConfiguracaoServidorValida();
+    let correcoes = 0;
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () => {
+        correcoes++;
+        return json({ pontuacao: 42.5 });
+      },
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 230);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+    assert.strictEqual(correcoes, 1);
+    assert.deepStrictEqual(interno.avaliacaoAtual, {
+      precision: 42.5,
+      score: 42.5,
+      source: "servidor",
+      repetida: true,
+    });
+
+    // Uma forma diferente é outra página: volta ao servidor.
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+      { ...FORMAS[0], cor: "#123456" },
+      FORMAS[1],
+    ]);
+    assert.strictEqual(correcoes, 2);
+    assert.strictEqual(interno.avaliacaoAtual?.repetida, undefined);
+  });
+
+  test("reenvia a mesma página depois de uma correção que falhou", async () => {
+    mockarConfiguracaoServidorValida();
+    let correcoes = 0;
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () => {
+        correcoes++;
+        return correcoes === 1
+          ? json({ detail: "Instável" }, 502)
+          : json({ pontuacao: 80 });
+      },
+    });
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = prepararVerificacao(provedor, 231);
+    await registro.update(CHAVE_REGISTRO, {
+      cod: 91,
+      challengeId: interno.desafioAtual!.challengeId,
+    });
+
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    assert.strictEqual(interno.avaliacaoAtual?.source, "api-error");
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+    assert.strictEqual(correcoes, 2);
+    assert.strictEqual(interno.avaliacaoAtual?.precision, 80);
+  });
+
+  test("mostra as etapas e avisa a conclusão com o número da verificação", async () => {
+    mockarConfiguracaoServidorValida();
+    mockarServidor({
+      "GET /tipo-dinamica/treino/gabaritos": () => json([]),
+      "POST /tipo-dinamica/treino/gabarito": () => json({ cod: 91 }),
+      [`GET /medidas-gabarito?gabarito=${NOME_GABARITO}`]: () => json({}),
+      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 10 }),
+    });
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens);
+    const interno = prepararVerificacao(provedor, 232);
+
+    await interno.verificarTentativaAtual(
+      interno.desafioAtual!.challengeId,
+      FORMAS,
+      7,
+    );
+
+    const verificacao = mensagens.filter((mensagem) =>
+      ["progressoVerificacao", "resultadoAvaliacao", "verificacaoConcluida"].includes(
+        mensagem.type,
+      ),
+    );
+    assert.deepStrictEqual(
+      verificacao.map((mensagem) => mensagem.type),
+      [
+        "progressoVerificacao",
+        "progressoVerificacao",
+        "resultadoAvaliacao",
+        "verificacaoConcluida",
+      ],
+    );
+    assert.deepStrictEqual(verificacao[0].payload, {
+      id: 7,
+      mensagem: "Cadastrando a imagem deste desafio como gabarito no servidor...",
+    });
+    assert.deepStrictEqual(verificacao[1].payload, {
+      id: 7,
+      mensagem: "Corrigindo a sua página no servidor...",
+    });
+    assert.deepStrictEqual(verificacao[3].payload, { id: 7, mensagem: undefined });
+  });
+
+  test("avisa a conclusão mesmo quando a verificação para no meio", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({});
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens);
+    const interno = prepararVerificacao(provedor, 233);
+    // Desafio de outra geração: a verificação nem começa.
+    await interno.verificarTentativaAtual("desafio-antigo", FORMAS, 9);
+
+    assert.strictEqual(requisicoes.length, 0);
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "verificacaoConcluida")?.payload, {
+      id: 9,
+      mensagem: undefined,
+    });
+  });
+
+  test("invalida o desafio quando há extensões de IA habilitadas na hora de verificar", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({});
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, {
+      extensoesIa: [
+        { id: "anthropic.claude-code", nome: "Claude Code" },
+        { id: "openai.chatgpt", nome: "Codex" },
+      ],
+    });
+    const interno = prepararVerificacao(provedor, 240);
+
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+    assert.strictEqual(requisicoes.length, 0);
+    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.match(
+      interno.avaliacaoAtual?.error ?? "",
+      /extensões de IA ficaram habilitadas durante ele \(Claude Code, Codex\)\./,
+    );
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "extensoesIa")?.payload, [
+      { id: "anthropic.claude-code", nome: "Claude Code" },
+      { id: "openai.chatgpt", nome: "Codex" },
+    ]);
+  });
+
+  test("não começa um desafio com extensões de IA habilitadas", async () => {
+    const avisos: string[] = [];
+    vscode.window.showWarningMessage = (async (mensagem: string) => {
+      avisos.push(mensagem);
+      return undefined;
+    }) as unknown as typeof vscode.window.showWarningMessage;
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, {
+      extensoesIa: [{ id: "github.copilot-chat", nome: "GitHub Copilot" }],
+    });
+    const interno = provedor as unknown as ProvedorInterno;
+
+    await provedor.iniciarNovoDesafio();
+
+    assert.strictEqual(interno.desafioAtual, undefined);
+    assert.strictEqual(ultimaMensagem(mensagens, "dadosDesafio"), undefined);
+    assert.match(
+      avisos[0] ?? "",
+      /desabilite as extensões de IA antes de começar um desafio: GitHub Copilot\./,
+    );
+  });
+
+  test("continua invalidado o desafio em que a IA foi habilitada, mesmo depois de desabilitá-la", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({});
+    const opcoes: OpcoesProvedorTeste = { extensoesIa: [] };
+    const provedor = criarProvedorParaTeste([], opcoes);
+    const interno = prepararVerificacao(provedor, 241);
+
+    opcoes.extensoesIa = [{ id: "anthropic.claude-code", nome: "Claude Code" }];
+    provedor.atualizarExtensoesIa();
+    opcoes.extensoesIa = [];
+    provedor.atualizarExtensoesIa();
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+    assert.strictEqual(requisicoes.length, 0);
+    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.match(
+      interno.avaliacaoAtual?.error ?? "",
+      /uma extensão de IA ficou habilitada durante ele \(Claude Code\)\./,
+    );
+  });
+
+  test("invalida o desafio quando um arquivo de treino muda fora do editor", async () => {
+    mockarConfiguracaoServidorValida();
+    const requisicoes = mockarServidor({});
+    const provedor = criarProvedorParaTeste([]);
+    const interno = prepararVerificacao(provedor, 242);
+    // Sem pasta aberta nos testes: mantém os arquivos de treino preparados.
+    provedor.atualizarPreviewWorkspace = async () => undefined;
+    const agora = Date.now();
+
+    // Outro arquivo com o mesmo nome e uma mudança de antes do desafio não contam.
+    await provedor.registrarAlteracaoExterna({
+      uri: vscode.Uri.file("/outro-projeto/style.css"),
+      instante: agora,
+    });
+    await provedor.registrarAlteracaoExterna({
+      uri: vscode.Uri.file("/projeto/style.css"),
+      instante: interno.inicioTentativaMs - 1,
+    });
+    const avaliacaoAntes = interno.avaliacaoAtual;
+    assert.strictEqual(avaliacaoAntes, undefined);
+
+    await provedor.registrarAlteracaoExterna({
+      uri: vscode.Uri.file("/projeto/style.css"),
+      instante: agora,
+    });
+    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+    assert.strictEqual(requisicoes.length, 0);
+    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.match(
+      interno.avaliacaoAtual?.error ?? "",
+      /o style\.css foi alterado fora do editor\./,
+    );
+  });
+
+  test("oferece abrir uma pasta quando não há onde criar index.html e style.css", async function () {
+    if (vscode.workspace.workspaceFolders?.length) {
+      this.skip();
+    }
+    const mostradas: string[] = [];
+    vscode.window.showInformationMessage = (async (
+      mensagem: string,
+      ...itens: string[]
+    ) => {
+      mostradas.push(`${mensagem} [${itens.join(", ")}]`);
+      return undefined;
+    }) as unknown as typeof vscode.window.showInformationMessage;
+    const provedor = criarProvedorParaTeste([]);
+
+    await provedor.criarArquivosDeTreino();
+
+    assert.deepStrictEqual(mostradas, [
+      "Abra uma pasta para treinar: o FlexBox Trainer cria nela o index.html e o style.css. [Abrir pasta]",
+    ]);
+  });
+
   test("não cria nota local quando corrigir-formas responde sem precisão", async () => {
     mockarConfiguracaoServidorValida();
     mockarServidor({
@@ -555,36 +807,24 @@ suite("Provedor da barra lateral", () => {
     ]);
   });
 
-  test("permite forçar os IDs das configurações quando o override está ligado", () => {
-    mockarConfiguracaoServidorValida({ usarIdsDasConfiguracoes: true });
+  test("usa só o aluno e o time da sessão, mesmo com IDs nas configurações", () => {
+    // Configurações antigas não podem fazer alguém corrigir em nome de outro.
+    mockarConfiguracaoServidorValida({
+      usarIdsDasConfiguracoes: true,
+      userId: 7,
+      teamId: 42,
+    });
 
-    // Cenário real: /auth/me devolveu um id do provedor OAuth que não existe
-    // na tabela `usuarios` do servidor.
     const provedor = criarProvedorParaTeste([], {
       serverToken: "token-autenticado",
-      userId: 176078921,
-      teamId: 46,
+      userId: 74,
+      teamId: 81,
     });
     const interno = provedor as unknown as ProvedorInterno;
     const configuracao = interno.lerConfiguracaoServidorAtual();
 
-    assert.strictEqual(configuracao.userId, 7);
-    assert.strictEqual(configuracao.teamId, 42);
-  });
-
-  test("mantém os IDs da sessão quando o override está desligado", () => {
-    mockarConfiguracaoServidorValida();
-
-    const provedor = criarProvedorParaTeste([], {
-      serverToken: "token-autenticado",
-      userId: 176078921,
-      teamId: 46,
-    });
-    const interno = provedor as unknown as ProvedorInterno;
-    const configuracao = interno.lerConfiguracaoServidorAtual();
-
-    assert.strictEqual(configuracao.userId, 176078921);
-    assert.strictEqual(configuracao.teamId, 46);
+    assert.strictEqual(configuracao.userId, 74);
+    assert.strictEqual(configuracao.teamId, 81);
   });
 
   test("invalida a sessão quando auth/me responde 403", async () => {
@@ -704,6 +944,7 @@ function criarProvedorParaTeste(
     vscode.Uri.parse("file:///extensao"),
     authService,
     opcoes.registro ?? criarRegistroFalso(),
+    () => opcoes.extensoesIa ?? [],
   );
   const interno = provedor as unknown as ProvedorInterno;
 
@@ -756,12 +997,7 @@ function mockarConfiguracaoServidorValida(
       const valores: Record<string, unknown> = {
         apiBaseUrl: BASE_API,
         apiToken: "token-das-configuracoes",
-        dinamicaId: "gref",
         eventoTreino: "treino",
-        userId: 7,
-        teamId: 42,
-        captureWidth: 960,
-        captureHeight: 540,
         ...extras,
       };
       return (valores[key] ?? defaultValue) as T;

@@ -77,6 +77,21 @@ export function obterHtmlWebview(
       color: #f5c26b;
     }
 
+    .aviso-ia {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #f5c26b;
+      border-radius: 8px;
+      background: rgba(245, 194, 107, 0.1);
+      font-size: 12px;
+      line-height: 1.4;
+      color: #f5c26b;
+    }
+
+    .aviso-ia .acoes {
+      margin-top: 6px;
+    }
+
     .avatar-usuario,
     .avatar-fallback {
       width: 34px;
@@ -204,6 +219,13 @@ export function obterHtmlWebview(
   </style>
 </head>
 <body>
+  <div class="aviso-ia" id="avisoIa" role="alert" hidden>
+    <span id="textoAvisoIa"></span>
+    <div class="acoes">
+      <button id="botaoVerExtensoesIa" class="secundario">Ver extensões</button>
+    </div>
+  </div>
+
   <section class="bloco">
     <div class="cabecalho">
       <h2 class="titulo">FlexBox Trainer</h2>
@@ -228,6 +250,9 @@ export function obterHtmlWebview(
     </div>
     <div class="linha" id="metaDesafio"></div>
     <div class="linha" id="detalheComponente">Clique em um componente para ver suas medidas e sua cor.</div>
+    <div class="acoes">
+      <button id="botaoAbrirAba" class="secundario" title="Abre o gabarito e as medidas de todos os componentes em uma aba do editor">Abrir em uma aba</button>
+    </div>
   </section>
 
   <section class="bloco">
@@ -235,6 +260,7 @@ export function obterHtmlWebview(
     <div class="linha" id="listaWorkspace">Aguardando arquivos...</div>
     <div class="acoes">
       <button id="botaoAtualizarPreview" class="secundario">Atualizar preview</button>
+      <button id="botaoCriarArquivos" class="secundario" hidden>Criar index.html e style.css</button>
     </div>
   </section>
 
@@ -256,6 +282,330 @@ export function obterHtmlWebview(
     <div class="linha" id="caixaResultado">Nenhuma verificação ainda.</div>
   </section>
 
+  <script src="${scriptUri}"></script>
+</body>
+</html>`;
+}
+
+// Aba do editor com o gabarito grande, as medidas de todos os componentes e a
+// comparação com a página do aluno. Usa as cores do tema do VS Code para
+// parecer parte do editor.
+export function obterHtmlPainelGabarito(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+): string {
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "painelGabarito.js"),
+  );
+  // A página do aluno usa as mesmas permissões da barra lateral, onde a
+  // correção a mede.
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: http: data: blob:; font-src https: data:; style-src 'unsafe-inline' https: http:; script-src ${webview.cspSource};">
+  <title>Gabarito</title>
+  <style>
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: var(--vscode-font-family);
+      font-size: 13px;
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+    }
+
+    .conteudo {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .imagem {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .resumo,
+    .barra {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+    }
+
+    .resumo strong {
+      font-size: 15px;
+    }
+
+    .fundo,
+    .contagem,
+    .opacidade {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .modos {
+      display: inline-flex;
+    }
+
+    .modo {
+      font: inherit;
+      padding: 4px 10px;
+      border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+      cursor: pointer;
+      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-button-secondaryBackground);
+    }
+
+    .modo + .modo {
+      border-left: 0;
+    }
+
+    .modo:first-child {
+      border-radius: 4px 0 0 4px;
+    }
+
+    .modo:last-child {
+      border-radius: 0 4px 4px 0;
+    }
+
+    .modo[aria-pressed="true"] {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+    }
+
+    .palco {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .palco[data-modo="gabarito"] #quadroAluno {
+      display: none;
+    }
+
+    /* Sobreposto: os dois quadros na mesma célula, o gabarito por cima. */
+    .palco[data-modo="sobreposto"] {
+      display: grid;
+    }
+
+    .palco[data-modo="sobreposto"] .quadro {
+      grid-area: 1 / 1;
+    }
+
+    .palco[data-modo="sobreposto"] #quadroGabarito {
+      position: relative;
+      z-index: 1;
+    }
+
+    .palco[data-modo="sobreposto"] #telaGabarito {
+      background: transparent;
+    }
+
+    .palco[data-modo="sobreposto"] #canvasGabarito {
+      opacity: var(--opacidade-gabarito, 0.5);
+    }
+
+    .quadro {
+      margin: 0;
+    }
+
+    .quadro figcaption {
+      display: none;
+      margin-bottom: 4px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .palco[data-modo="lado"] figcaption {
+      display: block;
+    }
+
+    .tela {
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+      outline: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+    }
+
+    .tela canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #canvasDestaque {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    #superficieAluno {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: 0 0;
+    }
+
+    .sem-pagina {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      color: #52606d;
+      background: #fff;
+    }
+
+    .ajuda {
+      max-width: 640px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .lista {
+      flex: 1 1 300px;
+      min-width: 250px;
+      max-width: 340px;
+      max-height: calc(100vh - 32px);
+      list-style: none;
+      margin: 0;
+      padding: 0 4px 0 0;
+      overflow-y: auto;
+    }
+
+    .componente {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .componente:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
+
+    .componente.selecionado {
+      border-color: var(--vscode-focusBorder);
+      background: var(--vscode-list-inactiveSelectionBackground);
+    }
+
+    .amostra {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid rgba(128, 128, 128, 0.5);
+    }
+
+    .fundo .amostra {
+      width: 14px;
+      height: 14px;
+    }
+
+    .info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .valores {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .valor {
+      font: inherit;
+      font-family: var(--vscode-editor-font-family, monospace);
+      font-size: 12px;
+      padding: 1px 6px;
+      border: 0;
+      border-radius: 4px;
+      cursor: copy;
+      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-button-secondaryBackground);
+    }
+
+    .valor:hover {
+      background: var(--vscode-button-secondaryHoverBackground);
+    }
+
+    .valor.copiado {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+    }
+
+    .vazio {
+      color: var(--vscode-descriptionForeground);
+    }
+
+    /* Em uma aba estreita, a lista vai para baixo da imagem. */
+    @media (max-width: 680px) {
+      .conteudo {
+        flex-direction: column;
+      }
+
+      .lista {
+        max-width: none;
+        max-height: none;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="vazio" id="vazio">Gere um desafio na barra lateral do FlexBox Trainer para ver o gabarito aqui.</div>
+  <div class="conteudo" id="conteudo" hidden>
+    <section class="imagem">
+      <div class="resumo" id="resumo"></div>
+      <div class="barra">
+        <div class="modos" role="group" aria-label="Modo de exibição">
+          <button type="button" class="modo" data-modo="gabarito" aria-pressed="true">Gabarito</button>
+          <button type="button" class="modo" data-modo="sobreposto" aria-pressed="false">Sobrepor à sua página</button>
+          <button type="button" class="modo" data-modo="lado" aria-pressed="false">Lado a lado</button>
+        </div>
+        <div class="opacidade" id="controleOpacidade" hidden>
+          <span>Sua página</span>
+          <input type="range" id="opacidade" min="0" max="100" step="1" value="50" aria-label="Opacidade do gabarito">
+          <span>Gabarito</span>
+          <strong id="valorOpacidade">50%</strong>
+        </div>
+      </div>
+      <div class="palco" id="palco" data-modo="gabarito">
+        <figure class="quadro" id="quadroGabarito">
+          <figcaption>Gabarito</figcaption>
+          <div class="tela" id="telaGabarito">
+            <canvas id="canvasGabarito"></canvas>
+            <canvas id="canvasDestaque"></canvas>
+          </div>
+        </figure>
+        <figure class="quadro" id="quadroAluno">
+          <figcaption>Sua página</figcaption>
+          <div class="tela" id="telaAluno">
+            <div id="superficieAluno"></div>
+            <div class="sem-pagina" id="semPagina" hidden>Crie index.html e style.css na pasta do projeto para comparar com o gabarito.</div>
+          </div>
+        </figure>
+      </div>
+      <div class="ajuda" id="ajuda"></div>
+    </section>
+    <ul class="lista" id="listaComponentes" aria-label="Componentes do gabarito"></ul>
+  </div>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -407,9 +757,9 @@ export function obterHtmlAutenticacao(
     <p class="descricao">Escolha um provedor para conectar à sua conta do IFMS.</p>
     <div class="status" id="statusAutenticacao">Selecione uma opção para entrar.</div>
     <div class="acoes">
+      <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
       <button id="botaoGitHub" class="btn-github">Entrar com GitHub</button>
       <button id="botaoMicrosoft" class="btn-microsoft">Entrar com Microsoft</button>
-      <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
       <button id="botaoSair" class="terciario">Desconectar</button>
     </div>
     <div class="meta">A validação é feita com a API configurada e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>

@@ -1,5 +1,12 @@
 import html2canvas from "html2canvas";
+import {
+  blocoNoPonto,
+  desenharGabarito,
+  formatarMedida,
+  normalizarHex,
+} from "./desenhoGabarito";
 import { medirFormas } from "./formas";
+import { montarPaginaAluno } from "./paginaAluno";
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -21,13 +28,9 @@ type DesafioRecebido = {
     borderRadius?: number;
     shape?: "rectangle" | "circle";
   }>;
-  captureWidth?: number;
-  captureHeight?: number;
   tempoAtualMs?: number;
   encerrado?: boolean;
 };
-
-type BlocoRecebido = DesafioRecebido["blocks"][number];
 
 type ResumoWorkspaceRecebido = {
   caminhoHtml: string;
@@ -44,7 +47,11 @@ type ResultadoAvaliacaoRecebido = {
   score: number;
   source: string;
   error?: string;
+  // A página não mudou desde a última correção e não foi reenviada.
+  repetida?: boolean;
 };
+
+type VerificacaoRecebida = { id?: number; mensagem?: string };
 
 type StatusConexaoServidorRecebido = {
   ok: boolean;
@@ -65,7 +72,19 @@ type MensagemDaExtensao =
   | { type: "dadosWorkspace"; payload: ResumoWorkspaceRecebido }
   | { type: "resultadoAvaliacao"; payload: ResultadoAvaliacaoRecebido }
   | { type: "statusServidor"; payload: StatusConexaoServidorRecebido }
-  | { type: "estadoAutenticacao"; payload: EstadoAutenticacaoRecebido };
+  | { type: "estadoAutenticacao"; payload: EstadoAutenticacaoRecebido }
+  | { type: "extensoesIa"; payload: Array<{ id: string; nome: string }> }
+  | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
+  | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };
+
+// Uma verificação vai do clique em Verificar até a extensão avisar que ela
+// terminou. Nesse meio tempo a extensão reenvia o estado (com o resultado
+// antigo) ao reler os arquivos; ele fica guardado e só o último é exibido.
+const LIMITE_VERIFICACAO_MS = 120_000;
+let verificacaoPendente: { id: number; challengeId: string } | undefined;
+let contadorVerificacoes = 0;
+let resultadoDuranteVerificacao: ResultadoAvaliacaoRecebido | undefined;
+let limiteVerificacao: number | undefined;
 
 const vscode = acquireVsCodeApi();
 
@@ -99,7 +118,9 @@ const avatarFallback = document.getElementById(
   "avatarFallback",
 ) as HTMLDivElement;
 
-const botaoNovoDesafio = document.getElementById("botaoNovoDesafio");
+const botaoNovoDesafio = document.getElementById(
+  "botaoNovoDesafio",
+) as HTMLButtonElement;
 const botaoEncerrarDesafio = document.getElementById(
   "botaoEncerrarDesafio",
 ) as HTMLButtonElement;
@@ -109,6 +130,13 @@ const botaoVerificar = document.getElementById(
   "botaoVerificar",
 ) as HTMLButtonElement;
 const botaoSair = document.getElementById("botaoSair");
+const botaoAbrirAba = document.getElementById("botaoAbrirAba");
+const botaoCriarArquivos = document.getElementById(
+  "botaoCriarArquivos",
+) as HTMLButtonElement;
+const avisoIa = document.getElementById("avisoIa") as HTMLDivElement;
+const textoAvisoIa = document.getElementById("textoAvisoIa") as HTMLSpanElement;
+const botaoVerExtensoesIa = document.getElementById("botaoVerExtensoesIa");
 let ultimoGabaritoEnviado = "";
 let desafioAtual: DesafioRecebido | undefined;
 let tempoBaseMs = 0;
@@ -162,6 +190,18 @@ botaoVerificar?.addEventListener("click", () => {
   void solicitarVerificacao();
 });
 
+botaoVerExtensoesIa?.addEventListener("click", () => {
+  vscode.postMessage({ type: "verExtensoesIa" });
+});
+
+botaoCriarArquivos?.addEventListener("click", () => {
+  vscode.postMessage({ type: "criarArquivos" });
+});
+
+botaoAbrirAba?.addEventListener("click", () => {
+  vscode.postMessage({ type: "abrirPainelGabarito" });
+});
+
 botaoSair?.addEventListener("click", () => {
   vscode.postMessage({ type: "logout" });
 });
@@ -185,41 +225,22 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     return;
   }
 
-  contexto.clearRect(0, 0, canvasAlvo.width, canvasAlvo.height);
-  contexto.fillStyle = desafio.backgroundColor;
-  contexto.fillRect(0, 0, canvasAlvo.width, canvasAlvo.height);
-
-  desafio.blocks.forEach((bloco) => {
-    contexto.fillStyle = bloco.color;
-    if (bloco.shape === "circle") {
-      desenharCirculo(
-        contexto,
-        bloco.x,
-        bloco.y,
-        bloco.width,
-        bloco.height,
-      );
-    } else {
-      desenharRetanguloArredondado(
-        contexto,
-        bloco.x,
-        bloco.y,
-        bloco.width,
-        bloco.height,
-        bloco.borderRadius ?? 0,
-      );
-    }
-  });
-
-  // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
-  // calcular o resultado final da tentativa.
-  botaoVerificar.disabled = false;
-  botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
+  desenharGabarito(contexto, desafio);
 
   if (mudouDesafio) {
     componenteSelecionadoId = undefined;
     caixaResultado.textContent = "Nenhuma verificação ainda.";
+    // Uma verificação do desafio anterior não vale para este.
+    window.clearTimeout(limiteVerificacao);
+    verificacaoPendente = undefined;
+    resultadoDuranteVerificacao = undefined;
   }
+
+  // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
+  // calcular o resultado final da tentativa. O estado é reenviado durante a
+  // verificação, que mantém o botão desligado até terminar.
+  botaoVerificar.disabled = Boolean(verificacaoPendente);
+  botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
   canvasAnotacoes
     .getContext("2d")
     ?.clearRect(0, 0, canvasAnotacoes.width, canvasAnotacoes.height);
@@ -302,42 +323,10 @@ function selecionarComponenteNoCanvas(evento: MouseEvent): void {
     (evento.clientX - limites.left) * (canvasAnotacoes.width / limites.width);
   const y =
     (evento.clientY - limites.top) * (canvasAnotacoes.height / limites.height);
-  const bloco = [...desafioAtual.blocks]
-    .reverse()
-    .find((candidato) => pontoPertenceAoBloco(x, y, candidato));
+  const bloco = blocoNoPonto(desafioAtual.blocks, x, y);
 
   componenteSelecionadoId = bloco?.id;
   renderizarDetalheComponente();
-}
-
-function pontoPertenceAoBloco(
-  x: number,
-  y: number,
-  bloco: BlocoRecebido,
-): boolean {
-  if (bloco.shape === "circle") {
-    const raioX = bloco.width / 2;
-    const raioY = bloco.height / 2;
-    const centroX = bloco.x + raioX;
-    const centroY = bloco.y + raioY;
-
-    if (raioX <= 0 || raioY <= 0) {
-      return false;
-    }
-
-    return (
-      ((x - centroX) * (x - centroX)) / (raioX * raioX) +
-        ((y - centroY) * (y - centroY)) / (raioY * raioY) <=
-      1
-    );
-  }
-
-  return (
-    x >= bloco.x &&
-    x <= bloco.x + bloco.width &&
-    y >= bloco.y &&
-    y <= bloco.y + bloco.height
-  );
 }
 
 function renderizarDetalheComponente(): void {
@@ -368,81 +357,27 @@ function renderizarDetalheComponente(): void {
     ` | Cor: ${normalizarHex(bloco.color)}`;
 }
 
-function formatarMedida(valor: number): string {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
-}
-
-function normalizarHex(cor: string): string {
-  return cor.toUpperCase();
-}
-
-function desenharCirculo(
-  contexto: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): void {
-  contexto.beginPath();
-  contexto.ellipse(
-    x + width / 2,
-    y + height / 2,
-    width / 2,
-    height / 2,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  contexto.fill();
-}
-
-function desenharRetanguloArredondado(
-  contexto: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  raioSolicitado: number,
-): void {
-  const raio = Math.max(0, Math.min(raioSolicitado, width / 2, height / 2));
-
-  if (raio === 0) {
-    contexto.fillRect(x, y, width, height);
-    return;
-  }
-
-  contexto.beginPath();
-  contexto.moveTo(x + raio, y);
-  contexto.lineTo(x + width - raio, y);
-  contexto.quadraticCurveTo(x + width, y, x + width, y + raio);
-  contexto.lineTo(x + width, y + height - raio);
-  contexto.quadraticCurveTo(
-    x + width,
-    y + height,
-    x + width - raio,
-    y + height,
-  );
-  contexto.lineTo(x + raio, y + height);
-  contexto.quadraticCurveTo(x, y + height, x, y + height - raio);
-  contexto.lineTo(x, y + raio);
-  contexto.quadraticCurveTo(x, y, x + raio, y);
-  contexto.closePath();
-  contexto.fill();
-}
-
 function renderizarWorkspace(
   resumoWorkspace: ResumoWorkspaceRecebido,
 ): void {
   const htmlInfo = resumoWorkspace.temArquivoHtml
     ? resumoWorkspace.caminhoHtml
-    : "index.html nao encontrado";
+    : "index.html não encontrado";
   const cssInfo = resumoWorkspace.temArquivoCss
     ? resumoWorkspace.caminhoCss
-    : "style.css nao encontrado";
+    : "style.css não encontrado";
 
   listaWorkspace.textContent = "HTML: " + htmlInfo + " | CSS: " + cssInfo;
+  botaoCriarArquivos.hidden =
+    resumoWorkspace.temArquivoHtml && resumoWorkspace.temArquivoCss;
   try {
-    prepararSuperficieAvaliacao(resumoWorkspace.htmlPreview);
+    const { largura, altura } = dimensoesDoDesafio();
+    montarPaginaAluno(
+      quadroAvaliacao,
+      resumoWorkspace.htmlPreview,
+      largura,
+      altura,
+    );
     const versaoDaCaptura = ++versaoWorkspace;
     const captura = capturarCanvasAluno();
     void captura
@@ -474,9 +409,19 @@ async function solicitarVerificacao(): Promise<void> {
   }
 
   const challengeId = desafioAtual.challengeId;
+  const id = ++contadorVerificacoes;
+  verificacaoPendente = { id, challengeId };
+  resultadoDuranteVerificacao = undefined;
+  window.clearTimeout(limiteVerificacao);
+  limiteVerificacao = window.setTimeout(() => {
+    if (verificacaoPendente?.id === id) {
+      concluirVerificacao();
+      caixaResultado.textContent =
+        "A verificação demorou demais para responder. Tente de novo.";
+    }
+  }, LIMITE_VERIFICACAO_MS);
   botaoVerificar.disabled = true;
-  caixaResultado.textContent =
-    "Atualizando os arquivos antes de enviar ao servidor...";
+  caixaResultado.textContent = "Atualizando os arquivos antes de verificar...";
 
   try {
     await atualizarWorkspaceAntesDaVerificacao();
@@ -504,13 +449,21 @@ async function solicitarVerificacao(): Promise<void> {
     return;
   }
 
-  caixaResultado.textContent =
-    "Enviando as formas da sua página para correção no servidor...";
+  caixaResultado.textContent = "Medindo as formas da sua página...";
   vscode.postMessage({
     type: "solicitarVerificacao",
     challengeId,
+    verificacaoId: id,
     formas: medirFormasDoAluno(),
   });
+}
+
+function concluirVerificacao(): void {
+  window.clearTimeout(limiteVerificacao);
+  verificacaoPendente = undefined;
+  const resultado = resultadoDuranteVerificacao;
+  resultadoDuranteVerificacao = undefined;
+  renderizarResultado(resultado);
 }
 
 function medirFormasDoAluno(): ReturnType<typeof medirFormas> {
@@ -616,83 +569,6 @@ function desenharMensagemPreview(mensagem: string): void {
   contexto.fillText(mensagem, largura / 2, altura / 2, largura * 0.92);
 }
 
-function prepararSuperficieAvaliacao(htmlPreview: string): void {
-  const documento = new DOMParser().parseFromString(htmlPreview, "text/html");
-  documento.querySelectorAll("script, iframe, object, embed").forEach((elemento) =>
-    elemento.remove(),
-  );
-  documento.querySelectorAll("*").forEach((elemento) => {
-    Array.from(elemento.attributes).forEach((atributo) => {
-      if (atributo.name.toLowerCase().startsWith("on")) {
-        elemento.removeAttribute(atributo.name);
-      }
-    });
-  });
-  documento
-    .querySelectorAll('meta[http-equiv="Content-Security-Policy" i]')
-    .forEach((elemento) => elemento.remove());
-
-  const { largura, altura } = dimensoesDoDesafio();
-  const raiz = quadroAvaliacao.shadowRoot ?? quadroAvaliacao.attachShadow({
-    mode: "open",
-  });
-  raiz.replaceChildren();
-
-  // Regras do documento externo vencem :host, então o tamanho da superfície
-  // de captura precisa ir no estilo inline do próprio host.
-  quadroAvaliacao.style.width = `${largura}px`;
-  quadroAvaliacao.style.height = `${altura}px`;
-
-  // Mesmo reset com que a extensão oficial do torneio renderiza a página do
-  // aluno antes de medir as formas.
-  const estilo = document.createElement("style");
-  estilo.textContent = `
-    :host {
-      display: block;
-      overflow: hidden;
-      background: #fff;
-    }
-    html, body {
-      display: block;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #ffffff;
-    }
-    * { box-sizing: border-box; }
-  `;
-
-  documento.querySelectorAll("style").forEach((estiloOriginal) => {
-    estilo.textContent += `\n${estiloOriginal.textContent || ""}`;
-  });
-
-  const htmlAluno = document.createElement("html");
-  copiarAtributosPermitidos(documento.documentElement, htmlAluno);
-  const bodyAluno = document.createElement("body");
-  copiarAtributosPermitidos(documento.body, bodyAluno);
-
-  Array.from(documento.body.childNodes).forEach((filho) => {
-    if (!(filho instanceof HTMLStyleElement)) {
-      bodyAluno.append(filho.cloneNode(true));
-    }
-  });
-  htmlAluno.append(bodyAluno);
-  raiz.append(estilo, htmlAluno);
-}
-
-function copiarAtributosPermitidos(
-  origem: Element,
-  destino: Element,
-): void {
-  Array.from(origem.attributes).forEach((atributo) => {
-    if (!atributo.name.toLowerCase().startsWith("on")) {
-      destino.setAttribute(atributo.name, atributo.value);
-    }
-  });
-}
-
 function aguardarDoisFrames(): Promise<void> {
   return new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
@@ -711,6 +587,7 @@ function renderizarResultado(
 
   if (
     resultado.source === "missing-files" ||
+    resultado.source === "desafio-invalidado" ||
     resultado.source === "sem-formas" ||
     resultado.source === "config-missing" ||
     resultado.source === "gabarito-error" ||
@@ -723,7 +600,13 @@ function renderizarResultado(
 
   if (resultado.source === "servidor") {
     caixaResultado.textContent =
-      "Precisão oficial do servidor: " + resultado.precision.toFixed(2) + "%";
+      "Precisão oficial do servidor: " +
+      resultado.precision.toFixed(2) +
+      "%" +
+      (resultado.repetida
+        ? ". A sua página continua igual à da última verificação, então não " +
+          "foi enviada de novo; altere o código e salve para verificar outra vez."
+        : "");
     return;
   }
 
@@ -833,7 +716,26 @@ window.addEventListener(
     }
 
     if (mensagem.type === "resultadoAvaliacao") {
-      renderizarResultado(mensagem.payload);
+      if (verificacaoPendente) {
+        resultadoDuranteVerificacao = mensagem.payload;
+      } else {
+        renderizarResultado(mensagem.payload);
+      }
+    }
+
+    if (
+      mensagem.type === "progressoVerificacao" &&
+      mensagem.payload.id === verificacaoPendente?.id &&
+      mensagem.payload.mensagem
+    ) {
+      caixaResultado.textContent = mensagem.payload.mensagem;
+    }
+
+    if (
+      mensagem.type === "verificacaoConcluida" &&
+      mensagem.payload.id === verificacaoPendente?.id
+    ) {
+      concluirVerificacao();
     }
 
     if (mensagem.type === "statusServidor") {
@@ -844,6 +746,19 @@ window.addEventListener(
 
     if (mensagem.type === "estadoAutenticacao") {
       renderizarEstadoAutenticacao(mensagem.payload);
+    }
+
+    if (mensagem.type === "extensoesIa") {
+      const nomes = mensagem.payload.map((extensao) => extensao.nome);
+      avisoIa.hidden = nomes.length === 0;
+      textoAvisoIa.textContent =
+        `Extensões de IA habilitadas: ${nomes.join(", ")}. Como no torneio, ` +
+        "você só começa e corrige desafios com elas desabilitadas. Depois " +
+        'de desabilitar, clique em "Reiniciar Extensões" se o VS Code pedir.';
+      // A extensão também recusa; o botão desligado só deixa isso claro.
+      botaoNovoDesafio.disabled = nomes.length > 0;
+      botaoNovoDesafio.title =
+        nomes.length > 0 ? "Desabilite as extensões de IA para começar." : "";
     }
   },
 );

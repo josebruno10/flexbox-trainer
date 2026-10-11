@@ -21,6 +21,8 @@ export async function avaliarTentativa(
   tentativa: TentativaPayload,
   configuracao: ConfiguracaoServidor,
   registro: vscode.Memento,
+  // Etapas que demoram, para a barra lateral mostrar o andamento.
+  aoProgredir: (mensagem: string) => void = () => undefined,
 ): Promise<ResultadoAvaliacao> {
   if (!configuracao.apiBaseUrl) {
     return falha(
@@ -74,6 +76,9 @@ export async function avaliarTentativa(
         : undefined;
 
     if (cod === undefined) {
+      aoProgredir(
+        "Cadastrando a imagem deste desafio como gabarito no servidor...",
+      );
       try {
         cod = await enviarGabaritoDeTreino(
           configuracao,
@@ -99,6 +104,7 @@ export async function avaliarTentativa(
       } satisfies GabaritoRegistrado);
     }
 
+    aoProgredir("Corrigindo a sua página no servidor...");
     return await corrigirFormas(
       configuracao,
       cod,

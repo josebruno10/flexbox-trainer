@@ -34,25 +34,11 @@ export function lerConfiguracaoServidor(
     apiBaseUrl: normalizarApiBaseUrl(apiBaseUrl),
     apiToken:
       tokenSessao?.trim() || config.get<string>("apiToken", "").trim(),
-    dinamicaId: config.get<string>("dinamicaId", "").trim(),
     eventoTreino: config.get<string>("eventoTreino", "").trim(),
-    userId: config.get<number>("userId", 0),
-    teamId: config.get<number>("teamId", 0),
-    captureWidth: config.get<number>("captureWidth", 960),
-    captureHeight: config.get<number>("captureHeight", 540),
+    // Preenchidos com o aluno e o time da sessão autenticada.
+    userId: 0,
+    teamId: 0,
   };
-}
-
-export function temConfiguracaoServidorMinima(
-  configuracao: ConfiguracaoServidor,
-): boolean {
-  return Boolean(
-    configuracao.apiBaseUrl &&
-      configuracao.apiToken &&
-      configuracao.dinamicaId &&
-      configuracao.userId > 0 &&
-      configuracao.teamId > 0,
-  );
 }
 
 export async function verificarConexaoServidor(
@@ -102,131 +88,6 @@ export async function verificarConexaoServidor(
   }
 
   return `Conexão realizada com sucesso (HTTP ${resposta.status}).`;
-}
-
-export async function criarPastaDoAluno(
-  configuracao: ConfiguracaoServidor,
-): Promise<string> {
-  const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
-  const rotaCriarPasta = `${apiBaseUrl}/criar-pasta/${encodeURIComponent(configuracao.dinamicaId)}/${configuracao.teamId}/${configuracao.userId}`;
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 10000);
-
-  log.info(`Chamando API criar-pasta: ${rotaCriarPasta}`);
-
-  const resposta = await fetch(rotaCriarPasta, {
-    method: "POST",
-    mode: "cors",
-    headers: montarCabecalhos(configuracao),
-    signal: abortController.signal,
-  })
-    .catch((erro: unknown) => {
-      const mensagem =
-        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
-      const detalhe =
-        erro instanceof Error && erro.name === "AbortError"
-          ? "Tempo limite de 10 segundos excedido."
-          : mensagem;
-
-      log.error(`Erro fatal no fetch (criar-pasta): ${detalhe}`);
-      throw new Error(`Não foi possível conectar ao servidor: ${detalhe}`);
-    })
-    .finally(() => {
-      clearTimeout(timeoutId);
-    });
-
-  if (!resposta.ok) {
-    const detalhe = await extrairDetalheDeErro(resposta);
-    throw new ErroHttpServidor(
-      `Falha ao criar pasta (HTTP ${resposta.status}): ${detalhe}`,
-      resposta.status,
-    );
-  }
-
-  const dados = await extrairCorpoResposta(resposta);
-  const codigoPasta = extrairCodigoPasta(dados);
-
-  if (!codigoPasta) {
-    throw new Error("A API não retornou o código da pasta.");
-  }
-
-  return codigoPasta;
-}
-
-export async function enviarConteudoDaTentativa(
-  configuracao: ConfiguracaoServidor,
-  codigoPasta: string,
-  html: string,
-  css: string,
-): Promise<ResultadoAvaliacao> {
-  const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
-  const rotaSalvarConteudo = `${apiBaseUrl}/salvar-conteudo`;
-  const formulario = new URLSearchParams();
-  formulario.set("code_pasta", codigoPasta);
-  formulario.set("tipo", "ambos");
-  formulario.set("index_conteudo", html);
-  formulario.set("style_conteudo", css);
-
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 15000);
-
-  log.info(`Enviando conteúdo para pasta: ${codigoPasta}`);
-
-  const resposta = await fetch(rotaSalvarConteudo, {
-    method: "POST",
-    mode: "cors",
-    headers: montarCabecalhos(configuracao, {
-      "Content-Type": "application/x-www-form-urlencoded",
-    }),
-    signal: abortController.signal,
-    body: formulario.toString(),
-  })
-    .catch((erro: unknown) => {
-      const mensagem =
-        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
-      const detalhe =
-        erro instanceof Error && erro.name === "AbortError"
-          ? "Tempo limite de 15 segundos excedido."
-          : mensagem;
-
-      log.error(`Erro na rota salvar-conteudo: ${detalhe}`);
-      throw new Error(`Falha de rede ao enviar a tentativa: ${detalhe}`);
-    })
-    .finally(() => {
-      clearTimeout(timeoutId);
-    });
-
-  if (!resposta.ok) {
-    const detalhe = await extrairDetalheDeErro(resposta);
-    throw new ErroHttpServidor(
-      `Falha ao enviar conteúdo (HTTP ${resposta.status}): ${detalhe}`,
-      resposta.status,
-    );
-  }
-
-  const dados = await extrairCorpoResposta(resposta);
-  const nota = extrairNotaServidor(dados);
-  // O contrato da API não documenta a resposta desta rota; o registro mostra
-  // se ela devolve alguma nota ou só confirma o salvamento.
-  log.info(
-    `Resposta de salvar-conteudo (HTTP ${resposta.status}): ` +
-      JSON.stringify(dados).slice(0, 500),
-  );
-
-  if (nota === undefined) {
-    return {
-      precision: 0,
-      score: 0,
-      source: "servidor-sem-nota",
-      error: extrairMensagemServidor(dados),
-    };
-  }
-
-  return {
-    precision: nota,
-    score: nota,
-    source: "servidor",
-  };
 }
 
 /**
@@ -630,59 +491,6 @@ async function requisitarApi(
   return extrairCorpoResposta(resposta);
 }
 
-export function extrairNotaServidor(dados: unknown): number | undefined {
-  if (!dados || typeof dados !== "object") {
-    return undefined;
-  }
-
-  const fila: unknown[] = [dados];
-  const visitados = new Set<object>();
-  const chavesNota = new Set([
-    "nota",
-    "pontuacao",
-    "score",
-    "precisao",
-    "precision",
-    "porcentagem",
-    "percentage",
-    "acuracia",
-    "accuracy",
-  ]);
-
-  while (fila.length > 0) {
-    const atual = fila.shift();
-
-    if (!atual || typeof atual !== "object" || visitados.has(atual)) {
-      continue;
-    }
-
-    visitados.add(atual);
-
-    for (const [chave, valor] of Object.entries(
-      atual as Record<string, unknown>,
-    )) {
-      if (chavesNota.has(chave.toLowerCase())) {
-        const numero =
-          typeof valor === "number"
-            ? valor
-            : typeof valor === "string" && valor.trim()
-              ? Number(valor)
-              : undefined;
-
-        if (numero !== undefined && Number.isFinite(numero)) {
-          return numero;
-        }
-      }
-
-      if (valor && typeof valor === "object") {
-        fila.push(valor);
-      }
-    }
-  }
-
-  return undefined;
-}
-
 /**
  * Lê a resposta de corrigir-formas como a extensão oficial do torneio: a
  * porcentagem geral vem em pontuacao, percentual ou ultima_pontuacao; sem
@@ -753,10 +561,7 @@ function ehRegistro(valor: unknown): valor is Record<string, unknown> {
   return Boolean(valor) && typeof valor === "object" && !Array.isArray(valor);
 }
 
-function extrairMensagemServidor(
-  dados: unknown,
-  padrao = "Conteúdo salvo, mas a API não retornou nota/precisão nesta rota.",
-): string {
+function extrairMensagemServidor(dados: unknown, padrao: string): string {
   if (dados && typeof dados === "object") {
     const resposta = dados as Record<string, unknown>;
     const mensagem = resposta.message ?? resposta.mensagem ?? resposta.detail;
@@ -808,34 +613,6 @@ async function extrairCorpoResposta(response: Response): Promise<unknown> {
   } catch {
     return texto.trim();
   }
-}
-
-export function extrairCodigoPasta(dados: unknown): string | undefined {
-  if (typeof dados === "string" && dados.trim()) {
-    return dados;
-  }
-
-  if (!dados || typeof dados !== "object") {
-    return undefined;
-  }
-
-  const resposta = dados as Record<string, unknown>;
-  const candidatos = [
-    resposta.code_pasta,
-    resposta.codigo_pasta,
-    resposta.codigoPasta,
-    resposta.codPasta,
-    resposta.cod_pasta,
-    resposta.pastaCodigo,
-    resposta.codigo,
-  ];
-
-  return candidatos.find(
-    (valor): valor is string =>
-      typeof valor === "string" &&
-      valor.trim().length > 0 &&
-      !valor.includes("Sucesso"),
-  );
 }
 
 function normalizarApiBaseUrl(apiBaseUrl: string): string {

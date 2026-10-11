@@ -72,6 +72,45 @@ const webExtensionConfig = {
   },
 };
 
+/**
+ * O mesmo código da extensão para o host Node do VS Code desktop. Cada host
+ * só enxerga as próprias extensões, e as de IA (Copilot, Claude Code, Codex...)
+ * rodam no Node; só daqui a extensão consegue detectá-las.
+ * @type WebpackConfig
+ */
+const nodeExtensionConfig = {
+  mode: "none",
+  target: "node",
+  entry: {
+    extension: "./src/web/extension.ts",
+  },
+  output: {
+    filename: "[name].js",
+    path: path.join(__dirname, "./dist/node"),
+    libraryTarget: "commonjs2",
+    devtoolModuleFilenameTemplate: "../../[resource-path]",
+  },
+  resolve: {
+    mainFields: ["module", "main"],
+    extensions: [".ts", ".js"],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: [{ loader: "ts-loader" }],
+      },
+    ],
+  },
+  externals: {
+    vscode: "commonjs vscode",
+  },
+  performance: { hints: false },
+  devtool: "nosources-source-map",
+  infrastructureLogging: { level: "log" },
+};
+
 /** @type WebpackConfig */
 const webviewAppConfig = {
   mode: "none", // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
@@ -79,6 +118,7 @@ const webviewAppConfig = {
   entry: {
     "webview/app": "./src/web/webview/app.ts",
     "webview/loginPage": "./src/web/webview/loginPage.ts",
+    "webview/painelGabarito": "./src/web/webview/painelGabarito.ts",
   },
   output: {
     filename: "[name].js",
@@ -109,4 +149,4 @@ const webviewAppConfig = {
   infrastructureLogging: { level: "log" },
 };
 
-module.exports = [webExtensionConfig, webviewAppConfig];
+module.exports = [webExtensionConfig, nodeExtensionConfig, webviewAppConfig];

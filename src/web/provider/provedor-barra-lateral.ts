@@ -14,18 +14,32 @@ import {
 } from "../types";
 import { criarDesafioGerado } from "../services/desafio";
 import {
+  criarArquivosDeTreino,
   criarResumoWorkspaceVazio,
   lerResumoWorkspace,
 } from "../services/workspace";
 import { avaliarTentativa } from "../services/avaliacao";
+import { AlteracaoExterna } from "../services/alteracoesExternas";
+import { log } from "../services/logger";
+import {
+  abrirExtensoesIa,
+  encontrarExtensoesIa,
+  ExtensaoIa,
+} from "../services/extensoesIa";
 import {
   ErroHttpServidor,
   lerConfiguracaoServidor,
   verificarConexaoServidor,
 } from "../services/servidor";
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
+import { PainelGabarito } from "./painel-gabarito";
 
 const CRIAR_DINAMICA = "Criar dinâmica de treino";
+const ABRIR_PASTA = "Abrir pasta";
+const VER_EXTENSOES = "Ver extensões";
+// Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
+const LARGURA_PADRAO = 800;
+const ALTURA_PADRAO = 800;
 
 export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public static readonly viewType = "flexbox-trainer.sidebar";
@@ -50,13 +64,30 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private fimTentativaMs?: number;
 
+  // Por que o desafio atual não pode mais ser corrigido. Fica só na memória,
+  // como o desafio: a extensão de IA que estava rodando só sai da lista
+  // depois de "Reiniciar Extensões", que reinicia esta extensão também.
+  private motivoInvalidacao?: string;
+
   private estadoAutenticacao: EstadoAutenticacao;
+
+  // Criada na primeira vez que o aluno abre o gabarito em uma aba.
+  private painelGabarito?: PainelGabarito;
+
+  // Última correção com nota: uma página igual não é reenviada ao servidor.
+  private ultimaCorrecao?: {
+    challengeId: string;
+    assinatura: string;
+    resultado: ResultadoAvaliacao;
+  };
 
   public constructor(
     extensionUri: vscode.Uri,
     authService: AuthService,
     // Guarda qual gabarito do evento de treino esta instalação criou.
     private readonly registroGabaritos: vscode.Memento,
+    private readonly detectarExtensoesIa: () => ExtensaoIa[] = () =>
+      encontrarExtensoesIa(),
   ) {
     this.extensionUri = extensionUri;
     this.authService = authService;
@@ -72,8 +103,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       } else if (estado.status === "unauthenticated") {
         this.desafioAtual = undefined;
         this.fimTentativaMs = undefined;
+        this.motivoInvalidacao = undefined;
         this.gabaritoAtual = undefined;
         this.avaliacaoAtual = undefined;
+        this.painelGabarito?.atualizar(undefined);
+        this.painelGabarito?.atualizarPagina(undefined);
+        this.ultimaCorrecao = undefined;
       }
 
       this.enviarEstado();
@@ -168,6 +203,21 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "abrirPainelGabarito") {
+          this.abrirPainelGabarito();
+          return;
+        }
+
+        if (mensagem.type === "verExtensoesIa") {
+          void this.verExtensoesIa();
+          return;
+        }
+
+        if (mensagem.type === "criarArquivos") {
+          void this.criarArquivosDeTreino();
+          return;
+        }
+
         if (mensagem.type === "encerrarDesafio") {
           this.encerrarDesafioAtual();
           return;
@@ -191,6 +241,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           void this.verificarTentativaAtual(
             mensagem.challengeId,
             sanitizarFormas(mensagem.formas),
+            typeof mensagem.verificacaoId === "number"
+              ? mensagem.verificacaoId
+              : undefined,
           );
         }
       },
@@ -207,25 +260,199 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
+    // Como no torneio, o desafio começa e termina sem IA.
+    const extensoesIa = this.detectarExtensoesIa();
+    if (extensoesIa.length > 0) {
+      const nomes = extensoesIa.map((extensao) => extensao.nome).join(", ");
+      void vscode.window
+        .showWarningMessage(
+          "Como no torneio, desabilite as extensões de IA antes de começar " +
+            `um desafio: ${nomes}. Se já desabilitou, clique em ` +
+            '"Reiniciar Extensões".',
+          VER_EXTENSOES,
+        )
+        .then((escolha) => {
+          if (escolha === VER_EXTENSOES) {
+            void abrirExtensoesIa(extensoesIa);
+          }
+        });
+      this.enviarEstado();
+      return;
+    }
+
     console.log("[FlexBox Trainer] Iniciando novo desafio...");
-    const desafioGerado = criarDesafioGerado();
-    // A captura do aluno precisa casar com o gabarito. As dimensões saem do
-    // próprio desafio, não das settings, porque nem todo gabarito é 960x540.
-    this.desafioAtual = {
-      ...desafioGerado,
-      captureWidth: desafioGerado.width,
-      captureHeight: desafioGerado.height,
-    };
+    this.desafioAtual = criarDesafioGerado();
+    this.motivoInvalidacao = undefined;
+    this.painelGabarito?.atualizar(this.desafioAtual);
     this.gabaritoAtual = undefined;
     this.avaliacaoAtual = undefined;
     this.inicioTentativaMs = Date.now();
     this.fimTentativaMs = undefined;
     this.enviarEstado();
     void this.testarConexaoServidor();
+    // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
+    void this.criarArquivosSeFaltarem();
+  }
+
+  /** Cria os arquivos de treino que faltarem e avisa o que aconteceu. */
+  public async criarArquivosDeTreino(
+    avisarSeExistirem = true,
+  ): Promise<void> {
+    const resultado = await criarArquivosDeTreino(
+      this.desafioAtual?.width ?? LARGURA_PADRAO,
+      this.desafioAtual?.height ?? ALTURA_PADRAO,
+    );
+
+    if (resultado.status === "sem-pasta") {
+      // Não espera a resposta: a notificação pode ficar aberta.
+      void vscode.window
+        .showInformationMessage(
+          "Abra uma pasta para treinar: o FlexBox Trainer cria nela o " +
+            "index.html e o style.css.",
+          ABRIR_PASTA,
+        )
+        .then((escolha) => {
+          if (escolha === ABRIR_PASTA) {
+            void vscode.commands.executeCommand(
+              "workbench.action.files.openFolder",
+            );
+          }
+        });
+      return;
+    }
+
+    if (resultado.status === "ja-existiam") {
+      if (avisarSeExistirem) {
+        void vscode.window.showInformationMessage(
+          "index.html e style.css já existem nesta pasta.",
+        );
+      }
+      return;
+    }
+
+    // O index.html fica em primeiro plano, com o style.css na aba ao lado.
+    const ordenados = [...resultado.arquivos].sort((a, b) =>
+      a.path.endsWith("index.html") ? 1 : b.path.endsWith("index.html") ? -1 : 0,
+    );
+    for (const arquivo of ordenados) {
+      await vscode.window.showTextDocument(arquivo, { preview: false });
+    }
+    void vscode.window.showInformationMessage(
+      `Criei ${resultado.arquivos
+        .map((arquivo) => arquivo.path.split("/").pop())
+        .join(" e ")} na pasta do projeto para você recriar o desafio.`,
+    );
+    await this.atualizarPreviewWorkspace();
+  }
+
+  private async criarArquivosSeFaltarem(): Promise<void> {
+    const resumo = await lerResumoWorkspace();
+    if (!resumo.temArquivoHtml || !resumo.temArquivoCss) {
+      await this.criarArquivosDeTreino(false);
+    }
   }
 
   public obterDesafioAtual(): Desafio | undefined {
     return this.desafioAtual;
+  }
+
+  /**
+   * As extensões habilitadas mudaram. Uma de IA habilitada durante o desafio
+   * o invalida, mesmo que seja desabilitada depois.
+   */
+  public atualizarExtensoesIa(): void {
+    const extensoesIa = this.detectarExtensoesIa();
+    if (extensoesIa.length > 0) {
+      this.invalidarDesafio(motivoExtensoesIa(extensoesIa));
+    }
+    this.enviarEstado();
+  }
+
+  /**
+   * Um index.html ou style.css mudou no disco sem ter saído do editor. Se for
+   * um arquivo de treino, durante o desafio, o desafio fica invalidado.
+   */
+  public async registrarAlteracaoExterna(
+    alteracao: AlteracaoExterna,
+  ): Promise<void> {
+    // A página mudou: o preview e a aba do gabarito mostram o conteúdo novo.
+    await this.atualizarPreviewWorkspace();
+
+    if (
+      !this.desafioAtual ||
+      this.motivoInvalidacao ||
+      alteracao.instante < this.inicioTentativaMs
+    ) {
+      return;
+    }
+
+    const resumo = this.resumoWorkspaceAtual;
+    const caminho = normalizarCaminho(alteracao.uri.fsPath);
+    const arquivosDeTreino = [
+      resumo.temArquivoHtml ? resumo.caminhoHtml : undefined,
+      resumo.temArquivoCss ? resumo.caminhoCss : undefined,
+    ];
+
+    if (
+      !arquivosDeTreino.some(
+        (arquivo) =>
+          arquivo !== undefined && normalizarCaminho(arquivo) === caminho,
+      )
+    ) {
+      return;
+    }
+
+    const nome = alteracao.uri.path.split("/").pop() ?? "arquivo";
+    this.invalidarDesafio(`o ${nome} foi alterado fora do editor.`);
+    this.enviarEstado();
+  }
+
+  private invalidarDesafio(motivo: string): void {
+    if (!this.desafioAtual || this.motivoInvalidacao) {
+      return;
+    }
+
+    this.motivoInvalidacao = motivo;
+    this.avaliacaoAtual = this.resultadoDesafioInvalidado();
+    log.info(
+      `Desafio ${this.desafioAtual.challengeId} invalidado: ${motivo}`,
+    );
+  }
+
+  private resultadoDesafioInvalidado(): ResultadoAvaliacao {
+    return {
+      precision: 0,
+      score: 0,
+      source: "desafio-invalidado",
+      error:
+        `Desafio invalidado: ${this.motivoInvalidacao} Como no torneio, ele ` +
+        "não pode mais ser corrigido. Gere um novo desafio e faça-o no " +
+        "editor, sem IA.",
+    };
+  }
+
+  /** Abre a página das extensões de IA habilitadas, para desabilitá-las. */
+  public async verExtensoesIa(): Promise<ExtensaoIa[]> {
+    const lista = this.detectarExtensoesIa();
+    await abrirExtensoesIa(lista);
+    return lista;
+  }
+
+  public abrirPainelGabarito(): void {
+    this.painelGabarito ??= new PainelGabarito(this.extensionUri);
+    this.painelGabarito.mostrar(this.desafioAtual, this.paginaDoAluno());
+  }
+
+  private definirResumoWorkspace(resumo: ResumoWorkspace): void {
+    this.resumoWorkspaceAtual = resumo;
+    this.painelGabarito?.atualizarPagina(this.paginaDoAluno());
+  }
+
+  private paginaDoAluno(): string | undefined {
+    const resumo = this.resumoWorkspaceAtual;
+    return resumo.temArquivoHtml || resumo.temArquivoCss
+      ? resumo.htmlPreview
+      : undefined;
   }
 
   public async atualizarPreviewWorkspace(): Promise<void> {
@@ -233,7 +460,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    this.resumoWorkspaceAtual = await lerResumoWorkspace();
+    this.definirResumoWorkspace(await lerResumoWorkspace());
     this.enviarEstado();
   }
 
@@ -246,15 +473,55 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarEstado();
   }
 
+  // A barra lateral mostra as etapas e espera o aviso de conclusão, que vai
+  // sempre, mesmo quando a verificação para no meio.
   private async verificarTentativaAtual(
     challengeId: string,
     formas: FormaMedida[],
+    verificacaoId?: number,
+  ): Promise<void> {
+    const avisar = (type: string, mensagem?: string): void => {
+      void this.visualizacaoWebview?.webview.postMessage({
+        type,
+        payload: { id: verificacaoId, mensagem },
+      });
+    };
+
+    try {
+      await vscode.window.withProgress(
+        { location: { viewId: ProvedorBarraLateralFlexBox.viewType } },
+        () =>
+          this.executarVerificacao(challengeId, formas, (mensagem) =>
+            avisar("progressoVerificacao", mensagem),
+          ),
+      );
+    } finally {
+      avisar("verificacaoConcluida");
+    }
+  }
+
+  private async executarVerificacao(
+    challengeId: string,
+    formas: FormaMedida[],
+    aoProgredir: (mensagem: string) => void,
   ): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
 
     if (!this.desafioAtual || this.desafioAtual.challengeId !== challengeId) {
+      return;
+    }
+
+    // Como no torneio, nada é corrigido com uma extensão de IA habilitada.
+    const extensoesIa = this.detectarExtensoesIa();
+    if (extensoesIa.length > 0) {
+      this.invalidarDesafio(motivoExtensoesIa(extensoesIa));
+    }
+
+    if (this.motivoInvalidacao) {
+      this.avaliacaoAtual = this.resultadoDesafioInvalidado();
+      this.enviarEstado();
       return;
     }
 
@@ -272,7 +539,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      this.resumoWorkspaceAtual = resumoWorkspace;
+      this.definirResumoWorkspace(resumoWorkspace);
 
       if (
         !resumoWorkspace.temArquivoHtml ||
@@ -282,9 +549,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           precision: 0,
           score: 0,
           source: "missing-files",
-          error: "Abra ou crie index.html e style.css na pasta do projeto.",
+          error:
+            "Não encontrei index.html e style.css: recrie o desafio neles e " +
+            "verifique de novo.",
         };
         this.enviarEstado();
+        void this.criarArquivosDeTreino(false);
         return;
       }
 
@@ -327,10 +597,26 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         }
       }
 
+      const configuracao = this.lerConfiguracaoServidorAtual();
+      // As formas medidas são o que o servidor compara: se não mudaram, a
+      // nota também não mudaria.
+      const assinatura = JSON.stringify([configuracao.eventoTreino, formas]);
+      const anterior = this.ultimaCorrecao;
+
+      if (
+        anterior?.challengeId === challengeId &&
+        anterior.assinatura === assinatura
+      ) {
+        this.avaliacaoAtual = { ...anterior.resultado, repetida: true };
+        this.enviarEstado();
+        return;
+      }
+
       const resultadoServidor = await avaliarTentativa(
         { challengeId, formas, gabarito },
-        this.lerConfiguracaoServidorAtual(),
+        configuracao,
         this.registroGabaritos,
+        aoProgredir,
       );
 
       if (!desafioAindaEhAtual()) {
@@ -338,6 +624,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       }
 
       this.avaliacaoAtual = resultadoServidor;
+      this.ultimaCorrecao =
+        resultadoServidor.source === "servidor"
+          ? { challengeId, assinatura, resultado: resultadoServidor }
+          : undefined;
 
       this.enviarEstado();
 
@@ -392,33 +682,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private lerConfiguracaoServidorAtual(): ConfiguracaoServidor {
     const sessao = this.authService.getSessaoAtual();
-    const configuracao = lerConfiguracaoServidor(
-      this.authService.getAccessToken(),
-    );
-    // Por padrão a sessão vence, para ninguém submeter com o ID de outra
-    // pessoa. O override existe porque o servidor pode devolver em /auth/me
-    // um id do provedor OAuth que não existe na tabela `usuarios`.
-    const preferirConfiguracoes = vscode.workspace
-      .getConfiguration("flexboxTrainer")
-      .get<boolean>("usarIdsDasConfiguracoes", false);
-
-    const escolherId = (
-      valorConfigurado: number,
-      valorSessao: number | undefined,
-    ): number => {
-      if (preferirConfiguracoes && valorConfigurado > 0) {
-        return valorConfigurado;
-      }
-
-      return typeof valorSessao === "number" && valorSessao > 0
-        ? valorSessao
-        : valorConfigurado;
-    };
-
+    // Aluno e time vêm só da sessão, que os busca no servidor pelo e-mail;
+    // assim ninguém corrige em nome de outra pessoa.
     return {
-      ...configuracao,
-      userId: escolherId(configuracao.userId, sessao?.userId),
-      teamId: escolherId(configuracao.teamId, sessao?.teamId),
+      ...lerConfiguracaoServidor(this.authService.getAccessToken()),
+      userId: sessao?.userId ?? 0,
+      teamId: sessao?.teamId ?? 0,
     };
   }
 
@@ -448,6 +717,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     if (!this.authService.isAutenticado()) {
       return;
     }
+
+    this.visualizacaoWebview.webview.postMessage({
+      type: "extensoesIa",
+      payload: this.detectarExtensoesIa(),
+    });
 
     if (this.desafioAtual) {
       this.visualizacaoWebview.webview.postMessage({
@@ -501,6 +775,17 @@ const TIPOS_FORMA: ReadonlySet<unknown> = new Set<FormaMedida["tipo"]>([
   "retangulo_deitado",
   "retangulo_em_pe",
 ]);
+
+function motivoExtensoesIa(extensoes: ExtensaoIa[]): string {
+  const nomes = extensoes.map((extensao) => extensao.nome).join(", ");
+  return extensoes.length === 1
+    ? `uma extensão de IA ficou habilitada durante ele (${nomes}).`
+    : `extensões de IA ficaram habilitadas durante ele (${nomes}).`;
+}
+
+function normalizarCaminho(caminho: string): string {
+  return caminho.replace(/\\/g, "/").toLowerCase();
+}
 
 // A mensagem vem da webview; só passam formas com números e cor válidos.
 function sanitizarFormas(formas: unknown): FormaMedida[] {

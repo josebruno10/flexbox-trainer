@@ -107,19 +107,9 @@ export async function criarDinamicaTreinoInterativa(
   );
 }
 
-// Mesma regra dos envios: com o override ligado, o ID das configurações vence
-// o do login, que pode ser o ID do provedor OAuth.
+// O ID da sessão é o do aluno no servidor (buscado pelo e-mail no login).
 function sugerirCodigo(authService: AuthService): string {
-  const configuracao = vscode.workspace.getConfiguration("flexboxTrainer");
-  const idConfigurado = configuracao.get<number>("userId", 0);
-  const idSessao = authService.getSessaoAtual()?.userId ?? 0;
-  const id =
-    configuracao.get<boolean>("usarIdsDasConfiguracoes", false) &&
-    idConfigurado > 0
-      ? idConfigurado
-      : idSessao > 0
-        ? idSessao
-        : idConfigurado;
+  const id = authService.getSessaoAtual()?.userId ?? 0;
   if (id <= 0) {
     return "";
   }

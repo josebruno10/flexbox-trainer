@@ -18,8 +18,6 @@ export type Desafio = {
   height: number;
   backgroundColor: string;
   blocks: Bloco[];
-  captureWidth?: number;
-  captureHeight?: number;
   encerrado?: boolean;
 };
 
@@ -39,12 +37,15 @@ export type FormaMedida = {
 export type ResultadoAvaliacao = {
   precision: number;
   score: number;
+  // A página não mudou desde a última correção e não foi reenviada.
+  repetida?: boolean;
   source:
     | "servidor"
     | "servidor-sem-nota"
     | "api-error"
     | "authentication-error"
     | "missing-files"
+    | "desafio-invalidado"
     | "sem-formas"
     | "config-missing"
     | "gabarito-error";
@@ -87,13 +88,10 @@ export type TentativaPayload = {
 export type ConfiguracaoServidor = {
   apiBaseUrl: string;
   apiToken: string;
-  dinamicaId: string;
   // Evento só de treino que recebe a imagem de cada desafio gerado.
   eventoTreino: string;
   userId: number;
   teamId: number;
-  captureWidth: number;
-  captureHeight: number;
 };
 
 export type StatusConexaoServidor = {
@@ -107,7 +105,12 @@ export type MensagemRecebidaBarraLateral =
   | { type: "encerrarDesafio" }
   | { type: "testarConexao" }
   | { type: "atualizarPreview" }
-  | { type: "solicitarVerificacao"; challengeId: string; formas: unknown }
+  | {
+      type: "solicitarVerificacao";
+      challengeId: string;
+      formas: unknown;
+      verificacaoId?: unknown;
+    }
   | { type: "abrirLogin" }
   | { type: "abrirCadastro" }
   | { type: "loginGitHub" }
@@ -121,4 +124,7 @@ export type MensagemRecebidaBarraLateral =
       width: number;
       height: number;
     }
+  | { type: "abrirPainelGabarito" }
+  | { type: "verExtensoesIa" }
+  | { type: "criarArquivos" }
   | { type: "logout" };

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
+import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
@@ -80,6 +81,47 @@ export async function activate(context: vscode.ExtensionContext) {
       "flexbox-trainer.criarConta",
       async () => {
         await authService.abrirFluxoAutenticacao("register");
+      },
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("flexbox-trainer.abrirGabarito", () => {
+      provedor.abrirPainelGabarito();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("flexbox-trainer.verExtensoesIa", () =>
+      provedor.verExtensoesIa(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.criarArquivos", () =>
+      provedor.criarArquivosDeTreino(),
+    ),
+    // Habilitar ou desabilitar uma extensão atualiza o aviso de IA e, se
+    // houver desafio, pode invalidá-lo.
+    vscode.extensions.onDidChange(() => provedor.atualizarExtensoesIa()),
+    // index.html e style.css gravados fora do editor (por um assistente de IA
+    // no terminal, por exemplo) também invalidam o desafio.
+    new MonitorAlteracoesExternas((alteracao) => {
+      void provedor.registrarAlteracaoExterna(alteracao);
+    }).iniciar(),
+  );
+
+  // Atalho no topo dos arquivos de treino, como na extensão oficial do torneio.
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider(
+      [{ language: "html" }, { language: "css" }],
+      {
+        provideCodeLenses: (document) =>
+          ehDocumentoDeTreino(document)
+            ? [
+                new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+                  title: "$(preview) Abrir gabarito em uma aba",
+                  command: "flexbox-trainer.abrirGabarito",
+                }),
+              ]
+            : [],
       },
     ),
   );

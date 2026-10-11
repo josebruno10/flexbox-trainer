@@ -142,21 +142,6 @@ suite("Criação da dinâmica de treino", () => {
     assert.deepStrictEqual(erros, []);
   });
 
-  test("sugere o código com o ID das configurações quando o override está ligado", async () => {
-    valoresConfiguracao.usarIdsDasConfiguracoes = true;
-    valoresConfiguracao.userId = 74;
-    vscode.window.showInputBox = (async (opcoes?: vscode.InputBoxOptions) => {
-      opcoesDoCampo = opcoes;
-      return undefined;
-    }) as typeof vscode.window.showInputBox;
-    const requisicoes = mockarServidor({});
-
-    await criarDinamicaTreinoInterativa(criarAuthService(true, 176078921));
-
-    assert.strictEqual(opcoesDoCampo?.value, "fb74");
-    assert.strictEqual(requisicoes.length, 0);
-  });
-
   test("sugere um código de até 4 caracteres para IDs longos", async () => {
     vscode.window.showInputBox = (async (opcoes?: vscode.InputBoxOptions) => {
       opcoesDoCampo = opcoes;

@@ -10,6 +10,7 @@
   "categories": [
     "Other"
   ],
+  "main": "./dist/node/extension.js",
   "browser": "./dist/web/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -42,6 +43,18 @@
       {
         "command": "flexbox-trainer.logout",
         "title": "FlexBox Trainer: Sair"
+      },
+      {
+        "command": "flexbox-trainer.abrirGabarito",
+        "title": "FlexBox Trainer: Abrir Gabarito em uma Aba"
+      },
+      {
+        "command": "flexbox-trainer.criarArquivos",
+        "title": "FlexBox Trainer: Criar index.html e style.css"
+      },
+      {
+        "command": "flexbox-trainer.verExtensoesIa",
+        "title": "FlexBox Trainer: Ver Extensões de IA Habilitadas"
       },
       {
         "command": "flexbox-trainer.criarDinamicaTreino",
@@ -97,11 +110,6 @@
           "scope": "application",
           "description": "Token manual opcional para desenvolvimento. No uso normal, a extensão utiliza o token da sessão autenticada."
         },
-        "flexboxTrainer.dinamicaId": {
-          "type": "string",
-          "default": "",
-          "description": "Código da dinâmica do torneio informado pelo professor (exemplo: KOTI)."
-        },
         "flexboxTrainer.eventoTreino": {
           "type": "string",
           "default": "",
@@ -113,32 +121,6 @@
           "default": false,
           "scope": "application",
           "description": "Mostra ferramentas de teste, como o comando que gera a solução exata do desafio. Deixe desligado para alunos: a solução entrega a resposta."
-        },
-        "flexboxTrainer.usarIdsDasConfiguracoes": {
-          "type": "boolean",
-          "default": false,
-          "scope": "application",
-          "description": "Somente para testes: usa userId e teamId das configurações em vez dos IDs da sessão autenticada. Mantenha desligado no uso normal, pois força o envio com IDs que podem não ser os seus."
-        },
-        "flexboxTrainer.userId": {
-          "type": "number",
-          "default": 0,
-          "description": "Identificador numérico do aluno no servidor do torneio."
-        },
-        "flexboxTrainer.teamId": {
-          "type": "number",
-          "default": 0,
-          "description": "Identificador numérico da equipe no servidor do torneio."
-        },
-        "flexboxTrainer.captureWidth": {
-          "type": "number",
-          "default": 960,
-          "description": "Largura usada apenas no preview local do aluno. A correção usa as dimensões do gabarito no servidor."
-        },
-        "flexboxTrainer.captureHeight": {
-          "type": "number",
-          "default": 540,
-          "description": "Altura usada apenas no preview local do aluno. A correção usa as dimensões do gabarito no servidor."
         }
       }
     }

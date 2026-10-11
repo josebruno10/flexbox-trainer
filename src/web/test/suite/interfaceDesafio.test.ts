@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { obterHtmlWebview } from "../../webview/html";
+import { obterHtmlAutenticacao, obterHtmlWebview } from "../../webview/html";
 
 suite("Interface do desafio", () => {
   test("mantém uma camada transparente para clicar no gabarito limpo", () => {
@@ -45,6 +45,38 @@ suite("Interface do desafio", () => {
 
     assert.ok(html.includes('id="botaoEncerrarDesafio"'));
     assert.ok(html.includes("Encerrar desafio"));
+  });
+
+  test("mostra o login pelo Google antes do GitHub e da Microsoft", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlAutenticacao(
+      webview,
+      vscode.Uri.parse("file:///extensao"),
+    );
+    const posicoes = ["botaoGoogle", "botaoGitHub", "botaoMicrosoft"].map(
+      (id) => html.indexOf(`id="${id}"`),
+    );
+
+    assert.ok(posicoes.every((posicao) => posicao >= 0));
+    assert.deepStrictEqual([...posicoes].sort((a, b) => a - b), posicoes);
+  });
+
+  test("oferece abrir o gabarito em uma aba do editor", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlWebview(
+      webview,
+      vscode.Uri.parse("file:///extensao"),
+      "Aluno",
+    );
+
+    assert.ok(html.includes('id="botaoAbrirAba"'));
+    assert.ok(html.includes("Abrir em uma aba"));
   });
 
   test("gera desafios aleatórios sem seletor de dificuldade", () => {
