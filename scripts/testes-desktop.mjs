@@ -1,5 +1,7 @@
 // Abre um VS Code desktop limpo (perfil e extensões temporários) com esta
-// extensão e roda a suíte no host Node. Precisa do comando `code` no PATH.
+// extensão e roda a suíte no host Node. Usa o `code` instalado; no GitHub,
+// onde ele não existe (ou com VSCODE_TESTE_BAIXAR=1), baixa um VS Code com o
+// @vscode/test-electron.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,29 +9,56 @@ import { join, resolve } from "node:path";
 
 const projeto = resolve(import.meta.dirname, "..");
 const pastaTestes = join(projeto, "dist", "node", "test");
+const arquivoTestes = join(pastaTestes, "desktop.js");
 const arquivoResultado = join(pastaTestes, "resultado-desktop.json");
 const temporaria = mkdtempSync(join(tmpdir(), "flexbox-trainer-testes-"));
+const baixarVsCode =
+  process.env.CI === "true" || process.env.VSCODE_TESTE_BAIXAR === "1";
+const argumentos = [
+  `--user-data-dir=${join(temporaria, "perfil")}`,
+  `--extensions-dir=${join(temporaria, "extensoes")}`,
+  "--disable-workspace-trust",
+  "--skip-welcome",
+  "--skip-release-notes",
+];
 rmSync(arquivoResultado, { force: true });
 
 try {
-  const execucao = spawnSync(
-    "code",
-    [
-      `--user-data-dir=${join(temporaria, "perfil")}`,
-      `--extensions-dir=${join(temporaria, "extensoes")}`,
-      "--disable-workspace-trust",
-      "--skip-welcome",
-      "--skip-release-notes",
-      `--extensionDevelopmentPath=${projeto}`,
-      `--extensionTestsPath=${join(pastaTestes, "desktop.js")}`,
-      "--wait",
-    ],
-    { stdio: "ignore", shell: process.platform === "win32" },
-  );
-
-  if (execucao.error) {
-    throw new Error(`não foi possível abrir o VS Code (\`code\`): ${execucao.error.message}`);
+  if (baixarVsCode) {
+    // Herdada de um terminal do VS Code, esta variável faz o VS Code baixado
+    // agir como Node e recusar as opções.
+    delete process.env.ELECTRON_RUN_AS_NODE;
+    const { runTests } = await import("@vscode/test-electron");
+    await runTests({
+      extensionDevelopmentPath: projeto,
+      extensionTestsPath: arquivoTestes,
+      // As máquinas Ubuntu do GitHub bloqueiam o sandbox do Electron; ali o
+      // VS Code é descartável e só roda os testes.
+      launchArgs: [
+        ...argumentos,
+        "--disable-gpu",
+        ...(process.env.CI === "true" ? ["--no-sandbox"] : []),
+      ],
+    });
+  } else {
+    const execucao = spawnSync(
+      "code",
+      [
+        ...argumentos,
+        `--extensionDevelopmentPath=${projeto}`,
+        `--extensionTestsPath=${arquivoTestes}`,
+        "--wait",
+      ],
+      { stdio: "ignore", shell: process.platform === "win32" },
+    );
+    if (execucao.error) {
+      throw new Error(
+        `não foi possível abrir o VS Code (\`code\`): ${execucao.error.message}`,
+      );
+    }
   }
+
+  // O VS Code não repassa o resultado dos testes: a suíte o grava num arquivo.
   if (!existsSync(arquivoResultado)) {
     throw new Error("o VS Code fechou sem rodar os testes.");
   }
@@ -38,7 +67,9 @@ try {
   for (const falha of falhas) {
     console.error(`✗ ${falha.teste}\n  ${falha.erro}`);
   }
-  console.log(`${passaram} passaram, ${falhas.length} falharam (VS Code desktop, host Node).`);
+  console.log(
+    `${passaram} passaram, ${falhas.length} falharam (VS Code desktop, host Node).`,
+  );
   process.exitCode = falhas.length > 0 ? 1 : 0;
 } catch (erro) {
   console.error(`Testes no desktop: ${erro.message}`);

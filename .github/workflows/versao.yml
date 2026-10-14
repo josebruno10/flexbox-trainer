@@ -1,0 +1,52 @@
+# Quando uma versão é publicada em Releases, roda os testes no código da
+# etiqueta e anexa o .vsix gerado aqui, substituindo um anexado à mão.
+name: Versão
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  vsix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ETIQUETA: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Conferir a versão
+        run: |
+          versao="$(node -p "require('./package.json').version")"
+          if [ "v$versao" != "$ETIQUETA" ]; then
+            echo "A etiqueta $ETIQUETA não bate com a versão $versao do package.json." >&2
+            exit 1
+          fi
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Navegador dos testes
+        run: npx playwright install --with-deps chromium
+
+      - name: Testes
+        run: |
+          xvfb-run -a npm test
+          xvfb-run -a npm run test:desktop
+
+      - name: Gerar e anexar o .vsix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npx --yes @vscode/vsce@3 package
+          gh release upload "$ETIQUETA" flexbox-trainer-*.vsix --clobber

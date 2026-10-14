@@ -361,7 +361,7 @@
     ]
   },
   "scripts": {
-    "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
+    "test": "node scripts/testes-web.mjs",
     "pretest": "npm run compile-web",
     "test:desktop": "webpack --env testesDesktop && node scripts/testes-desktop.mjs",
     "vscode:prepublish": "npm run package-web",
@@ -377,6 +377,7 @@
     "@types/mocha": "^10.0.10",
     "@types/vscode": "^1.110.0",
     "@types/webpack-env": "^1.18.8",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/test-web": "^0.0.80",
     "assert": "^2.1.0",
     "eslint": "^9.39.3",

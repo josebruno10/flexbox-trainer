@@ -12,6 +12,10 @@ As mudanças de cada versão do FlexBox Trainer.
 ### Primeiro uso
 - Guia de primeiros passos na tela de boas-vindas do VS Code, que abre uma vez, na primeira vez que a extensão roda, e marca o que o aluno já fez.
 
+### Para quem desenvolve
+- Testes automáticos no GitHub a cada envio, com o `.vsix` de cada execução para baixar; ao publicar uma versão, o `.vsix` é gerado e anexado sozinho.
+- O `npm test` falha quando a suíte não chega a rodar, em vez de passar em silêncio.
+
 ## [0.3.0] - 2026-10-14
 
 ### Telas

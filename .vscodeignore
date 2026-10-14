@@ -20,3 +20,5 @@ resources/icone.svg
 .claude/**
 docs/**
 scripts/**
+.vscode-test/**
+.github/**

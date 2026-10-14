@@ -228,11 +228,16 @@ npm run compile-web   # compila
 npm run watch-web     # compila a cada alteração
 npm run lint          # verifica o estilo do código
 npm test              # roda os testes em um VS Code no Chromium
-npm run test:desktop  # roda os mesmos testes no VS Code desktop (precisa do comando `code`)
+npm run test:desktop  # roda os mesmos testes no VS Code desktop
 npm run typecheck     # confere os tipos e acusa código sem uso
 ```
 
-Os testes simulam as respostas do servidor e não criam dados reais.
+Os testes simulam as respostas do servidor e não criam dados reais. O `npm test` só passa se o resumo dos testes aparecer na saída: sem rede para baixar o VS Code, o `vscode-test-web` sai com sucesso sem rodar nada. O `npm run test:desktop` usa o `code` instalado; com `VSCODE_TESTE_BAIXAR=1` (e no GitHub), baixa um VS Code na pasta `.vscode-test`, que fica fora do Git e do `.vsix`.
+
+### No GitHub
+
+- **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
+- **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.4.0` e `0.4.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído.
 
 Os códigos de desafio dependem do gerador: se ele mudar, os códigos já passados à turma geram outros desafios. Um teste em `codigoDesafio.test.ts` avisa quando isso acontece.
 
