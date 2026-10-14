@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 // Cores de destaque da extensão. O resto (fundo, texto, bordas) vem do tema
 // do VS Code; aqui ficam só o degradê, o botão principal e o destaque.
-export type NomeTema = "fecitel" | "oceano" | "floresta" | "violeta" | "sol" | "vscode";
+export type NomeTema = "magenta" | "oceano" | "floresta" | "violeta" | "sol" | "vscode";
 
 export type CoresTema = {
   nome: string;
@@ -18,12 +18,12 @@ export type CoresTema = {
   acento: string;
 };
 
-export const TEMA_PADRAO: NomeTema = "fecitel";
+export const TEMA_PADRAO: NomeTema = "magenta";
 
 export const TEMAS: Record<NomeTema, CoresTema> = {
-  fecitel: {
-    nome: "FECITEL",
-    descricao: "Magenta e laranja, as cores do projeto na feira",
+  magenta: {
+    nome: "Magenta",
+    descricao: "Magenta e laranja",
     degrade: "linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720)",
     degradeBotao: "linear-gradient(100deg, #b5179e, #d6245e 50%, #c94010)",
     sobreBotao: "#ffffff",

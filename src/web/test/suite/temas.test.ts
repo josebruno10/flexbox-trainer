@@ -42,12 +42,12 @@ suite("Cores da extensão", () => {
     }
   });
 
-  test("usa o conjunto escolhido e volta ao da FECITEL com um valor desconhecido", () => {
+  test("usa o conjunto escolhido e volta ao padrão com um valor desconhecido", () => {
     configurarTema("oceano");
     assert.strictEqual(lerTemaCores(), "oceano");
 
     configurarTema("arco-íris");
-    assert.strictEqual(lerTemaCores(), "fecitel");
+    assert.strictEqual(lerTemaCores(), "magenta");
   });
 
   test("as telas trazem as cores do conjunto escolhido", () => {
@@ -59,7 +59,7 @@ suite("Cores da extensão", () => {
       obterHtmlWebview(webview, vscode.Uri.parse("file:///extensao"), "Aluno", tema);
 
     assert.ok(html("oceano").includes(`--acento: ${TEMAS.oceano.acento};`));
-    assert.ok(!html("oceano").includes(TEMAS.fecitel.acento));
-    assert.ok(html("fecitel").includes(`--degrade-botao: ${TEMAS.fecitel.degradeBotao};`));
+    assert.ok(!html("oceano").includes(TEMAS.magenta.acento));
+    assert.ok(html("magenta").includes(`--degrade-botao: ${TEMAS.magenta.degradeBotao};`));
   });
 });

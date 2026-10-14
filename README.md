@@ -35,8 +35,8 @@ O treino segue as condições do torneio: a extensão mostra as medidas e as cor
 
 ### Pelo arquivo `.vsix` (para treinar)
 
-1. Pegue o arquivo `flexbox-trainer-0.1.0.vsix` com a equipe.
-2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.1.0.vsix`.
+1. Baixe o arquivo `.vsix` da versão mais nova, em [Releases](https://github.com/josebruno10/flexbox-trainer/releases/latest) (em **Assets**).
+2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.2.0.vsix`.
 3. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
 
 Para atualizar, instale o `.vsix` novo do mesmo jeito.
@@ -149,7 +149,7 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 |---|---|
 | `flexboxTrainer.eventoTreino` | Código da sua dinâmica de treino. É preenchido sozinho quando você cria a dinâmica |
 | `flexboxTrainer.modoDesenvolvedor` | Mostra ferramentas de teste. Deixe desligado para treinar |
-| `flexboxTrainer.temaCores` | Cores de destaque: FECITEL (padrão, magenta e laranja), Oceano, Floresta, Violeta, Pôr do sol ou as do tema do VS Code. Muda só o degradê, o botão principal e os destaques; o resto segue o tema do VS Code |
+| `flexboxTrainer.temaCores` | Cores de destaque: Magenta (a padrão, em magenta e laranja), Oceano, Floresta, Violeta, Pôr do sol ou as do tema do VS Code. Muda só o degradê, o botão principal e os destaques; o resto segue o tema do VS Code |
 | `flexboxTrainer.preCadastro` | Oferece cadastrar no torneio quem entra com um e-mail que não está lá. Ainda desligado: espera a organização confirmar as rotas de cadastro |
 | `flexboxTrainer.apiBaseUrl`, `flexboxTrainer.authApiBaseUrl` | Endereço da API do torneio. Não precisa mudar |
 | `flexboxTrainer.authSiteUrl`, `flexboxTrainer.googleClientId` | Site e cliente do login pelo Google. Não precisa mudar |

@@ -4,7 +4,7 @@
   "displayName": "FlexBox Trainer",
   "description": "Extensão para treinamento de recriação de layouts em HTML e CSS, no formato do Frontend Teams Cup.",
   "icon": "resources/icone.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -159,10 +159,10 @@
         },
         "flexboxTrainer.temaCores": {
           "type": "string",
-          "default": "fecitel",
+          "default": "magenta",
           "scope": "application",
           "enum": [
-            "fecitel",
+            "magenta",
             "oceano",
             "floresta",
             "violeta",
@@ -170,7 +170,7 @@
             "vscode"
           ],
           "enumItemLabels": [
-            "FECITEL",
+            "Magenta",
             "Oceano",
             "Floresta",
             "Violeta",
@@ -178,7 +178,7 @@
             "Tema do VS Code"
           ],
           "enumDescriptions": [
-            "Magenta e laranja, as cores do projeto na feira (padrão)",
+            "Magenta e laranja (padrão)",
             "Azul e verde-água",
             "Verdes",
             "Roxo e lilás",
