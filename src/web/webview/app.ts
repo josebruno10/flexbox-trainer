@@ -490,13 +490,14 @@ function renderizarDetalheComponente(): void {
   const circulo = bloco.shape === "circle";
   const nome = document.createElement("strong");
   nome.textContent = `#${bloco.id} ${circulo ? "Círculo" : "Retângulo"}`;
+  const amostra = criarAmostra(bloco.color);
+  amostra.classList.toggle("circulo", circulo);
+  // Círculos também em largura e altura: o aluno os faz com border-radius.
   detalheComponente.replaceChildren(
-    criarAmostra(bloco.color),
+    amostra,
     nome,
     criarMedida(
-      circulo
-        ? `diâm. ${formatarMedida(bloco.width)} px`
-        : `${formatarMedida(bloco.width)} × ${formatarMedida(bloco.height)} px`,
+      `${formatarMedida(bloco.width)} × ${formatarMedida(bloco.height)} px`,
     ),
     criarMedida(normalizarHex(bloco.color)),
   );

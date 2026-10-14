@@ -312,6 +312,11 @@ ${variaveisDoTema(tema)}
       height: 12px;
       border: 1px solid var(--linha-forte);
     }
+
+    /* A forma da amostra diz se o componente é um círculo. */
+    .amostra.circulo {
+      border-radius: 50%;
+    }
   `;
 }
 
@@ -1028,11 +1033,6 @@ export function obterHtmlPainelGabarito(
     .componente .amostra {
       width: 16px;
       height: 16px;
-    }
-
-    /* A forma da amostra diz se o componente é um círculo. */
-    .componente .amostra.circulo {
-      border-radius: 50%;
     }
 
     .componente .numero-componente {

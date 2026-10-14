@@ -288,13 +288,11 @@ function renderizarLista(atual: GabaritoRecebido): void {
       const cor = normalizarHex(bloco.color);
       const valores = document.createElement("div");
       valores.className = "valores";
+      // Círculos também em largura e altura: o aluno os faz com
+      // border-radius numa caixa.
       valores.append(
-        ...(circulo
-          ? [criarValor(`diâm. ${largura}`, `${largura}px`, "Copiar o diâmetro")]
-          : [
-              criarValor(`larg. ${largura}`, `${largura}px`, "Copiar a largura"),
-              criarValor(`alt. ${altura}`, `${altura}px`, "Copiar a altura"),
-            ]),
+        criarValor(`larg. ${largura}`, `${largura}px`, "Copiar a largura"),
+        criarValor(`alt. ${altura}`, `${altura}px`, "Copiar a altura"),
         criarValor(cor, cor, "Copiar a cor"),
       );
 
