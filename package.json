@@ -71,6 +71,15 @@
         "title": "FlexBox Trainer: Ver Extensões de IA Habilitadas"
       },
       {
+        "command": "flexbox-trainer.testarServidor",
+        "title": "FlexBox Trainer: Testar Servidor"
+      },
+      {
+        "command": "flexbox-trainer.escolherCores",
+        "title": "FlexBox Trainer: Escolher Cores",
+        "icon": "$(symbol-color)"
+      },
+      {
         "command": "flexbox-trainer.criarDinamicaTreino",
         "title": "FlexBox Trainer: Criar Dinâmica de Treino"
       },
@@ -88,6 +97,18 @@
         {
           "command": "flexbox-trainer.gerarSolucaoTeste",
           "when": "config.flexboxTrainer.modoDesenvolvedor"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "flexbox-trainer.escolherCores",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "flexbox-trainer.testarServidor",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_servidor"
         }
       ]
     },
@@ -135,6 +156,36 @@
           "default": false,
           "scope": "application",
           "description": "Mostra ferramentas de teste, como o comando que gera a solução exata do desafio. Deixe desligado para alunos: a solução entrega a resposta."
+        },
+        "flexboxTrainer.temaCores": {
+          "type": "string",
+          "default": "fecitel",
+          "scope": "application",
+          "enum": [
+            "fecitel",
+            "oceano",
+            "floresta",
+            "violeta",
+            "sol",
+            "vscode"
+          ],
+          "enumItemLabels": [
+            "FECITEL",
+            "Oceano",
+            "Floresta",
+            "Violeta",
+            "Pôr do sol",
+            "Tema do VS Code"
+          ],
+          "enumDescriptions": [
+            "Magenta e laranja, as cores do projeto na feira (padrão)",
+            "Azul e verde-água",
+            "Verdes",
+            "Roxo e lilás",
+            "Amarelo, laranja e vermelho",
+            "A cor de destaque do tema que você usa no VS Code"
+          ],
+          "description": "Cores de destaque do FlexBox Trainer: o degradê, o botão principal e os destaques. O resto segue o tema do VS Code."
         },
         "flexboxTrainer.preCadastro": {
           "type": "boolean",

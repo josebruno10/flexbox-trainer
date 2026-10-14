@@ -52,6 +52,7 @@ const opacidade = elemento<HTMLInputElement>("opacidade");
 const valorOpacidade = elemento<HTMLElement>("valorOpacidade");
 const ajuda = elemento<HTMLDivElement>("ajuda");
 const botaoLista = elemento<HTMLButtonElement>("botaoLista");
+const textoBotaoLista = elemento<HTMLElement>("textoBotaoLista");
 const resumo = elemento<HTMLDivElement>("resumo");
 const lista = elemento<HTMLUListElement>("listaComponentes");
 const vazio = elemento<HTMLDivElement>("vazio");
@@ -139,6 +140,7 @@ function renderizar(): void {
   }
   renderizarResumo(gabarito);
   renderizarLista(gabarito);
+  rotularBotaoLista();
   renderizarPagina();
   definirModo(modo);
 }
@@ -175,8 +177,16 @@ function definirModo(novo: Modo): void {
 function mostrarLista(visivel: boolean): void {
   listaVisivel = visivel;
   lista.hidden = !visivel;
-  botaoLista.setAttribute("aria-pressed", String(visivel));
+  botaoLista.setAttribute("aria-expanded", String(visivel));
+  rotularBotaoLista();
   ajustarTamanho();
+}
+
+// O texto diz o que o clique faz e, escondida, quantos componentes há.
+function rotularBotaoLista(): void {
+  textoBotaoLista.textContent = listaVisivel
+    ? "Esconder componentes"
+    : `Mostrar componentes (${gabarito?.blocks.length ?? 0})`;
 }
 
 function aplicarOpacidade(): void {

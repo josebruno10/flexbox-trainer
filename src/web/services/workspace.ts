@@ -40,9 +40,64 @@ export type ResultadoCriacao =
   | { status: "ja-existiam" }
   | { status: "criados"; arquivos: vscode.Uri[] };
 
+// A base dos arquivos de treino: o HTML mínimo e o reset do CSS, sem pistas
+// do desafio. É com ela que cada desafio começa.
+export function modeloHtml(): string {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->
+</body>
+</html>
+`;
+}
+
+export function modeloCss(largura: number, altura: number): string {
+  return `/* A página tem o tamanho do gabarito: ${largura} × ${altura} px. */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+`;
+}
+
+/**
+ * Se os arquivos têm algo além da base (o que o aluno escreveu). Comentários
+ * e espaços não contam, então a base de qualquer tamanho de gabarito vale.
+ */
+export function temTrabalhoDoAluno(resumo: ResumoWorkspace): boolean {
+  const semComentarios = (texto: string) =>
+    texto
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\s+/g, "");
+  const htmlMudou =
+    resumo.temArquivoHtml &&
+    semComentarios(resumo.textoHtml) !== "" &&
+    semComentarios(resumo.textoHtml) !== semComentarios(modeloHtml());
+  const cssMudou =
+    resumo.temArquivoCss &&
+    semComentarios(resumo.textoCss) !== "" &&
+    semComentarios(resumo.textoCss) !== semComentarios(modeloCss(0, 0));
+  return htmlMudou || cssMudou;
+}
+
+/** Volta index.html e style.css à base, para o desafio novo começar do zero. */
+export async function limparArquivosDeTreino(
+  largura: number,
+  altura: number,
+): Promise<void> {
+  await escreverArquivosDeTreino(modeloHtml(), modeloCss(largura, altura));
+}
+
 /**
  * Cria na raiz da pasta aberta o index.html e o style.css que faltarem, com
- * uma base mínima, sem pistas do desafio. Nunca sobrescreve um arquivo.
+ * a base mínima. Nunca sobrescreve um arquivo.
  */
 export async function criarArquivosDeTreino(
   largura: number,
@@ -55,30 +110,8 @@ export async function criarArquivosDeTreino(
   }
 
   const arquivos = [
-    [
-      "index.html",
-      `<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->
-</body>
-</html>
-`,
-    ],
-    [
-      "style.css",
-      `/* A página tem o tamanho do gabarito: ${largura} × ${altura} px. */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-`,
-    ],
+    ["index.html", modeloHtml()],
+    ["style.css", modeloCss(largura, altura)],
   ] as const;
   const criados: vscode.Uri[] = [];
 

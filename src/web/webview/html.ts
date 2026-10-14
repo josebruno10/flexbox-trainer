@@ -1,9 +1,15 @@
 import * as vscode from "vscode";
+import { lerTemaCores, NomeTema, variaveisDoTema } from "./temas";
 
 // Identidade comum às três telas. As cores vêm do tema do VS Code, para
-// combinar com o claro e o escuro; o degradê e as fontes (Space Grotesk e
-// DM Mono, licença OFL, em media/fontes) são os do projeto na FECITEL.
-function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+// combinar com o claro e o escuro; as de destaque vêm do conjunto escolhido
+// (o padrão é o do projeto na FECITEL), e as fontes (Space Grotesk e DM Mono,
+// licença OFL) ficam em media/fontes.
+function estilosBase(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+  tema: NomeTema,
+): string {
   const fonte = (arquivo: string) =>
     webview.asWebviewUri(
       vscode.Uri.joinPath(extensionUri, "media", "fontes", arquivo),
@@ -41,14 +47,10 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
       /* O botão principal tem a cor do texto: escuro no tema claro e o contrário. */
       --tinta: var(--texto);
       --sobre-tinta: var(--fundo);
-      --rosa: #f32f67;
-      --degrade: linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720);
-      /* Mais escuro que o da marca: o texto branco fica legível (contraste
-         acima de 4,5 em toda a faixa). */
-      --degrade-botao: linear-gradient(100deg, #b5179e, #d6245e 50%, #c94010);
+${variaveisDoTema(tema)}
       --aviso: var(--vscode-editorWarning-foreground, #cca700);
       --erro: var(--vscode-errorForeground, #f14c4c);
-      --foco: var(--vscode-focusBorder, #f32f67);
+      --foco: var(--vscode-focusBorder, var(--acento));
       --fonte-texto: var(--vscode-font-family, system-ui, sans-serif);
       --fonte-mono: "DM Mono", var(--vscode-editor-font-family, monospace);
       --fonte-titulo: "Space Grotesk", var(--vscode-font-family, sans-serif);
@@ -143,14 +145,15 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
       transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease, border-color 120ms ease;
     }
 
-    /* A sombra rosa desloca o botão como uma impressão fora de registro. */
+    /* A sombra na cor de destaque desloca o botão como uma impressão fora de
+       registro. */
     button:hover:not(:disabled) {
-      box-shadow: 3px 3px 0 var(--rosa);
+      box-shadow: 3px 3px 0 var(--acento);
       transform: translate(-1px, -1px);
     }
 
     button:active:not(:disabled) {
-      box-shadow: 1px 1px 0 var(--rosa);
+      box-shadow: 1px 1px 0 var(--acento);
       transform: none;
     }
 
@@ -179,7 +182,7 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
     /* A ação principal de cada momento: gerar o primeiro desafio, depois
        verificar. */
     button.principal {
-      color: #fff;
+      color: var(--sobre-botao);
       background: var(--degrade-botao);
       border-color: transparent;
     }
@@ -302,6 +305,7 @@ export function obterHtmlWebview(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   nomeUsuario?: string,
+  tema: NomeTema = lerTemaCores(),
 ): string {
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
@@ -321,7 +325,7 @@ export function obterHtmlWebview(
     frame-src 'self' https: http: data:;
   ">
   <title>FlexBox Trainer</title>
-  <style>${estilosBase(webview, extensionUri)}
+  <style>${estilosBase(webview, extensionUri, tema)}
     body {
       padding: 0 14px 18px;
     }
@@ -439,7 +443,7 @@ export function obterHtmlWebview(
     }
 
     .selo[data-estado="andamento"]::before {
-      background: var(--rosa);
+      background: var(--acento);
       animation: piscar 1.6s ease-in-out infinite;
     }
 
@@ -633,7 +637,8 @@ export function obterHtmlWebview(
       margin-top: 12px;
     }
 
-    .nota.resultado + .linha {
+    /* Escondida, a nota continua no HTML; só com ela à vista o texto sobe. */
+    .nota.resultado:not([hidden]) + .linha {
       margin-top: 0;
     }
 
@@ -738,7 +743,6 @@ export function obterHtmlWebview(
   <section class="bloco surge" style="--ordem: 2" aria-label="Resultado">
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">02</span> / Resultado</h2>
-      <button id="botaoTestarConexao" class="discreto" title="Confere a sessão no servidor">Testar servidor</button>
     </div>
     <div id="avisoArquivos" hidden>
       <p class="falta" id="textoArquivos"></p>
@@ -775,6 +779,7 @@ export function obterHtmlWebview(
 export function obterHtmlPainelGabarito(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
+  tema: NomeTema = lerTemaCores(),
 ): string {
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "painelGabarito.js"),
@@ -788,7 +793,7 @@ export function obterHtmlPainelGabarito(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: http: data: blob:; font-src ${webview.cspSource} https: data:; style-src 'unsafe-inline' https: http:; script-src ${webview.cspSource};">
   <title>Gabarito</title>
-  <style>${estilosBase(webview, extensionUri)}
+  <style>${estilosBase(webview, extensionUri, tema)}
     :root {
       --fundo: var(--vscode-editor-background);
     }
@@ -849,6 +854,24 @@ export function obterHtmlPainelGabarito(
       gap: 8px 16px;
     }
 
+    /* Destacado, para não parecer um rótulo: cor de destaque, ícone e o mesmo
+       deslocamento dos outros botões ao passar o mouse. */
+    .botao-lista {
+      color: var(--acento);
+      background: color-mix(in srgb, var(--acento) 10%, transparent);
+      border-color: var(--acento);
+    }
+
+    .botao-lista:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--acento) 18%, transparent);
+      box-shadow: 3px 3px 0 var(--acento);
+    }
+
+    .icone-lista {
+      font-size: 13px;
+      line-height: 1;
+    }
+
     .opacidade {
       display: inline-flex;
       align-items: center;
@@ -865,7 +888,7 @@ export function obterHtmlPainelGabarito(
     }
 
     .opacidade input {
-      accent-color: var(--rosa);
+      accent-color: var(--acento);
     }
 
     .palco {
@@ -984,7 +1007,7 @@ export function obterHtmlPainelGabarito(
     }
 
     .componente.selecionado {
-      border-left-color: var(--rosa);
+      border-left-color: var(--acento);
       background: var(--superficie);
     }
 
@@ -1076,7 +1099,7 @@ export function obterHtmlPainelGabarito(
           <button type="button" class="modo" data-modo="sobreposto" aria-pressed="false">Sobrepor à sua página</button>
           <button type="button" class="modo" data-modo="lado" aria-pressed="false">Lado a lado</button>
         </div>
-        <button type="button" class="modo" id="botaoLista" aria-pressed="true" aria-controls="listaComponentes" title="Mostrar ou esconder a lista de componentes">Componentes</button>
+        <button type="button" class="botao-lista" id="botaoLista" aria-expanded="true" aria-controls="listaComponentes"><span class="icone-lista" aria-hidden="true">☰</span><span id="textoBotaoLista">Esconder componentes</span></button>
         <div class="opacidade" id="controleOpacidade" hidden>
           <span>Sua página</span>
           <input type="range" id="opacidade" min="0" max="100" step="1" value="50" aria-label="Opacidade do gabarito">
@@ -1117,6 +1140,7 @@ const ICONE_MICROSOFT = `<svg viewBox="0 0 21 21" aria-hidden="true"><rect x="1"
 export function obterHtmlAutenticacao(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
+  tema: NomeTema = lerTemaCores(),
 ): string {
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "loginPage.js"),
@@ -1129,7 +1153,7 @@ export function obterHtmlAutenticacao(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource}; style-src 'unsafe-inline'; script-src ${webview.cspSource};">
   <title>FlexBox Trainer - Autenticação</title>
-  <style>${estilosBase(webview, extensionUri)}
+  <style>${estilosBase(webview, extensionUri, tema)}
     body {
       padding: 0 14px 18px;
     }
@@ -1169,7 +1193,7 @@ export function obterHtmlAutenticacao(
     .status {
       margin-bottom: 16px;
       padding: 9px 10px;
-      border-left: 2px solid var(--rosa);
+      border-left: 2px solid var(--acento);
       font-size: 12px;
       background: var(--superficie);
     }

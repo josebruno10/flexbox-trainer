@@ -105,7 +105,6 @@ export type MensagemRecebidaBarraLateral =
   | { type: "pronto" }
   | { type: "novoDesafio" }
   | { type: "encerrarDesafio" }
-  | { type: "testarConexao" }
   | { type: "atualizarPreview" }
   | {
       type: "solicitarVerificacao";

@@ -159,7 +159,6 @@ const botaoNovoDesafio = document.getElementById(
 const botaoEncerrarDesafio = document.getElementById(
   "botaoEncerrarDesafio",
 ) as HTMLButtonElement;
-const botaoTestarConexao = document.getElementById("botaoTestarConexao");
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById(
   "botaoVerificar",
@@ -225,11 +224,6 @@ botaoNovoDesafio?.addEventListener("click", () => {
 botaoEncerrarDesafio?.addEventListener("click", () => {
   botaoEncerrarDesafio.disabled = true;
   vscode.postMessage({ type: "encerrarDesafio" });
-});
-
-botaoTestarConexao?.addEventListener("click", () => {
-  mostrarMensagem("Testando o servidor…");
-  vscode.postMessage({ type: "testarConexao" });
 });
 
 botaoAtualizarPreview?.addEventListener("click", () => {

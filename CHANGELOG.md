@@ -7,6 +7,9 @@ As mudanças de cada versão do FlexBox Trainer.
 ### Login
 - Pré-cadastro no torneio para quem entra com um e-mail que não está lá: a extensão pede nome, ano de ingresso, período, sede e nível, cria o usuário e coloca o aluno no time genérico. Fica desligado (`flexboxTrainer.preCadastro`) até as rotas serem confirmadas com a organização.
 
+### Desafios
+- Cada desafio começa do zero: ao gerar um novo, o `index.html` e o `style.css` voltam à base (HTML mínimo e o reset do CSS). Se o aluno escreveu algo, a extensão pergunta antes de limpar.
+
 ### Telas
 - Barra lateral mais curta: o gabarito e a sua página dividem o mesmo quadro, com **Gabarito | Sua página** para alternar, e os dados ficam em duas colunas. O **Verificar** aparece sem rolar.
 - Uma ação principal por vez, em degradê: **Gerar novo desafio** antes do primeiro desafio, **Verificar** depois. **Encerrar desafio** ficou discreto.
@@ -15,6 +18,9 @@ As mudanças de cada versão do FlexBox Trainer.
 - Antes do primeiro desafio, o quadro diz como começar.
 - A sua página atualiza enquanto você digita, sem precisar salvar. O **Atualizar preview** virou o ↻ ao lado de **Sua página**, para quando demorar, e as linhas dos arquivos deram lugar a um aviso que só aparece quando falta o `index.html` ou o `style.css`.
 - Na aba do gabarito, um componente por linha (a amostra é redonda nos círculos), e o botão **Componentes** esconde a lista; no modo Lado a lado ela começa escondida.
+- Escolha das cores de destaque (FECITEL, Oceano, Floresta, Violeta, Pôr do sol ou as do tema do VS Code), pelo ícone de paleta no topo da barra lateral ou por `flexboxTrainer.temaCores`.
+- **Testar servidor** saiu da barra lateral e virou comando, no menu ⋯ dela; o teste automático só aparece se der erro.
+- O botão **Componentes** da aba diz o que faz ("Mostrar componentes (71)" ou "Esconder componentes") e tem a cor de destaque.
 - Ícone novo na barra de atividades, no formato do ícone da extensão, e o ícone colorido na aba do gabarito.
 
 ### Documentação

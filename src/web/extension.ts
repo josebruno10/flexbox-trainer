@@ -6,6 +6,7 @@ import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
+import { escolherTemaCores } from "./webview/temas";
 import {
   ehDocumentoDeTreino,
   escreverArquivosDeTreino,
@@ -108,7 +109,16 @@ export async function activate(context: vscode.ExtensionContext) {
       if (evento.affectsConfiguration("flexboxTrainer.preCadastro")) {
         authService.atualizarOfertaCadastro();
       }
+      if (evento.affectsConfiguration("flexboxTrainer.temaCores")) {
+        provedor.aplicarCores();
+      }
     }),
+    vscode.commands.registerCommand("flexbox-trainer.escolherCores", () =>
+      escolherTemaCores(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.testarServidor", () =>
+      provedor.testarServidorPeloComando(),
+    ),
     // index.html e style.css gravados fora do editor (por um assistente de IA
     // no terminal, por exemplo) também invalidam o desafio.
     new MonitorAlteracoesExternas((alteracao) => {

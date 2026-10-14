@@ -7,6 +7,7 @@ import {
 } from "../../provider/barra-de-status";
 import { ProvedorBarraLateralFlexBox } from "../../provider/provedor-barra-lateral";
 import { criarDesafioGerado } from "../../services/desafio";
+import { modeloCss, modeloHtml } from "../../services/workspace";
 import {
   ConfiguracaoServidor,
   Desafio,
@@ -37,7 +38,9 @@ type ProvedorInterno = {
     formas: FormaMedida[],
     verificacaoId?: number,
   ): Promise<void>;
-  testarConexaoServidor(): Promise<void>;
+  testarConexaoServidor(): Promise<unknown>;
+  lerArquivosDoAluno(): Promise<ResumoWorkspace>;
+  limparArquivosDoAluno(largura: number, altura: number): Promise<void>;
   lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
 };
 
@@ -501,6 +504,99 @@ suite("Provedor da barra lateral", () => {
     ]);
     assert.strictEqual(correcoes, 2);
     assert.strictEqual(interno.avaliacaoAtual?.repetida, undefined);
+  });
+
+  suite("Arquivos do desafio anterior", () => {
+    const comTrabalho: ResumoWorkspace = {
+      caminhoHtml: "/projeto/index.html",
+      caminhoCss: "/projeto/style.css",
+      textoHtml: modeloHtml().replace("<body>", "<body><main></main>"),
+      textoCss: `${modeloCss(800, 800)}\nmain { display: flex; }`,
+      htmlPreview: "",
+      temArquivoHtml: true,
+      temArquivoCss: true,
+    };
+
+    function preparar(arquivos: ResumoWorkspace, resposta: string | undefined) {
+      const perguntas: string[] = [];
+      vscode.window.showWarningMessage = (async (mensagem: string) => {
+        perguntas.push(mensagem);
+        return resposta;
+      }) as unknown as typeof vscode.window.showWarningMessage;
+      const provedor = criarProvedorParaTeste([]);
+      const interno = provedor as unknown as ProvedorInterno;
+      const limpezas: { largura: number; altura: number; instante: number }[] = [];
+      interno.lerArquivosDoAluno = async () => arquivos;
+      interno.limparArquivosDoAluno = async (largura, altura) => {
+        limpezas.push({ largura, altura, instante: Date.now() });
+      };
+      interno.testarConexaoServidor = async () => undefined;
+      return { provedor, interno, perguntas, limpezas };
+    }
+
+    test("pede confirmação, limpa os arquivos e só então começa a contar o tempo", async () => {
+      const { provedor, interno, perguntas, limpezas } = preparar(comTrabalho, "Limpar e gerar");
+
+      await provedor.iniciarNovoDesafio();
+
+      assert.strictEqual(perguntas.length, 1);
+      assert.match(perguntas[0], /apaga o que você escreveu/);
+      assert.deepStrictEqual(
+        limpezas.map(({ largura, altura }) => [largura, altura]),
+        [[interno.desafioAtual!.width, interno.desafioAtual!.height]],
+      );
+      assert.ok(interno.inicioTentativaMs >= limpezas[0].instante);
+    });
+
+    test("não gera nem apaga nada quando o aluno cancela", async () => {
+      const { provedor, interno, limpezas } = preparar(comTrabalho, undefined);
+      const anterior = criarDesafioGerado({ aleatorio: criarAleatorioTeste(240) });
+      interno.desafioAtual = anterior;
+
+      await provedor.iniciarNovoDesafio();
+
+      assert.strictEqual(interno.desafioAtual, anterior);
+      assert.deepStrictEqual(limpezas, []);
+    });
+
+    test("não pergunta quando os arquivos ainda são a base", async () => {
+      const base: ResumoWorkspace = {
+        ...comTrabalho,
+        textoHtml: modeloHtml(),
+        textoCss: modeloCss(800, 800),
+      };
+      const { provedor, interno, perguntas, limpezas } = preparar(base, undefined);
+
+      await provedor.iniciarNovoDesafio();
+
+      assert.deepStrictEqual(perguntas, []);
+      assert.deepStrictEqual(limpezas, []);
+      assert.ok(interno.desafioAtual);
+    });
+  });
+
+  test("o teste automático do servidor só aparece na barra lateral se der erro", async () => {
+    mockarConfiguracaoServidorValida();
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ id: 74, email: "aluno@teste.com" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    const informacoes: string[] = [];
+    vscode.window.showInformationMessage = (async (mensagem: string) => {
+      informacoes.push(mensagem);
+      return undefined;
+    }) as unknown as typeof vscode.window.showInformationMessage;
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens);
+    const interno = provedor as unknown as ProvedorInterno;
+
+    await interno.testarConexaoServidor();
+    assert.strictEqual(ultimaMensagem(mensagens, "statusServidor"), undefined);
+
+    await provedor.testarServidorPeloComando();
+    assert.deepStrictEqual(informacoes, ["Servidor OK, sessão válida (HTTP 200)."]);
+    assert.strictEqual(ultimaMensagem(mensagens, "statusServidor"), undefined);
   });
 
   test("guarda as precisões do desafio para o histórico e a barra de status", async () => {

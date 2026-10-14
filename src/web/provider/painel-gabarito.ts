@@ -89,6 +89,16 @@ export class PainelGabarito implements vscode.Disposable {
   }
 
   /** A página do aluno mudou (arquivos salvos ou relidos). */
+  /** Redesenha a aba com as cores escolhidas; ela pede o desafio de novo. */
+  public aplicarCores(): void {
+    if (this.painel) {
+      this.painel.webview.html = obterHtmlPainelGabarito(
+        this.painel.webview,
+        this.extensionUri,
+      );
+    }
+  }
+
   public atualizarPagina(htmlAluno: string | undefined): void {
     if (htmlAluno === this.htmlAluno) {
       return;

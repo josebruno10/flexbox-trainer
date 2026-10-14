@@ -52,7 +52,7 @@ npm install
 code .
 ```
 
-No VS Code, abra **Executar e Depurar** (`Ctrl+Shift+D`), escolha **Run Extension (Desktop)** e aperte **F5**. Uma nova janela abre com a pasta `exemplo-treino`, que já tem um `index.html` e um `style.css` para começar.
+No VS Code, abra **Executar e Depurar** (`Ctrl+Shift+D`), escolha **Run Extension (Desktop)** e aperte **F5**. Uma nova janela abre com a pasta `exemplo-treino`, que já tem um `index.html` e um `style.css` de exemplo. O primeiro desafio pergunta se pode limpá-los; depois, `git restore exemplo-treino` traz o exemplo de volta.
 
 Essa janela usa as extensões que você tem instaladas. Se alguma for de IA, você não consegue começar nem corrigir desafios até desabilitá-la (veja [Problemas comuns](#problemas-comuns)).
 
@@ -67,7 +67,7 @@ Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar 
 
 ## Como treinar
 
-1. **Gerar novo desafio** cria uma imagem nova. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio.
+1. **Gerar novo desafio** cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela.
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
 4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
@@ -85,8 +85,9 @@ Como no torneio, o desafio é feito do começo ao fim no editor, sem IA:
 - Se uma extensão de IA for habilitada durante o desafio, ele é **invalidado**, mesmo que você a desabilite depois.
 - Se o `index.html` ou o `style.css` forem alterados fora do editor durante o desafio, ele também é invalidado. Isso pega assistentes de IA que rodam no terminal e gravam direto nos arquivos, mas vale para qualquer programa ou comando (outra janela do VS Code, `git checkout`, um formatador rodado no terminal).
 - Um desafio invalidado não pode mais ser corrigido: a barra lateral mostra o motivo, e é só gerar outro.
+- Cada desafio começa do zero. Ao gerar um desafio novo, o `index.html` e o `style.css` voltam à base (o HTML mínimo e o reset do CSS: `box-sizing`, `margin` e `padding`), para nada do desafio anterior ser reaproveitado e o tempo contar o desafio inteiro. Se você escreveu algo, a extensão pergunta antes de limpar; com o arquivo aberto, `Ctrl+Z` no editor desfaz a limpeza.
 
-Salvar no editor, inclusive com formatação ao salvar, e criar os arquivos pelo botão da extensão não contam como alteração de fora.
+Salvar no editor, inclusive com formatação ao salvar, e criar ou limpar os arquivos pela extensão não contam como alteração de fora.
 
 ## A barra lateral
 
@@ -97,7 +98,6 @@ A barra lateral tem duas partes: **Desafio** (o quadro, que alterna entre o gaba
 | Gabarito, Sua página | Alternam o que o quadro mostra: o gabarito ou a sua página |
 | Gerar novo desafio | Cria um desafio novo e reinicia o cronômetro |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
-| Testar servidor | Confere se a sua sessão está valendo no servidor |
 | Abrir em uma aba | Abre o gabarito, as medidas e a comparação em uma aba do editor |
 | ↻ (ao lado de Sua página) | Atualiza a sua página na hora. Ela já atualiza sozinha enquanto você digita; use se demorar |
 | Criar index.html e style.css | Aparece quando falta algum dos dois; cria só o que falta, sem sobrescrever nada |
@@ -106,6 +106,8 @@ A barra lateral tem duas partes: **Desafio** (o quadro, que alterna entre o gaba
 | Sair | Encerra a sua sessão |
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
+
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -136,6 +138,8 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Criar index.html e style.css | Cria na pasta aberta os arquivos que faltarem |
 | FlexBox Trainer: Ver Extensões de IA Habilitadas | Mostra as extensões de IA que impedem começar e corrigir desafios e abre a página delas |
 | FlexBox Trainer: Criar Dinâmica de Treino | Cria a sua dinâmica de treino, se você não a criou no primeiro Verificar |
+| FlexBox Trainer: Testar Servidor | Confere se a sua sessão está valendo no servidor |
+| FlexBox Trainer: Escolher Cores | Troca as cores de destaque da extensão |
 
 ## Configurações
 
@@ -145,6 +149,7 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 |---|---|
 | `flexboxTrainer.eventoTreino` | Código da sua dinâmica de treino. É preenchido sozinho quando você cria a dinâmica |
 | `flexboxTrainer.modoDesenvolvedor` | Mostra ferramentas de teste. Deixe desligado para treinar |
+| `flexboxTrainer.temaCores` | Cores de destaque: FECITEL (padrão, magenta e laranja), Oceano, Floresta, Violeta, Pôr do sol ou as do tema do VS Code. Muda só o degradê, o botão principal e os destaques; o resto segue o tema do VS Code |
 | `flexboxTrainer.preCadastro` | Oferece cadastrar no torneio quem entra com um e-mail que não está lá. Ainda desligado: espera a organização confirmar as rotas de cadastro |
 | `flexboxTrainer.apiBaseUrl`, `flexboxTrainer.authApiBaseUrl` | Endereço da API do torneio. Não precisa mudar |
 | `flexboxTrainer.authSiteUrl`, `flexboxTrainer.googleClientId` | Site e cliente do login pelo Google. Não precisa mudar |

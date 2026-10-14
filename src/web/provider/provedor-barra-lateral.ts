@@ -18,6 +18,8 @@ import {
   criarArquivosDeTreino,
   criarResumoWorkspaceVazio,
   lerResumoWorkspace,
+  limparArquivosDeTreino,
+  temTrabalhoDoAluno,
 } from "../services/workspace";
 import { avaliarTentativa } from "../services/avaliacao";
 import { AlteracaoExterna } from "../services/alteracoesExternas";
@@ -40,6 +42,7 @@ const CRIAR_DINAMICA = "Criar dinâmica de treino";
 const ABRIR_PASTA = "Abrir pasta";
 const VER_EXTENSOES = "Ver extensões";
 const CADASTRAR = "Cadastrar";
+const LIMPAR_E_GERAR = "Limpar e gerar";
 // Espera depois da última tecla antes de redesenhar a página do aluno.
 const ESPERA_DIGITACAO_MS = 500;
 // Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
@@ -80,6 +83,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private painelGabarito?: PainelGabarito;
 
   private atualizacaoAgendada?: ReturnType<typeof setTimeout>;
+
+  // Enquanto a extensão pergunta se pode limpar os arquivos, outro clique não
+  // gera um segundo desafio.
+  private gerandoDesafio = false;
 
   // Precisões das correções do desafio atual, da primeira à última.
   private historicoNotas: number[] = [];
@@ -234,11 +241,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
-        if (mensagem.type === "testarConexao") {
-          void this.testarConexaoServidor();
-          return;
-        }
-
         if (mensagem.type === "atualizarPreview") {
           void this.atualizarPreviewWorkspace();
           return;
@@ -290,19 +292,77 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    this.desafioAtual = criarDesafioGerado();
-    log.info(`Novo desafio: ${this.desafioAtual.challengeId}.`);
-    this.motivoInvalidacao = undefined;
-    this.painelGabarito?.atualizar(this.desafioAtual);
-    this.gabaritoAtual = undefined;
-    this.avaliacaoAtual = undefined;
-    this.historicoNotas = [];
-    this.inicioTentativaMs = Date.now();
-    this.fimTentativaMs = undefined;
-    this.enviarEstado();
-    void this.testarConexaoServidor();
-    // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
-    void this.criarArquivosSeFaltarem();
+    if (this.gerandoDesafio) {
+      return;
+    }
+    this.gerandoDesafio = true;
+
+    try {
+      // Como no torneio, cada desafio começa do zero: o que o aluno escreveu
+      // no anterior não é reaproveitado nem fica fora do tempo.
+      const temTrabalho = temTrabalhoDoAluno(await this.lerArquivosDoAluno());
+      if (temTrabalho && !(await this.confirmarLimpeza())) {
+        return;
+      }
+
+      this.desafioAtual = criarDesafioGerado();
+      log.info(`Novo desafio: ${this.desafioAtual.challengeId}.`);
+      this.motivoInvalidacao = undefined;
+      this.painelGabarito?.atualizar(this.desafioAtual);
+      this.gabaritoAtual = undefined;
+      this.avaliacaoAtual = undefined;
+      this.historicoNotas = [];
+
+      if (temTrabalho) {
+        try {
+          await this.limparArquivosDoAluno(
+            this.desafioAtual.width,
+            this.desafioAtual.height,
+          );
+        } catch (error) {
+          const mensagem =
+            error instanceof Error ? error.message : "Erro desconhecido.";
+          log.error("Não foi possível limpar os arquivos de treino", error);
+          void vscode.window.showErrorMessage(
+            `Não foi possível limpar index.html e style.css: ${mensagem}`,
+          );
+        }
+      }
+
+      // O tempo começa com os arquivos já limpos.
+      this.inicioTentativaMs = Date.now();
+      this.fimTentativaMs = undefined;
+      this.enviarEstado();
+      void this.testarConexaoServidor();
+      // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
+      void this.criarArquivosSeFaltarem();
+    } finally {
+      this.gerandoDesafio = false;
+    }
+  }
+
+  private async confirmarLimpeza(): Promise<boolean> {
+    const escolha = await vscode.window.showWarningMessage(
+      "Gerar um desafio novo apaga o que você escreveu em index.html e style.css.",
+      {
+        modal: true,
+        detail:
+          "Como no torneio, cada desafio começa do zero: ficam só o HTML " +
+          "básico e o reset do CSS (box-sizing, margin e padding). Assim o " +
+          "tempo conta o desafio inteiro.",
+      },
+      LIMPAR_E_GERAR,
+    );
+    return escolha === LIMPAR_E_GERAR;
+  }
+
+  // Separados para os testes trocarem a leitura e a escrita dos arquivos.
+  private lerArquivosDoAluno(): Promise<ResumoWorkspace> {
+    return lerResumoWorkspace();
+  }
+
+  private limparArquivosDoAluno(largura: number, altura: number): Promise<void> {
+    return limparArquivosDeTreino(largura, altura);
   }
 
   /** Cria os arquivos de treino que faltarem e avisa o que aconteceu. */
@@ -490,6 +550,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       log.error("Não foi possível cadastrar no torneio", error);
       void vscode.window.showErrorMessage(`Cadastro no torneio: ${mensagem}`);
     }
+  }
+
+  /**
+   * Redesenha a barra lateral e a aba com as cores escolhidas. As duas pedem
+   * o estado de novo ao carregar, então nada se perde.
+   */
+  public aplicarCores(): void {
+    this.renderizarWebviewAtual();
+    this.painelGabarito?.aplicarCores();
   }
 
   /** Abre a página das extensões de IA habilitadas, para desabilitá-las. */
@@ -733,7 +802,25 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  private async testarConexaoServidor(): Promise<void> {
+  /** O comando Testar Servidor: o resultado vem numa notificação. */
+  public async testarServidorPeloComando(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      void vscode.window.showWarningMessage("Entre antes de testar o servidor.");
+      return;
+    }
+
+    const status = await this.testarConexaoServidor(true);
+    if (status.ok) {
+      void vscode.window.showInformationMessage(status.mensagem);
+    } else {
+      void vscode.window.showErrorMessage(`Servidor: ${status.mensagem}`);
+    }
+  }
+
+  // Cada desafio novo testa a sessão; a barra lateral só fala se der erro.
+  private async testarConexaoServidor(
+    peloComando = false,
+  ): Promise<StatusConexaoServidor> {
     const configuracao = this.lerConfiguracaoServidorAtual();
     let status: StatusConexaoServidor;
 
@@ -750,10 +837,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       }
     }
 
-    void this.visualizacaoWebview?.webview.postMessage({
-      type: "statusServidor",
-      payload: status,
-    });
+    if (!peloComando && !status.ok) {
+      void this.visualizacaoWebview?.webview.postMessage({
+        type: "statusServidor",
+        payload: status,
+      });
+    }
+    return status;
   }
 
   private lerConfiguracaoServidorAtual(): ConfiguracaoServidor {
