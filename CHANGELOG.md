@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.3.0] - 2026-10-14
 
 ### Telas
 - O verde (Floresta) passa a ser a cor padrão da extensão.

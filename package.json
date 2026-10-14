@@ -4,7 +4,7 @@
   "displayName": "FlexBox Trainer",
   "description": "Extensão para treinamento de recriação de layouts em HTML e CSS, no formato do Frontend Teams Cup.",
   "icon": "resources/icone.png",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "repository": {
     "type": "git",
