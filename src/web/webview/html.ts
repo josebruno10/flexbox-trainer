@@ -1,5 +1,239 @@
 import * as vscode from "vscode";
 
+// Identidade comum às três telas. As cores vêm do tema do VS Code, para
+// combinar com o claro e o escuro; o degradê e as fontes (Space Grotesk e
+// DM Mono, licença OFL, em media/fontes) são os do projeto na FECITEL.
+function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+  const fonte = (arquivo: string) =>
+    webview.asWebviewUri(
+      vscode.Uri.joinPath(extensionUri, "media", "fontes", arquivo),
+    );
+  return `
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url("${fonte("space-grotesk.woff2")}") format("woff2");
+    }
+
+    @font-face {
+      font-family: "DM Mono";
+      font-weight: 400;
+      font-display: swap;
+      src: url("${fonte("dm-mono-400.woff2")}") format("woff2");
+    }
+
+    @font-face {
+      font-family: "DM Mono";
+      font-weight: 500;
+      font-display: swap;
+      src: url("${fonte("dm-mono-500.woff2")}") format("woff2");
+    }
+
+    :root {
+      --fundo: var(--vscode-sideBar-background, var(--vscode-editor-background));
+      --texto: var(--vscode-foreground);
+      --texto-suave: var(--vscode-descriptionForeground);
+      --linha: var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
+      --linha-forte: color-mix(in srgb, var(--texto) 45%, transparent);
+      --linha-tracejada: color-mix(in srgb, var(--texto) 22%, transparent);
+      --superficie: color-mix(in srgb, var(--texto) 6%, transparent);
+      /* O botão principal tem a cor do texto: escuro no tema claro e o contrário. */
+      --tinta: var(--texto);
+      --sobre-tinta: var(--fundo);
+      --rosa: #f32f67;
+      --degrade: linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720);
+      --aviso: var(--vscode-editorWarning-foreground, #cca700);
+      --erro: var(--vscode-errorForeground, #f14c4c);
+      --foco: var(--vscode-focusBorder, #f32f67);
+      --fonte-texto: var(--vscode-font-family, system-ui, sans-serif);
+      --fonte-mono: "DM Mono", var(--vscode-editor-font-family, monospace);
+      --fonte-titulo: "Space Grotesk", var(--vscode-font-family, sans-serif);
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--fonte-texto);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--texto);
+      background: var(--fundo);
+    }
+
+    .faixa {
+      height: 3px;
+      background: var(--degrade);
+      background-size: 200% 100%;
+      animation: correr 9s ease-in-out infinite alternate;
+    }
+
+    @keyframes correr {
+      to {
+        background-position: 100% 0;
+      }
+    }
+
+    /* As partes da tela surgem uma depois da outra ao abrir. */
+    .surge {
+      animation: surgir 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation-delay: calc(var(--ordem, 0) * 60ms);
+    }
+
+    @keyframes surgir {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    .rotulo {
+      margin: 0;
+      font-family: var(--fonte-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+    }
+
+    .rotulo .numero {
+      color: var(--texto);
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid var(--tinta);
+      border-radius: 2px;
+      font-family: var(--fonte-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      line-height: 1.25;
+      text-transform: uppercase;
+      color: var(--sobre-tinta);
+      background: var(--tinta);
+      cursor: pointer;
+      transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    /* A sombra rosa desloca o botão como uma impressão fora de registro. */
+    button:hover:not(:disabled) {
+      box-shadow: 3px 3px 0 var(--rosa);
+      transform: translate(-1px, -1px);
+    }
+
+    button:active:not(:disabled) {
+      box-shadow: 1px 1px 0 var(--rosa);
+      transform: none;
+    }
+
+    button.secundario {
+      color: var(--texto);
+      background: transparent;
+      border-color: var(--linha-forte);
+    }
+
+    button.perigo {
+      color: var(--erro);
+      background: transparent;
+      border-color: color-mix(in srgb, var(--erro) 55%, transparent);
+    }
+
+    button.discreto {
+      min-height: 0;
+      padding: 3px 6px;
+      color: var(--texto-suave);
+      background: transparent;
+      border-color: transparent;
+    }
+
+    button.secundario:hover:not(:disabled),
+    button.perigo:hover:not(:disabled),
+    button.discreto:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      border-color: currentColor;
+      background: var(--superficie);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 1px solid var(--foco);
+      outline-offset: 2px;
+    }
+
+    .dados {
+      margin: 0;
+    }
+
+    .dados > div {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--linha-tracejada);
+    }
+
+    .dados dt {
+      flex: 0 0 auto;
+      font-family: var(--fonte-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+    }
+
+    .dados dd {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      min-width: 0;
+      margin: 0;
+      font-family: var(--fonte-mono);
+      font-size: 12px;
+    }
+
+    .amostra {
+      flex: 0 0 auto;
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--linha-forte);
+    }
+  `;
+}
+
 export function obterHtmlWebview(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
@@ -16,27 +250,94 @@ export function obterHtmlWebview(
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'none';
     img-src ${webview.cspSource} https: http: data: blob:;
+    font-src ${webview.cspSource};
     script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';
     style-src ${webview.cspSource} 'unsafe-inline' https: http:;
     connect-src ${webview.cspSource} https: http: ws: wss:;
     frame-src 'self' https: http: data:;
   ">
   <title>FlexBox Trainer</title>
-  <style>
+  <style>${estilosBase(webview, extensionUri)}
     body {
-      margin: 0;
-      padding: 12px;
-      font-family: "JetBrains Mono", monospace;
-      background: #0b0d12;
-      color: #e8edf5;
+      padding: 0 14px 18px;
+    }
+
+    .faixa {
+      margin: 0 -14px;
+    }
+
+    .conta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--linha);
+    }
+
+    .status-auth-texto {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+    .status-auth-texto strong {
+      display: block;
+      overflow: hidden;
+      font-family: var(--fonte-titulo);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--texto);
+    }
+
+    .aviso-cadastro {
+      display: block;
+      color: var(--aviso);
+    }
+
+    .avatar-usuario,
+    .avatar-fallback {
+      flex: 0 0 32px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .avatar-fallback {
+      display: grid;
+      place-items: center;
+      font-family: var(--fonte-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--degrade);
+    }
+
+    .aviso-ia {
+      margin-top: 12px;
+      padding: 10px 10px 10px 12px;
+      border: 1px solid var(--aviso);
+      border-left-width: 3px;
+      font-size: 12px;
+      background: color-mix(in srgb, var(--aviso) 10%, transparent);
+    }
+
+    .aviso-ia .rotulo {
+      margin-bottom: 4px;
+      color: var(--aviso);
     }
 
     .bloco {
-      border: 1px solid #2a3140;
-      background: #111723;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--linha);
+    }
+
+    .bloco:last-of-type {
+      border-bottom: 0;
     }
 
     .cabecalho {
@@ -44,91 +345,43 @@ export function obterHtmlWebview(
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .titulo {
-      margin: 0;
-      font-size: 13px;
-      color: #9fb4d1;
-      text-transform: uppercase;
-    }
-
-    .status-auth {
-      border: 1px solid #2a3140;
-      border-radius: 8px;
-      background: rgba(76, 186, 114, 0.08);
-      padding: 8px 10px;
-      color: #c6d2e4;
-      font-size: 12px;
-      line-height: 1.4;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-    }
-
-    .status-auth-texto {
-      min-width: 0;
-    }
-
-    .aviso-cadastro {
-      display: block;
-      color: #f5c26b;
-    }
-
-    .aviso-ia {
+      min-height: 22px;
       margin-bottom: 10px;
-      padding: 10px;
-      border: 1px solid #f5c26b;
-      border-radius: 8px;
-      background: rgba(245, 194, 107, 0.1);
-      font-size: 12px;
-      line-height: 1.4;
-      color: #f5c26b;
     }
 
-    .aviso-ia .acoes {
-      margin-top: 6px;
+    .selo {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--fonte-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--texto-suave);
     }
 
-    .avatar-usuario,
-    .avatar-fallback {
-      width: 34px;
-      height: 34px;
-      flex: 0 0 34px;
-      border-radius: 50%;
-      border: 1px solid #40506a;
-      object-fit: cover;
+    .selo::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: currentColor;
     }
 
-    .avatar-fallback {
-      display: grid;
-      place-items: center;
-      color: #07150c;
-      background: #4cba72;
-      font-size: 14px;
-      font-weight: 800;
+    .selo[data-estado="andamento"] {
+      color: var(--texto);
     }
 
-    [hidden] {
-      display: none !important;
+    .selo[data-estado="andamento"]::before {
+      background: var(--rosa);
+      animation: piscar 1.6s ease-in-out infinite;
     }
 
-    .status-auth strong {
-      display: block;
-      color: #e8edf5;
-      margin-bottom: 2px;
-    }
-
-    canvas {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 16 / 9;
-      display: block;
-      background: #fff;
-      border-radius: 6px;
-      border: 1px solid #2a3140;
+    @keyframes piscar {
+      50% {
+        opacity: 0.25;
+      }
     }
 
     .canvas-desafio {
@@ -136,32 +389,32 @@ export function obterHtmlWebview(
       width: 100%;
       aspect-ratio: var(--proporcao-desafio, 16 / 9);
       overflow: hidden;
-      border: 1px solid #2a3140;
-      border-radius: 6px;
+      border: 1px solid var(--linha);
       background: #fff;
     }
 
     .canvas-desafio canvas {
+      display: block;
       width: 100%;
       height: 100%;
-      border: 0;
-      border-radius: 0;
     }
 
     .canvas-anotacoes {
       position: absolute;
       inset: 0;
       background: transparent;
+    }
+
+    .canvas-anotacoes[data-sobre-componente] {
       cursor: pointer;
     }
 
     .preview {
+      display: block;
       width: 100%;
       height: auto;
       aspect-ratio: var(--proporcao-desafio, 16 / 9);
-      display: block;
-      border: 1px solid #2a3140;
-      border-radius: 6px;
+      border: 1px solid var(--linha);
       background: #fff;
     }
 
@@ -177,95 +430,178 @@ export function obterHtmlWebview(
       z-index: -1;
     }
 
-    .linha {
+    .detalhe {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      min-height: 34px;
+      margin: 8px 0 4px;
+      padding: 7px 9px;
       font-size: 12px;
-      color: #c6d2e4;
-      margin-top: 6px;
-      line-height: 1.4;
+      color: var(--texto-suave);
+      background: var(--superficie);
+    }
+
+    .detalhe strong {
+      font-family: var(--fonte-titulo);
+      font-weight: 600;
+      color: var(--texto);
+    }
+
+    .detalhe .medida {
+      font-family: var(--fonte-mono);
+      color: var(--texto);
+    }
+
+    .caminho {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .falta {
+      color: var(--erro);
     }
 
     .acoes {
-      display: flex;
+      display: grid;
+      /* Dois botões por linha quando cabem sem quebrar o texto. */
+      grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
       gap: 8px;
-      margin-top: 8px;
-      flex-wrap: wrap;
+      margin-top: 12px;
     }
 
-    button {
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      background: #4cba72;
-      color: #05120a;
-      font-weight: 700;
-      cursor: pointer;
+    .acoes > .largo {
+      grid-column: 1 / -1;
+    }
+
+    .simbolo {
+      display: inline-block;
+      font-size: 14px;
+      line-height: 1;
+      transition: transform 250ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    button:hover:not(:disabled) .simbolo.mais {
+      transform: rotate(90deg);
+    }
+
+    /* O ✓ de Verificar pula quando a nota chega. */
+    .simbolo.pulo {
+      animation: pular 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    @keyframes pular {
+      40% {
+        transform: translateY(-4px) scale(1.35);
+      }
+    }
+
+    button.arquivos {
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+
+    .linha {
       font-size: 12px;
+      line-height: 1.5;
     }
 
-    button.secundario {
-      background: #2a3140;
-      color: #e8edf5;
+    .nota {
+      margin-bottom: 10px;
     }
 
-    button.perigo {
-      background: #ef4444;
-      color: #fff;
+    .valor-nota {
+      display: block;
+      font-family: var(--fonte-titulo);
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.045em;
+      line-height: 1;
     }
 
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
+    .valor-nota small {
+      margin-left: 2px;
+      font-size: 20px;
+      letter-spacing: 0;
+      color: var(--texto-suave);
+    }
+
+    .barra-nota {
+      height: 6px;
+      margin-top: 10px;
+      background: var(--superficie);
+    }
+
+    .barra-nota span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--degrade);
+      /* Mesma duração e curva da contagem da nota. */
+      transition: width 700ms cubic-bezier(0.33, 1, 0.68, 1);
     }
   </style>
 </head>
 <body>
+  <div class="faixa" aria-hidden="true"></div>
+  <header class="conta surge" style="--ordem: 0">
+    <img id="avatarUsuario" class="avatar-usuario" alt="Foto do usuário" hidden>
+    <div id="avatarFallback" class="avatar-fallback">${escapeHtml((nomeUsuario || "U").trim().charAt(0).toUpperCase() || "U")}</div>
+    <div class="status-auth-texto" id="statusAutenticacao"><strong>${escapeHtml(nomeUsuario || "Conectado")}</strong></div>
+    <button id="botaoSair" class="discreto">Sair</button>
+  </header>
+
   <div class="aviso-ia" id="avisoIa" role="alert" hidden>
+    <p class="rotulo">IA habilitada</p>
     <span id="textoAvisoIa"></span>
     <div class="acoes">
       <button id="botaoVerExtensoesIa" class="secundario">Ver extensões</button>
     </div>
   </div>
 
-  <section class="bloco">
+  <section class="bloco surge" style="--ordem: 1" aria-label="Desafio">
     <div class="cabecalho">
-      <h2 class="titulo">FlexBox Trainer</h2>
-      <button id="botaoSair" class="secundario">Sair</button>
+      <h2 class="rotulo"><span class="numero">01</span> / Desafio</h2>
+      <span class="selo" id="seloDesafio" data-estado="vazio">Sem desafio</span>
     </div>
-    <div class="status-auth">
-      <img id="avatarUsuario" class="avatar-usuario" alt="Foto do usuário" hidden>
-      <div id="avatarFallback" class="avatar-fallback">${escapeHtml((nomeUsuario || "U").trim().charAt(0).toUpperCase() || "U")}</div>
-      <div class="status-auth-texto" id="statusAutenticacao">${nomeUsuario ? `Conectado como <strong>${escapeHtml(nomeUsuario)}</strong>` : "Sessão autenticada"}</div>
-    </div>
-    <div class="acoes">
-      <button id="botaoNovoDesafio">Gerar novo desafio</button>
-      <button id="botaoEncerrarDesafio" class="perigo" disabled>Encerrar desafio</button>
-      <button id="botaoTestarConexao" class="secundario">Testar servidor</button>
-    </div>
-  </section>
-
-  <section class="bloco" aria-label="Desafio alvo">
     <div class="canvas-desafio">
       <canvas id="canvasAlvo" width="960" height="540"></canvas>
       <canvas id="canvasAnotacoes" class="canvas-anotacoes" width="960" height="540"></canvas>
     </div>
-    <div class="linha" id="metaDesafio"></div>
-    <div class="linha" id="detalheComponente">Clique em um componente para ver suas medidas e sua cor.</div>
+    <div class="detalhe" id="detalheComponente" hidden></div>
+    <dl class="dados" id="metaDesafio" hidden>
+      <div><dt>Tempo</dt><dd id="valorTempo">--:--</dd></div>
+      <div><dt>Formato</dt><dd id="valorFormato">--</dd></div>
+      <div><dt>Fundo</dt><dd id="valorFundo">--</dd></div>
+      <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
+    </dl>
     <div class="acoes">
-      <button id="botaoAbrirAba" class="secundario" title="Abre o gabarito e as medidas de todos os componentes em uma aba do editor">Abrir em uma aba</button>
+      <button id="botaoNovoDesafio" class="largo"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
+      <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>Abrir em uma aba</button>
+      <button id="botaoEncerrarDesafio" class="perigo" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
     </div>
   </section>
 
-  <section class="bloco">
-    <h2 class="titulo">Arquivos detectados</h2>
-    <div class="linha" id="listaWorkspace">Aguardando arquivos...</div>
+  <section class="bloco surge" style="--ordem: 2" aria-label="Seus arquivos">
+    <div class="cabecalho">
+      <h2 class="rotulo"><span class="numero">02</span> / Seus arquivos</h2>
+    </div>
+    <dl class="dados" id="listaWorkspace">
+      <div><dt>HTML</dt><dd id="arquivoHtml">--</dd></div>
+      <div><dt>CSS</dt><dd id="arquivoCss">--</dd></div>
+    </dl>
     <div class="acoes">
-      <button id="botaoAtualizarPreview" class="secundario">Atualizar preview</button>
-      <button id="botaoCriarArquivos" class="secundario" hidden>Criar index.html e style.css</button>
+      <button id="botaoCriarArquivos" class="largo arquivos" hidden>Criar index.html e style.css</button>
+      <button id="botaoAtualizarPreview" class="secundario" title="Relê os arquivos sem salvar">Atualizar preview</button>
     </div>
   </section>
 
-  <section class="bloco">
-    <h2 class="titulo">Preview do aluno</h2>
+  <section class="bloco surge" style="--ordem: 3" aria-label="Sua página">
+    <div class="cabecalho">
+      <h2 class="rotulo"><span class="numero">03</span> / Sua página</h2>
+    </div>
     <canvas id="canvasPreviewAluno" class="preview" width="960" height="540"></canvas>
     <div
       id="quadroAvaliacao"
@@ -273,13 +609,20 @@ export function obterHtmlWebview(
       aria-hidden="true"
     ></div>
     <div class="acoes">
-      <button id="botaoVerificar" disabled>Verificar</button>
+      <button id="botaoVerificar" class="largo" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
     </div>
   </section>
 
-  <section class="bloco">
-    <h2 class="titulo">Resultado</h2>
-    <div class="linha" id="caixaResultado">Nenhuma verificação ainda.</div>
+  <section class="bloco surge" style="--ordem: 4" aria-label="Resultado">
+    <div class="cabecalho">
+      <h2 class="rotulo"><span class="numero">04</span> / Resultado</h2>
+      <button id="botaoTestarConexao" class="discreto" title="Confere a sessão no servidor">Testar servidor</button>
+    </div>
+    <div class="nota" id="notaResultado" hidden>
+      <strong class="valor-nota" id="valorNota"></strong>
+      <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
+    </div>
+    <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
   </section>
 
   <script src="${scriptUri}"></script>
@@ -288,8 +631,7 @@ export function obterHtmlWebview(
 }
 
 // Aba do editor com o gabarito grande, as medidas de todos os componentes e a
-// comparação com a página do aluno. Usa as cores do tema do VS Code para
-// parecer parte do editor.
+// comparação com a página do aluno.
 export function obterHtmlPainelGabarito(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
@@ -304,20 +646,19 @@ export function obterHtmlPainelGabarito(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: http: data: blob:; font-src https: data:; style-src 'unsafe-inline' https: http:; script-src ${webview.cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: http: data: blob:; font-src ${webview.cspSource} https: data:; style-src 'unsafe-inline' https: http:; script-src ${webview.cspSource};">
   <title>Gabarito</title>
-  <style>
-    [hidden] {
-      display: none !important;
+  <style>${estilosBase(webview, extensionUri)}
+    :root {
+      --fundo: var(--vscode-editor-background);
     }
 
     body {
-      margin: 0;
-      padding: 16px;
-      font-family: var(--vscode-font-family);
-      font-size: 13px;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
+      padding: 0 16px 16px;
+    }
+
+    .faixa {
+      margin: 0 -16px 16px;
     }
 
     .conteudo {
@@ -330,28 +671,42 @@ export function obterHtmlPainelGabarito(
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .resumo,
+    .resumo {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 8px 22px;
+    }
+
+    .titulo-tela {
+      display: block;
+      margin-top: 2px;
+      font-family: var(--fonte-titulo);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .resumo .dados {
+      display: flex;
+      gap: 18px;
+    }
+
+    .resumo .dados > div {
+      gap: 8px;
+      padding: 0 0 2px;
+      border-bottom: 0;
+    }
+
     .barra {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 6px 14px;
-    }
-
-    .resumo strong {
-      font-size: 15px;
-    }
-
-    .fundo,
-    .contagem,
-    .opacidade {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--vscode-descriptionForeground);
+      gap: 8px 16px;
     }
 
     .modos {
@@ -359,29 +714,48 @@ export function obterHtmlPainelGabarito(
     }
 
     .modo {
-      font: inherit;
-      padding: 4px 10px;
-      border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
-      cursor: pointer;
-      color: var(--vscode-button-secondaryForeground);
-      background: var(--vscode-button-secondaryBackground);
+      color: var(--texto);
+      background: transparent;
+      border-color: var(--linha-forte);
     }
 
     .modo + .modo {
       border-left: 0;
     }
 
-    .modo:first-child {
-      border-radius: 4px 0 0 4px;
-    }
-
-    .modo:last-child {
-      border-radius: 0 4px 4px 0;
-    }
-
     .modo[aria-pressed="true"] {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
+      color: var(--sobre-tinta);
+      background: var(--tinta);
+      border-color: var(--tinta);
+    }
+
+    .modo:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      background: var(--superficie);
+    }
+
+    .modo[aria-pressed="true"]:hover:not(:disabled) {
+      background: var(--tinta);
+    }
+
+    .opacidade {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--fonte-mono);
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+    .opacidade strong {
+      min-width: 4ch;
+      font-weight: 500;
+      color: var(--texto);
+    }
+
+    .opacidade input {
+      accent-color: var(--rosa);
     }
 
     .palco {
@@ -422,8 +796,7 @@ export function obterHtmlPainelGabarito(
 
     .quadro figcaption {
       display: none;
-      margin-bottom: 4px;
-      color: var(--vscode-descriptionForeground);
+      margin-bottom: 6px;
     }
 
     .palco[data-modo="lado"] figcaption {
@@ -434,7 +807,7 @@ export function obterHtmlPainelGabarito(
       position: relative;
       overflow: hidden;
       background: #fff;
-      outline: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+      outline: 1px solid var(--linha);
     }
 
     .tela canvas {
@@ -470,57 +843,64 @@ export function obterHtmlPainelGabarito(
 
     .ajuda {
       max-width: 640px;
-      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      color: var(--texto-suave);
     }
 
     .lista {
       flex: 1 1 300px;
       min-width: 250px;
       max-width: 340px;
-      max-height: calc(100vh - 32px);
+      max-height: calc(100vh - 35px);
       list-style: none;
       margin: 0;
       padding: 0 4px 0 0;
       overflow-y: auto;
+      border-top: 1px solid var(--linha);
     }
 
     .componente {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 7px 8px;
-      border: 1px solid transparent;
-      border-radius: 6px;
+      padding: 8px 8px 8px 10px;
+      border-bottom: 1px dashed var(--linha-tracejada);
+      border-left: 2px solid transparent;
       cursor: pointer;
     }
 
     .componente:hover {
-      background: var(--vscode-list-hoverBackground);
+      background: var(--superficie);
     }
 
     .componente.selecionado {
-      border-color: var(--vscode-focusBorder);
-      background: var(--vscode-list-inactiveSelectionBackground);
+      border-left-color: var(--rosa);
+      background: var(--superficie);
     }
 
-    .amostra {
-      flex: 0 0 auto;
+    .componente .amostra {
       width: 22px;
       height: 22px;
-      border-radius: 4px;
-      border: 1px solid rgba(128, 128, 128, 0.5);
-    }
-
-    .fundo .amostra {
-      width: 14px;
-      height: 14px;
     }
 
     .info {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
       min-width: 0;
+    }
+
+    .info strong {
+      font-family: var(--fonte-titulo);
+      font-weight: 600;
+    }
+
+    .info strong span {
+      margin-right: 6px;
+      font-family: var(--fonte-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--texto-suave);
     }
 
     .valores {
@@ -530,28 +910,31 @@ export function obterHtmlPainelGabarito(
     }
 
     .valor {
-      font: inherit;
-      font-family: var(--vscode-editor-font-family, monospace);
-      font-size: 12px;
+      min-height: 0;
       padding: 1px 6px;
-      border: 0;
-      border-radius: 4px;
+      font-size: 11.5px;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--texto);
+      background: transparent;
+      border-color: var(--linha);
       cursor: copy;
-      color: var(--vscode-button-secondaryForeground);
-      background: var(--vscode-button-secondaryBackground);
     }
 
-    .valor:hover {
-      background: var(--vscode-button-secondaryHoverBackground);
+    .valor:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      border-color: var(--texto);
     }
 
     .valor.copiado {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
+      color: var(--sobre-tinta);
+      background: var(--tinta);
+      border-color: var(--tinta);
     }
 
     .vazio {
-      color: var(--vscode-descriptionForeground);
+      color: var(--texto-suave);
     }
 
     /* Em uma aba estreita, a lista vai para baixo da imagem. */
@@ -569,7 +952,8 @@ export function obterHtmlPainelGabarito(
   </style>
 </head>
 <body>
-  <div class="vazio" id="vazio">Gere um desafio na barra lateral do FlexBox Trainer para ver o gabarito aqui.</div>
+  <div class="faixa" aria-hidden="true"></div>
+  <div class="vazio" id="vazio">Nenhum desafio. Gere um na barra lateral.</div>
   <div class="conteudo" id="conteudo" hidden>
     <section class="imagem">
       <div class="resumo" id="resumo"></div>
@@ -588,17 +972,17 @@ export function obterHtmlPainelGabarito(
       </div>
       <div class="palco" id="palco" data-modo="gabarito">
         <figure class="quadro" id="quadroGabarito">
-          <figcaption>Gabarito</figcaption>
+          <figcaption class="rotulo">Gabarito</figcaption>
           <div class="tela" id="telaGabarito">
             <canvas id="canvasGabarito"></canvas>
             <canvas id="canvasDestaque"></canvas>
           </div>
         </figure>
         <figure class="quadro" id="quadroAluno">
-          <figcaption>Sua página</figcaption>
+          <figcaption class="rotulo">Sua página</figcaption>
           <div class="tela" id="telaAluno">
             <div id="superficieAluno"></div>
-            <div class="sem-pagina" id="semPagina" hidden>Crie index.html e style.css na pasta do projeto para comparar com o gabarito.</div>
+            <div class="sem-pagina" id="semPagina" hidden>Sem index.html e style.css.</div>
           </div>
         </figure>
       </div>
@@ -610,6 +994,11 @@ export function obterHtmlPainelGabarito(
 </body>
 </html>`;
 }
+
+// Marcas dos provedores, como nos botões oficiais de login.
+const ICONE_GOOGLE = `<svg viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.87 2.69-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.8.54-1.84.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58A8.65 8.65 0 0 0 9 0 9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"/></svg>`;
+const ICONE_GITHUB = `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>`;
+const ICONE_MICROSOFT = `<svg viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>`;
 
 export function obterHtmlAutenticacao(
   webview: vscode.Webview,
@@ -624,145 +1013,116 @@ export function obterHtmlAutenticacao(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src ${webview.cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource}; style-src 'unsafe-inline'; script-src ${webview.cspSource};">
   <title>FlexBox Trainer - Autenticação</title>
-  <style>
+  <style>${estilosBase(webview, extensionUri)}
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 18px;
-      background:
-        radial-gradient(circle at top left, rgba(100, 181, 246, 0.22), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(76, 186, 114, 0.18), transparent 30%),
-        #08111d;
-      color: #e8edf5;
-      font-family: "Segoe UI", Arial, sans-serif;
+      padding: 0 14px 18px;
     }
 
-    .cartao {
-      width: min(100%, 360px);
-      border: 1px solid rgba(159, 180, 209, 0.18);
-      border-radius: 24px;
-      background: rgba(10, 18, 29, 0.94);
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
-      padding: 24px;
-      backdrop-filter: blur(10px);
+    .faixa {
+      margin: 0 -14px;
     }
 
-    .eyebrow {
-      margin: 0 0 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #7f93ab;
-      font-size: 11px;
+    .entrada {
+      max-width: 360px;
+      padding-top: 22px;
     }
 
     h1 {
-      margin: 0;
-      font-size: 24px;
-      line-height: 1.15;
+      margin: 10px 0 0;
+      font-family: var(--fonte-titulo);
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 0.92;
+    }
+
+    h1 span {
+      display: block;
+      width: fit-content;
+      color: transparent;
+      background: var(--degrade);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
 
     .descricao {
-      margin: 12px 0 18px;
-      color: #c2d0df;
-      line-height: 1.6;
-      font-size: 14px;
+      margin: 14px 0 18px;
+      color: var(--texto-suave);
     }
 
     .status {
-      min-height: 44px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(159, 180, 209, 0.14);
-      color: #cfe3f2;
-      font-size: 13px;
-      line-height: 1.5;
       margin-bottom: 16px;
+      padding: 9px 10px;
+      border-left: 2px solid var(--rosa);
+      font-size: 12px;
+      background: var(--superficie);
     }
 
     .acoes {
       display: grid;
-      gap: 10px;
-    }
-
-    button {
-      appearance: none;
-      border: 0;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       gap: 8px;
-      transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.1);
+    .provedor {
+      justify-content: flex-start;
+      gap: 10px;
+      min-height: 38px;
+      padding: 8px 12px;
+      font-size: 11.5px;
     }
 
-    .btn-github {
-      background: #24292e;
-      color: white;
-      border: 1px solid #444d56;
+    .provedor svg {
+      flex: 0 0 18px;
+      width: 18px;
+      height: 18px;
     }
 
-    .btn-microsoft {
-      background: #00a4ef;
-      color: white;
-      border: 1px solid #0078d4;
+    /* O G colorido precisa de fundo branco sobre o botão escuro. */
+    .provedor .marca {
+      display: grid;
+      place-items: center;
+      flex: 0 0 22px;
+      width: 22px;
+      height: 22px;
+      margin: -2px 0 -2px -4px;
+      background: #fff;
     }
 
-    .btn-google {
-      background: white;
-      color: #444;
-      border: 1px solid #ddd;
+    .provedor .marca svg {
+      width: 15px;
+      height: 15px;
     }
 
-    button.terciario {
-      background: transparent;
-      color: #7f93ab;
-      border: 1px solid transparent;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-weight: 500;
-    }
-
-    button.terciario:hover {
-      color: #e8edf5;
-      background: rgba(255, 255, 255, 0.04);
+    #botaoSair {
+      justify-self: start;
+      margin-top: 2px;
     }
 
     .meta {
-      margin-top: 16px;
-      font-size: 12px;
-      color: #8ea4bc;
-      line-height: 1.5;
-      text-align: center;
+      margin: 18px 0 0;
+      padding-top: 12px;
+      border-top: 1px dashed var(--linha-tracejada);
+      font-size: 11.5px;
+      color: var(--texto-suave);
     }
   </style>
 </head>
 <body>
-  <main class="cartao">
-    <p class="eyebrow">FlexBox Trainer</p>
-    <h1>Acesse sua conta 🚀</h1>
-    <p class="descricao">Escolha um provedor para conectar à sua conta do IFMS.</p>
-    <div class="status" id="statusAutenticacao">Selecione uma opção para entrar.</div>
-    <div class="acoes">
-      <button id="botaoGoogle" class="btn-google">Entrar com Google</button>
-      <button id="botaoGitHub" class="btn-github">Entrar com GitHub</button>
-      <button id="botaoMicrosoft" class="btn-microsoft">Entrar com Microsoft</button>
-      <button id="botaoSair" class="terciario">Desconectar</button>
+  <div class="faixa" aria-hidden="true"></div>
+  <main class="entrada">
+    <p class="rotulo surge" style="--ordem: 0"><span class="numero">00</span> / Entrar</p>
+    <h1 class="surge" style="--ordem: 1">FlexBox <span>Trainer</span></h1>
+    <p class="descricao surge" style="--ordem: 2">Extensão para treinamento de recriação de layouts em HTML e CSS.</p>
+    <div class="status" id="statusAutenticacao" role="status" hidden></div>
+    <div class="acoes surge" style="--ordem: 3">
+      <button id="botaoGoogle" class="provedor"><span class="marca">${ICONE_GOOGLE}</span>Entrar com Google</button>
+      <button id="botaoGitHub" class="provedor secundario">${ICONE_GITHUB}Entrar com GitHub</button>
+      <button id="botaoMicrosoft" class="provedor secundario">${ICONE_MICROSOFT}Entrar com Microsoft</button>
+      <button id="botaoSair" class="discreto" hidden>Desconectar</button>
     </div>
-    <div class="meta">A validação é feita com a API configurada e a sessão fica salva de forma segura no SecretStorage do VS Code.</div>
+    <p class="meta surge" style="--ordem: 4">Use a conta com o e-mail cadastrado no torneio.</p>
   </main>
   <script src="${scriptUri}"></script>
 </body>

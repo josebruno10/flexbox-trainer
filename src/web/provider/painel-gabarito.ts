@@ -42,7 +42,10 @@ export class PainelGabarito implements vscode.Disposable {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "dist")],
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.extensionUri, "dist"),
+          vscode.Uri.joinPath(this.extensionUri, "media"),
+        ],
       },
     );
     painel.iconPath = vscode.Uri.joinPath(

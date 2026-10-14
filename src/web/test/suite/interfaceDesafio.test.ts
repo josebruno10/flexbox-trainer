@@ -1,6 +1,10 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { obterHtmlAutenticacao, obterHtmlWebview } from "../../webview/html";
+import {
+  obterHtmlAutenticacao,
+  obterHtmlPainelGabarito,
+  obterHtmlWebview,
+} from "../../webview/html";
 
 suite("Interface do desafio", () => {
   test("mantém uma camada transparente para clicar no gabarito limpo", () => {
@@ -126,5 +130,25 @@ suite("Interface do desafio", () => {
       ),
     );
     assert.ok(!html.includes('id="quadroPreview"'));
+  });
+
+  test("carrega as fontes do projeto de dentro da extensão em todas as telas", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const raiz = vscode.Uri.parse("file:///extensao");
+    const telas = [
+      obterHtmlWebview(webview, raiz, "Aluno"),
+      obterHtmlAutenticacao(webview, raiz),
+      obterHtmlPainelGabarito(webview, raiz),
+    ];
+
+    for (const html of telas) {
+      assert.match(html, /font-src vscode-webview:\/\/teste[ ;]/);
+      for (const arquivo of ["space-grotesk", "dm-mono-400", "dm-mono-500"]) {
+        assert.ok(html.includes(`/extensao/media/fontes/${arquivo}.woff2`), arquivo);
+      }
+    }
   });
 });

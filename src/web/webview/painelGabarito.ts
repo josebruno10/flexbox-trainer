@@ -27,12 +27,14 @@ const LARGURA_LISTA = 300;
 const LARGURA_UMA_COLUNA = 680;
 const ESPACO = 16;
 
+// Como na extensão do torneio, o destaque some sozinho: preso na imagem, ele
+// atrapalha comparar o gabarito com a página.
+const DURACAO_SELECAO_MS = 2500;
+
 const AJUDA: Record<Modo, string> = {
-  gabarito:
-    "Clique em um componente na imagem ou na lista para destacá-lo. Clique em um valor para copiá-lo.",
-  sobreposto:
-    "Arraste o controle para ver mais a sua página ou mais o gabarito. A sua página atualiza quando você salva index.html ou style.css.",
-  lado: "A sua página atualiza quando você salva index.html ou style.css.",
+  gabarito: "Clique num componente para destacá-lo e num valor para copiá-lo.",
+  sobreposto: "Arraste o controle para comparar. A sua página atualiza ao salvar.",
+  lado: "A sua página atualiza ao salvar.",
 };
 
 const vscode = acquireVsCodeApi();
@@ -59,6 +61,7 @@ let htmlAluno: string | undefined;
 let modo: Modo = "gabarito";
 let selecionadoId: number | undefined;
 let sobMouseId: number | undefined;
+let limpezaSelecao: number | undefined;
 
 window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) => {
   const mensagem = evento.data;
@@ -66,6 +69,7 @@ window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) =>
   if (mensagem?.type === "desafio") {
     const novo = mensagem.payload ?? undefined;
     if (novo?.challengeId !== gabarito?.challengeId) {
+      window.clearTimeout(limpezaSelecao);
       selecionadoId = undefined;
       sobMouseId = undefined;
     }
@@ -101,6 +105,12 @@ canvas.addEventListener("mousemove", (evento) => {
 canvas.addEventListener("mouseleave", () => {
   sobMouseId = undefined;
   desenharDestaques();
+});
+
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape") {
+    definirSelecao(undefined, false);
+  }
 });
 
 window.addEventListener("resize", ajustarTamanho);
@@ -190,21 +200,38 @@ function ajustarTamanho(): void {
 }
 
 function renderizarResumo(atual: GabaritoRecebido): void {
+  const rotulo = document.createElement("p");
+  rotulo.className = "rotulo";
+  rotulo.textContent = "Gabarito";
   const titulo = document.createElement("strong");
-  titulo.textContent = `Gabarito ${atual.width} × ${atual.height} px`;
-  const fundo = document.createElement("span");
-  fundo.className = "fundo";
+  titulo.className = "titulo-tela";
+  titulo.textContent =
+    `${formatarMedida(atual.width)} × ${formatarMedida(atual.height)} px`;
+  const cabecalho = document.createElement("div");
+  cabecalho.append(rotulo, titulo);
+
   const corFundo = normalizarHex(atual.backgroundColor);
-  fundo.append(
-    "fundo ",
-    criarAmostra(atual.backgroundColor),
-    " ",
-    criarValor(corFundo, corFundo, "Copiar a cor do fundo"),
+  const dados = document.createElement("dl");
+  dados.className = "dados";
+  dados.append(
+    criarDado(
+      "Fundo",
+      criarAmostra(atual.backgroundColor),
+      criarValor(corFundo, corFundo, "Copiar a cor do fundo"),
+    ),
+    criarDado("Componentes", String(atual.blocks.length)),
   );
-  const contagem = document.createElement("span");
-  contagem.className = "contagem";
-  contagem.textContent = `${atual.blocks.length} componentes`;
-  resumo.replaceChildren(titulo, fundo, contagem);
+  resumo.replaceChildren(cabecalho, dados);
+}
+
+function criarDado(nome: string, ...valor: Array<Node | string>): HTMLDivElement {
+  const linha = document.createElement("div");
+  const termo = document.createElement("dt");
+  termo.textContent = nome;
+  const descricao = document.createElement("dd");
+  descricao.append(...valor);
+  linha.append(termo, descricao);
+  return linha;
 }
 
 function renderizarLista(atual: GabaritoRecebido): void {
@@ -217,7 +244,9 @@ function renderizarLista(atual: GabaritoRecebido): void {
 
       const nome = document.createElement("strong");
       const circulo = bloco.shape === "circle";
-      nome.textContent = `#${bloco.id} ${circulo ? "Círculo" : "Retângulo"}`;
+      const numero = document.createElement("span");
+      numero.textContent = `#${bloco.id}`;
+      nome.append(numero, circulo ? "Círculo" : "Retângulo");
 
       const largura = formatarMedida(bloco.width);
       const altura = formatarMedida(bloco.height);
@@ -252,8 +281,20 @@ function renderizarLista(atual: GabaritoRecebido): void {
   );
 }
 
+// Clicar de novo no mesmo componente, ou fora deles, tira o destaque.
 function selecionar(id: number | undefined, rolarLista: boolean): void {
-  selecionadoId = id === selecionadoId ? undefined : id;
+  definirSelecao(id === selecionadoId ? undefined : id, rolarLista);
+}
+
+function definirSelecao(id: number | undefined, rolarLista: boolean): void {
+  selecionadoId = id;
+  window.clearTimeout(limpezaSelecao);
+  if (id !== undefined) {
+    limpezaSelecao = window.setTimeout(
+      () => definirSelecao(undefined, false),
+      DURACAO_SELECAO_MS,
+    );
+  }
   lista.querySelectorAll<HTMLLIElement>(".componente").forEach((item) => {
     const ativo = Number(item.dataset.id) === selecionadoId;
     item.classList.toggle("selecionado", ativo);

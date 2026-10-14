@@ -25,8 +25,14 @@ suite("Aba do gabarito", () => {
       _tipo: string,
       _titulo: string,
       coluna: vscode.ViewColumn,
+      opcoes: vscode.WebviewPanelOptions & vscode.WebviewOptions,
     ) => {
       assert.strictEqual(coluna, vscode.ViewColumn.Beside);
+      // O script vem de dist e as fontes, de media; nada mais é liberado.
+      assert.deepStrictEqual(
+        opcoes.localResourceRoots?.map((uri) => uri.path),
+        ["/extensao/dist", "/extensao/media"],
+      );
       let aoReceber: (mensagem: unknown) => void = () => undefined;
       let aoFechar: () => void = () => undefined;
       const falso: PainelFalso = {
