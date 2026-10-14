@@ -37,10 +37,6 @@
         "title": "FlexBox Trainer: Fazer Login"
       },
       {
-        "command": "flexbox-trainer.criarConta",
-        "title": "FlexBox Trainer: Criar Conta"
-      },
-      {
         "command": "flexbox-trainer.logout",
         "title": "FlexBox Trainer: Sair"
       },

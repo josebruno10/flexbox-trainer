@@ -139,13 +139,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
-        if (mensagem.type === "abrirCadastro") {
-          void this.loginProvider
-            .abrirCadastro()
-            .catch(mostrarFalhaAoAbrirLogin);
-          return;
-        }
-
         if (mensagem.type === "loginGitHub") {
           void this.authService.loginComProvedorVSCode("github");
           return;
@@ -266,9 +259,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       const nomes = extensoesIa.map((extensao) => extensao.nome).join(", ");
       void vscode.window
         .showWarningMessage(
-          "Como no torneio, desabilite as extensões de IA antes de começar " +
-            `um desafio: ${nomes}. Se já desabilitou, clique em ` +
-            '"Reiniciar Extensões".',
+          `Desabilite as extensões de IA para começar: ${nomes}. Depois, ` +
+            "reinicie as extensões.",
           VER_EXTENSOES,
         )
         .then((escolha) => {
@@ -307,8 +299,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       // Não espera a resposta: a notificação pode ficar aberta.
       void vscode.window
         .showInformationMessage(
-          "Abra uma pasta para treinar: o FlexBox Trainer cria nela o " +
-            "index.html e o style.css.",
+          "Abra uma pasta para criar index.html e style.css.",
           ABRIR_PASTA,
         )
         .then((escolha) => {
@@ -337,10 +328,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     for (const arquivo of ordenados) {
       await vscode.window.showTextDocument(arquivo, { preview: false });
     }
+    const nomes = resultado.arquivos.map((arquivo) => arquivo.path.split("/").pop());
     void vscode.window.showInformationMessage(
-      `Criei ${resultado.arquivos
-        .map((arquivo) => arquivo.path.split("/").pop())
-        .join(" e ")} na pasta do projeto para você recriar o desafio.`,
+      `${nomes.join(" e ")} ${nomes.length === 1 ? "criado" : "criados"}.`,
     );
     await this.atualizarPreviewWorkspace();
   }
@@ -425,9 +415,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       score: 0,
       source: "desafio-invalidado",
       error:
-        `Desafio invalidado: ${this.motivoInvalidacao} Como no torneio, ele ` +
-        "não pode mais ser corrigido. Gere um novo desafio e faça-o no " +
-        "editor, sem IA.",
+        `Desafio invalidado: ${this.motivoInvalidacao} Gere outro e faça-o ` +
+        "no editor, sem IA.",
     };
   }
 
@@ -549,9 +538,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           precision: 0,
           score: 0,
           source: "missing-files",
-          error:
-            "Não encontrei index.html e style.css: recrie o desafio neles e " +
-            "verifique de novo.",
+          error: "Faltam index.html e style.css.",
         };
         this.enviarEstado();
         void this.criarArquivosDeTreino(false);
@@ -565,8 +552,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           precision: 0,
           score: 0,
           source: "gabarito-error",
-          error:
-            "A imagem do desafio ainda não foi gerada. Aguarde a barra lateral desenhá-lo.",
+          error: "O gabarito ainda está sendo desenhado. Tente de novo.",
         };
         this.enviarEstado();
         return;
@@ -580,8 +566,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           {
             modal: true,
             detail:
-              "A extensão precisa de uma dinâmica só sua no servidor para " +
-              "cadastrar o gabarito e corrigir. Ela é criada uma única vez.",
+              "É nela que o servidor guarda o seu gabarito para corrigir. " +
+              "Só precisa criar uma vez.",
           },
           CRIAR_DINAMICA,
         );
@@ -822,5 +808,5 @@ function sanitizarFormas(formas: unknown): FormaMedida[] {
 function mostrarFalhaAoAbrirLogin(error: unknown): void {
   const mensagem =
     error instanceof Error ? error.message : "Não foi possível abrir o login.";
-  void vscode.window.showErrorMessage(`Erro no Login: ${mensagem}`);
+  void vscode.window.showErrorMessage(`Erro no login: ${mensagem}`);
 }

@@ -23,7 +23,7 @@ export async function criarDinamicaTreinoInterativa(
 ): Promise<void> {
   if (!authService.isAutenticado()) {
     void vscode.window.showWarningMessage(
-      "Faça login no FlexBox Trainer antes de criar a dinâmica de treino.",
+      "Faça login antes de criar a dinâmica de treino.",
     );
     return;
   }
@@ -31,10 +31,7 @@ export async function criarDinamicaTreinoInterativa(
   const evento = (
     await vscode.window.showInputBox({
       title: "Criar dinâmica de treino",
-      prompt:
-        "Código da nova dinâmica, com até 4 letras ou números (limite do " +
-        "servidor). Use uma por pessoa: o servidor guarda um " +
-        "gabarito por tamanho em cada dinâmica.",
+      prompt: "Até 4 letras ou números. Uma dinâmica por pessoa.",
       value: sugerirCodigo(authService),
       validateInput: (valor) =>
         CODIGO_VALIDO.test(valor.trim())
@@ -52,8 +49,7 @@ export async function criarDinamicaTreinoInterativa(
   try {
     if ((await buscarDinamica(configuracao, evento)) !== undefined) {
       void vscode.window.showWarningMessage(
-        `Já existe uma dinâmica "${evento}" no servidor. Nada foi alterado; ` +
-          "escolha outro código.",
+        `Já existe uma dinâmica "${evento}". Escolha outro código.`,
       );
       return;
     }
@@ -63,9 +59,8 @@ export async function criarDinamicaTreinoInterativa(
       {
         modal: true,
         detail:
-          "Tipo 2 (projetos diferentes) com a configuração de correção " +
-          "padrão (código 1). Ela será aberta para receber correções e " +
-          "ficará no servidor: a extensão não apaga dinâmicas.",
+          "Tipo 2 (projetos diferentes), correção padrão (código 1). Ela " +
+          "fica aberta no servidor; a extensão não apaga dinâmicas.",
       },
       "Criar",
     );
@@ -95,15 +90,14 @@ export async function criarDinamicaTreinoInterativa(
     }
   } catch (error) {
     mostrarFalha(
-      `A dinâmica "${evento}" foi criada e configurada, mas não foi possível abri-la`,
+      `A dinâmica "${evento}" foi criada, mas não abriu`,
       error,
     );
     return;
   }
 
   void vscode.window.showInformationMessage(
-    `Dinâmica de treino "${evento}" criada, aberta e configurada. Gere um ` +
-      "desafio e clique em Verificar.",
+    `Dinâmica "${evento}" criada. Gere um desafio e clique em Verificar.`,
   );
 }
 

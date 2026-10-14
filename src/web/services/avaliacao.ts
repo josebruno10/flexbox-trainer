@@ -77,7 +77,7 @@ export async function avaliarTentativa(
 
     if (cod === undefined) {
       aoProgredir(
-        "Cadastrando a imagem deste desafio como gabarito no servidor...",
+        "Enviando o gabarito…",
       );
       try {
         cod = await enviarGabaritoDeTreino(
@@ -104,7 +104,7 @@ export async function avaliarTentativa(
       } satisfies GabaritoRegistrado);
     }
 
-    aoProgredir("Corrigindo a sua página no servidor...");
+    aoProgredir("Corrigindo no servidor…");
     return await corrigirFormas(
       configuracao,
       cod,

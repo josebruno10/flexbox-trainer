@@ -129,7 +129,7 @@ suite("Servidor Service Test Suite", () => {
       );
       assert.strictEqual(
         mensagem,
-        "Conexão realizada com sucesso (HTTP 200).",
+        "Servidor OK, sessão válida (HTTP 200).",
       );
     } finally {
       globalThis.fetch = originalFetch;

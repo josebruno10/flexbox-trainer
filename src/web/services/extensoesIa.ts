@@ -61,7 +61,7 @@ export function encontrarExtensoesIa(
 export async function abrirExtensoesIa(lista: ExtensaoIa[]): Promise<void> {
   if (lista.length === 0) {
     void vscode.window.showInformationMessage(
-      "Nenhuma extensão de IA habilitada: você pode começar e corrigir desafios.",
+      "Nenhuma extensão de IA habilitada.",
     );
     return;
   }

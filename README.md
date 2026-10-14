@@ -86,7 +86,7 @@ Salvar no editor, inclusive com formatação ao salvar, e criar os arquivos pelo
 
 Abra pelo botão **Abrir em uma aba**, pelo atalho **Abrir gabarito em uma aba** que aparece no topo do `index.html` e do `style.css`, ou pela paleta de comandos. A aba acompanha o desafio atual e tem três modos:
 
-- **Gabarito**: a imagem grande e a lista de todos os componentes, com largura, altura (ou diâmetro) e cor. Clique em um componente, na imagem ou na lista, para destacá-lo; clique em um valor para copiá-lo.
+- **Gabarito**: a imagem grande e a lista de todos os componentes, com largura, altura (ou diâmetro) e cor. Clique em um componente, na imagem ou na lista, para destacá-lo por alguns segundos (Esc tira o destaque na hora); clique em um valor para copiá-lo.
 - **Sobrepor à sua página**: o gabarito por cima da sua página. Arraste o controle entre "Sua página" e "Gabarito" para ver onde cada uma difere.
 - **Lado a lado**: o gabarito e a sua página, um ao lado do outro.
 
@@ -99,7 +99,6 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | Comando | O que faz |
 |---|---|
 | FlexBox Trainer: Fazer Login | Abre o login pelo Google no navegador |
-| FlexBox Trainer: Criar Conta | Abre o cadastro pelo Google no navegador |
 | FlexBox Trainer: Sair | Encerra a sessão |
 | FlexBox Trainer: Iniciar | Abre a barra lateral (e o login, se precisar) |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |

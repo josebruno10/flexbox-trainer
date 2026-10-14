@@ -35,16 +35,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         try {
           await authService.processarCallback(uri);
+          // A barra lateral aberta já mostra quem entrou.
           await vscode.commands.executeCommand(
             "workbench.view.extension.flexboxTrainer",
-          );
-          vscode.window.showInformationMessage(
-            "Autenticação concluída com sucesso. Bem-vindo!",
           );
         } catch (error) {
           const mensagem =
             error instanceof Error ? error.message : "Falha na autenticação.";
-          void vscode.window.showErrorMessage("Erro no Login: " + mensagem);
+          void vscode.window.showErrorMessage("Erro no login: " + mensagem);
         }
       },
     }),
@@ -74,15 +72,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.login", async () => {
       await authService.abrirFluxoAutenticacao("login");
     }),
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "flexbox-trainer.criarConta",
-      async () => {
-        await authService.abrirFluxoAutenticacao("register");
-      },
-    ),
   );
 
   context.subscriptions.push(
@@ -227,18 +216,12 @@ export async function activate(context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand(
           "workbench.view.extension.flexboxTrainer",
         );
-        vscode.window.showInformationMessage(
-          "Você precisa criar uma conta ou fazer login para usar esta extensão.",
-        );
         return;
       }
 
       await provedor.atualizarPreviewWorkspace();
       await vscode.commands.executeCommand(
         "workbench.view.extension.flexboxTrainer",
-      );
-      vscode.window.showInformationMessage(
-        "Gere desafios aleatórios na barra lateral até escolher o que deseja treinar.",
       );
     }),
   );

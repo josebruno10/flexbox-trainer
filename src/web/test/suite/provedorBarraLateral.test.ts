@@ -559,11 +559,11 @@ suite("Provedor da barra lateral", () => {
     );
     assert.deepStrictEqual(verificacao[0].payload, {
       id: 7,
-      mensagem: "Cadastrando a imagem deste desafio como gabarito no servidor...",
+      mensagem: "Enviando o gabarito…",
     });
     assert.deepStrictEqual(verificacao[1].payload, {
       id: 7,
-      mensagem: "Corrigindo a sua página no servidor...",
+      mensagem: "Corrigindo no servidor…",
     });
     assert.deepStrictEqual(verificacao[3].payload, { id: 7, mensagem: undefined });
   });
@@ -628,7 +628,7 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(ultimaMensagem(mensagens, "dadosDesafio"), undefined);
     assert.match(
       avisos[0] ?? "",
-      /desabilite as extensões de IA antes de começar um desafio: GitHub Copilot\./,
+      /Desabilite as extensões de IA para começar: GitHub Copilot\./,
     );
   });
 
@@ -705,7 +705,7 @@ suite("Provedor da barra lateral", () => {
     await provedor.criarArquivosDeTreino();
 
     assert.deepStrictEqual(mostradas, [
-      "Abra uma pasta para treinar: o FlexBox Trainer cria nela o index.html e o style.css. [Abrir pasta]",
+      "Abra uma pasta para criar index.html e style.css. [Abrir pasta]",
     ]);
   });
 

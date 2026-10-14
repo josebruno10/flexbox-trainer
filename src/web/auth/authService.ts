@@ -3,7 +3,7 @@ import { log } from "../services/logger";
 import { EstadoAutenticacao } from "../types";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
-type ModoAutenticacao = "login" | "register";
+type ModoAutenticacao = "login";
 type ProvedorAutenticacao = "gmail" | "github" | "microsoft";
 
 type PerfilServidor = {
@@ -58,7 +58,7 @@ export class AuthService implements vscode.Disposable {
   private readonly estadoMudou = new vscode.EventEmitter<EstadoAutenticacao>();
   private estadoAtual: EstadoAutenticacao = {
     status: "checking",
-    message: "Validando sessão...",
+    message: "Validando a sessão…",
   };
   private sessaoAtual?: SessaoAutenticacao;
   // Preenchido quando o e-mail do login não está cadastrado no torneio.
@@ -110,7 +110,7 @@ export class AuthService implements vscode.Disposable {
       const sessao = await this.tokenManager.carregarSessao();
 
       if (!this.sessaoEhValidaLocalmente(sessao)) {
-        await this.encerrarSessao("Aguardando login.");
+        await this.encerrarSessao();
         return;
       }
 
@@ -133,7 +133,7 @@ export class AuthService implements vscode.Disposable {
 
       if (!this.sessaoEhValidaLocalmente(sessao)) {
         await this.encerrarSessao(
-          "Sua sessão expirou. Faça login novamente.",
+          "A sessão expirou. Entre de novo.",
         );
         return;
       }
@@ -141,7 +141,7 @@ export class AuthService implements vscode.Disposable {
       this.sessaoAtual = sessao;
       this.definirEstado({
         status: "checking",
-        message: "Revalidando sua sessão no servidor...",
+        message: "Validando a sessão…",
       });
       await this.validarSessaoComApi();
     } catch (error) {
@@ -201,7 +201,7 @@ export class AuthService implements vscode.Disposable {
 
     this.definirEstado({
       status: "checking",
-      message: "Aguardando a autenticação do Google...",
+      message: "Aguardando o Google…",
     });
 
     try {
@@ -231,7 +231,7 @@ export class AuthService implements vscode.Disposable {
     try {
       this.definirEstado({
         status: "checking",
-        message: `Conectando ao ${provedor}...`,
+        message: `Conectando ao ${provedor}…`,
       });
 
       // Sem VSCODE_TENANT, o provedor da Microsoft usa "organizations" e
@@ -318,7 +318,7 @@ export class AuthService implements vscode.Disposable {
 
         this.definirEstado({
           status: "checking",
-          message: `Aguardando o login do ${provedor} ficar disponível...`,
+          message: `Aguardando o ${provedor}…`,
         });
       }
     }
@@ -374,7 +374,7 @@ export class AuthService implements vscode.Disposable {
 
       this.definirEstado({
         status: "checking",
-        message: "Validando sua sessão no servidor...",
+        message: "Validando a sessão…",
       });
 
       const perfil = await this.buscarPerfilAutenticado(tokenServidor);
@@ -704,7 +704,7 @@ export class AuthService implements vscode.Disposable {
         (error.status === 401 || error.status === 403)
       ) {
         await this.encerrarSessao(
-          "Sua sessão expirou. Faça login novamente.",
+          "A sessão expirou. Entre de novo.",
         );
         return;
       }
@@ -874,7 +874,7 @@ export class AuthService implements vscode.Disposable {
     });
   }
 
-  private async encerrarSessao(mensagem: string): Promise<void> {
+  private async encerrarSessao(mensagem?: string): Promise<void> {
     this.limparEstadoOAuthPendente();
     await this.tokenManager.limparSessao();
     this.sessaoAtual = undefined;

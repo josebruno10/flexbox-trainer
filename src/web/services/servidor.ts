@@ -87,7 +87,7 @@ export async function verificarConexaoServidor(
     );
   }
 
-  return `Conexão realizada com sucesso (HTTP ${resposta.status}).`;
+  return `Servidor OK, sessão válida (HTTP ${resposta.status}).`;
 }
 
 /**

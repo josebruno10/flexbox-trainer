@@ -219,7 +219,7 @@ function montarDocumentoPreview(textoHtml: string, textoCss: string): string {
     return `<!doctype html>
 <html lang="pt-BR">
 <body style="margin:0; display:grid; place-items:center; height:100vh; font-family:'JetBrains Mono', monospace; color:#52606d; background:#fff;">
-  Crie os arquivos index.html e style.css para ver o preview.
+  Sem index.html e style.css.
 </body>
 </html>`;
   }

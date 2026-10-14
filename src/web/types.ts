@@ -112,7 +112,6 @@ export type MensagemRecebidaBarraLateral =
       verificacaoId?: unknown;
     }
   | { type: "abrirLogin" }
-  | { type: "abrirCadastro" }
   | { type: "loginGitHub" }
   | { type: "loginMicrosoft" }
   | { type: "loginGoogle" }
