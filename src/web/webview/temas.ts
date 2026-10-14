@@ -25,6 +25,11 @@ export type CoresTema = {
   // Pontos, bordas e sombras de destaque (contraste de pelo menos 3 nos temas
   // claro e escuro).
   acento: string;
+  // Toques opcionais de uma segunda cor: a ponta da faixa do topo, os números
+  // das seções e o círculo do avatar.
+  ponta?: string;
+  numero?: string;
+  avatar?: string;
 };
 
 // O verde é a cor principal do projeto, como a do Instituto Federal.
@@ -40,7 +45,8 @@ export const TEMAS: Record<NomeTema, CoresTema> = {
     sobreBotao: "#ffffff",
     acento: "#16a34a",
   },
-  // Como a logo do IF: o verde nos blocos e o vermelho nos destaques.
+  // Como a logo do IF: o verde nos blocos e o vermelho nos destaques, na
+  // ponta da faixa, nos números das seções e no círculo do avatar.
   campus: {
     nome: "Campus",
     descricao: "Verde com toques de vermelho",
@@ -48,6 +54,9 @@ export const TEMAS: Record<NomeTema, CoresTema> = {
     degradeBotao: "linear-gradient(100deg, #24803a, #1f7a35 50%, #1a6d36)",
     sobreBotao: "#ffffff",
     acento: "#dc2626",
+    ponta: "#dc2626",
+    numero: "#dc2626",
+    avatar: "#dc2626",
   },
   oceano: {
     nome: "Oceano",
@@ -121,7 +130,10 @@ export function variaveisDoTema(nome: NomeTema): string {
       --degrade: ${tema.degrade};
       --degrade-botao: ${tema.degradeBotao};
       --sobre-botao: ${tema.sobreBotao};
-      --acento: ${tema.acento};`;
+      --acento: ${tema.acento};
+      --ponta: ${tema.ponta ?? "transparent"};
+      --numero: ${tema.numero ?? "var(--texto)"};
+      --avatar: ${tema.avatar ?? "var(--degrade)"};`;
 }
 
 /** Deixa o aluno escolher um conjunto e grava nas configurações do usuário. */

@@ -76,10 +76,22 @@ ${variaveisDoTema(tema)}
     }
 
     .faixa {
+      position: relative;
       height: 3px;
       background: var(--degrade);
       background-size: 200% 100%;
       animation: correr 9s ease-in-out infinite alternate;
+    }
+
+    /* Ponta da faixa numa segunda cor, nos conjuntos que têm uma. */
+    .faixa::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 18%;
+      background: var(--ponta);
     }
 
     @keyframes correr {
@@ -120,8 +132,10 @@ ${variaveisDoTema(tema)}
       color: var(--texto-suave);
     }
 
+    /* Misturado à cor do texto, o número continua legível no tema claro e
+       no escuro (contraste acima de 4,5). */
     .rotulo .numero {
-      color: var(--texto);
+      color: color-mix(in srgb, var(--numero) 70%, var(--texto));
     }
 
     button {
@@ -382,7 +396,7 @@ export function obterHtmlWebview(
       font-size: 15px;
       font-weight: 700;
       color: #fff;
-      background: var(--degrade);
+      background: var(--avatar);
     }
 
     .aviso-ia {
@@ -1181,6 +1195,14 @@ export function obterHtmlAutenticacao(
       width: fit-content;
       color: transparent;
       background: var(--degrade);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    /* No tema claro, o título usa a versão escura do degradê (a do botão),
+       para ficar legível. */
+    body.vscode-light h1 span {
+      background: var(--degrade-botao);
       -webkit-background-clip: text;
       background-clip: text;
     }

@@ -69,5 +69,11 @@ suite("Cores da extensão", () => {
     assert.ok(html("oceano").includes(`--acento: ${TEMAS.oceano.acento};`));
     assert.ok(!html("oceano").includes(TEMAS.magenta.acento));
     assert.ok(html("magenta").includes(`--degrade-botao: ${TEMAS.magenta.degradeBotao};`));
+
+    // Só o Campus tem a segunda cor; nos outros, os toques ficam neutros.
+    assert.ok(html("campus").includes("--ponta: #dc2626;"));
+    assert.ok(html("campus").includes("--avatar: #dc2626;"));
+    assert.ok(html("floresta").includes("--ponta: transparent;"));
+    assert.ok(html("floresta").includes("--avatar: var(--degrade);"));
   });
 });
