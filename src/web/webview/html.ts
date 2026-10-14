@@ -43,6 +43,9 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
       --sobre-tinta: var(--fundo);
       --rosa: #f32f67;
       --degrade: linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720);
+      /* Mais escuro que o da marca: o texto branco fica legível (contraste
+         acima de 4,5 em toda a faixa). */
+      --degrade-botao: linear-gradient(100deg, #b5179e, #d6245e 50%, #c94010);
       --aviso: var(--vscode-editorWarning-foreground, #cca700);
       --erro: var(--vscode-errorForeground, #f14c4c);
       --foco: var(--vscode-focusBorder, #f32f67);
@@ -157,12 +160,6 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
       border-color: var(--linha-forte);
     }
 
-    button.perigo {
-      color: var(--erro);
-      background: transparent;
-      border-color: color-mix(in srgb, var(--erro) 55%, transparent);
-    }
-
     button.discreto {
       min-height: 0;
       padding: 3px 6px;
@@ -172,12 +169,79 @@ function estilosBase(webview: vscode.Webview, extensionUri: vscode.Uri): string 
     }
 
     button.secundario:hover:not(:disabled),
-    button.perigo:hover:not(:disabled),
     button.discreto:hover:not(:disabled) {
       box-shadow: none;
       transform: none;
       border-color: currentColor;
       background: var(--superficie);
+    }
+
+    /* A ação principal de cada momento: gerar o primeiro desafio, depois
+       verificar. */
+    button.principal {
+      color: #fff;
+      background: var(--degrade-botao);
+      border-color: transparent;
+    }
+
+    button.principal:hover:not(:disabled) {
+      box-shadow: 3px 3px 0 var(--tinta);
+    }
+
+    button.principal:active:not(:disabled) {
+      box-shadow: 1px 1px 0 var(--tinta);
+    }
+
+    /* Desligado, o botão principal fica neutro: só uma ação chama atenção. */
+    button.principal:disabled {
+      color: var(--texto-suave);
+      background: transparent;
+      border-color: var(--linha);
+      opacity: 1;
+    }
+
+    button.encerrar {
+      color: var(--texto-suave);
+      background: transparent;
+      border-color: transparent;
+    }
+
+    button.encerrar:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      color: var(--erro);
+      background: var(--superficie);
+    }
+
+    /* Botões de alternar, um ao lado do outro. */
+    .modos {
+      display: inline-flex;
+    }
+
+    .modo {
+      color: var(--texto);
+      background: transparent;
+      border-color: var(--linha-forte);
+    }
+
+    .modo + .modo {
+      border-left: 0;
+    }
+
+    .modo[aria-pressed="true"] {
+      color: var(--sobre-tinta);
+      background: var(--tinta);
+      border-color: var(--tinta);
+    }
+
+    .modo:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      background: var(--superficie);
+    }
+
+    .modo[aria-pressed="true"]:hover:not(:disabled) {
+      background: var(--tinta);
     }
 
     button:disabled {
@@ -342,6 +406,7 @@ export function obterHtmlWebview(
 
     .cabecalho {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
@@ -409,13 +474,50 @@ export function obterHtmlWebview(
       cursor: pointer;
     }
 
-    .preview {
-      display: block;
-      width: 100%;
-      height: auto;
-      aspect-ratio: var(--proporcao-desafio, 16 / 9);
-      border: 1px solid var(--linha);
+    /* Gabarito e página do aluno dividem o mesmo quadro: alternar entre os
+       dois, no mesmo lugar, mostra onde eles diferem. */
+    .vistas {
+      display: flex;
+      margin-bottom: 8px;
+    }
+
+    .vistas .modo {
+      flex: 1 1 0;
+    }
+
+    .canvas-desafio .preview {
+      position: absolute;
+      inset: 0;
       background: #fff;
+      visibility: hidden;
+    }
+
+    .canvas-desafio[data-vista="pagina"] .preview {
+      visibility: visible;
+    }
+
+    .canvas-desafio[data-vista="pagina"] .canvas-anotacoes {
+      pointer-events: none;
+    }
+
+    .quadro-vazio {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      font-family: var(--fonte-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6c6066;
+      pointer-events: none;
+    }
+
+    .dados-grade {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      column-gap: 14px;
     }
 
     .preview-avaliacao {
@@ -542,6 +644,19 @@ export function obterHtmlWebview(
       /* Mesma duração e curva da contagem da nota. */
       transition: width 700ms cubic-bezier(0.33, 1, 0.68, 1);
     }
+
+    .historico {
+      margin-top: 10px;
+    }
+
+    .historico .atual {
+      font-weight: 500;
+      color: var(--texto);
+    }
+
+    .historico .anterior {
+      color: var(--texto-suave);
+    }
   </style>
 </head>
 <body>
@@ -570,56 +685,53 @@ export function obterHtmlWebview(
       <h2 class="rotulo"><span class="numero">01</span> / Desafio</h2>
       <span class="selo" id="seloDesafio" data-estado="vazio">Sem desafio</span>
     </div>
-    <div class="canvas-desafio">
+    <div class="modos vistas" id="vistas" role="group" aria-label="O que mostrar no quadro" hidden>
+      <button type="button" class="modo" data-vista="gabarito" aria-pressed="true">Gabarito</button>
+      <button type="button" class="modo" data-vista="pagina" aria-pressed="false">Sua página</button>
+    </div>
+    <div class="canvas-desafio" id="quadroDesafio" data-vista="gabarito">
       <canvas id="canvasAlvo" width="960" height="540"></canvas>
       <canvas id="canvasAnotacoes" class="canvas-anotacoes" width="960" height="540"></canvas>
+      <canvas id="canvasPreviewAluno" class="preview" width="960" height="540"></canvas>
+      <p class="quadro-vazio" id="quadroVazio">Gere um desafio para começar</p>
     </div>
     <div class="detalhe" id="detalheComponente" hidden></div>
-    <dl class="dados" id="metaDesafio" hidden>
+    <dl class="dados dados-grade" id="metaDesafio" hidden>
       <div><dt>Tempo</dt><dd id="valorTempo">--:--</dd></div>
       <div><dt>Formato</dt><dd id="valorFormato">--</dd></div>
       <div><dt>Fundo</dt><dd id="valorFundo">--</dd></div>
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
     </dl>
     <div class="acoes">
-      <button id="botaoNovoDesafio" class="largo"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
+      <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
       <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>Abrir em uma aba</button>
-      <button id="botaoEncerrarDesafio" class="perigo" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
+      <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
     </div>
   </section>
 
-  <section class="bloco surge" style="--ordem: 2" aria-label="Seus arquivos">
+  <section class="bloco surge" style="--ordem: 2" aria-label="Sua página">
     <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">02</span> / Seus arquivos</h2>
+      <h2 class="rotulo"><span class="numero">02</span> / Sua página</h2>
+      <button id="botaoAtualizarPreview" class="discreto" title="Relê os arquivos sem salvar">Atualizar preview</button>
     </div>
     <dl class="dados" id="listaWorkspace">
       <div><dt>HTML</dt><dd id="arquivoHtml">--</dd></div>
       <div><dt>CSS</dt><dd id="arquivoCss">--</dd></div>
     </dl>
-    <div class="acoes">
-      <button id="botaoCriarArquivos" class="largo arquivos" hidden>Criar index.html e style.css</button>
-      <button id="botaoAtualizarPreview" class="secundario" title="Relê os arquivos sem salvar">Atualizar preview</button>
-    </div>
-  </section>
-
-  <section class="bloco surge" style="--ordem: 3" aria-label="Sua página">
-    <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">03</span> / Sua página</h2>
-    </div>
-    <canvas id="canvasPreviewAluno" class="preview" width="960" height="540"></canvas>
     <div
       id="quadroAvaliacao"
       class="preview-avaliacao"
       aria-hidden="true"
     ></div>
     <div class="acoes">
-      <button id="botaoVerificar" class="largo" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
+      <button id="botaoCriarArquivos" class="largo secundario arquivos" hidden>Criar index.html e style.css</button>
+      <button id="botaoVerificar" class="largo principal" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
     </div>
   </section>
 
-  <section class="bloco surge" style="--ordem: 4" aria-label="Resultado">
+  <section class="bloco surge" style="--ordem: 3" aria-label="Resultado">
     <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">04</span> / Resultado</h2>
+      <h2 class="rotulo"><span class="numero">03</span> / Resultado</h2>
       <button id="botaoTestarConexao" class="discreto" title="Confere a sessão no servidor">Testar servidor</button>
     </div>
     <div class="nota" id="notaResultado" hidden>
@@ -627,6 +739,10 @@ export function obterHtmlWebview(
       <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
     </div>
     <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
+    <dl class="dados historico" id="historicoNotas" hidden>
+      <div><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
+      <div><dt>Melhor</dt><dd id="valorMelhor"></dd></div>
+    </dl>
   </section>
 
   <script src="${scriptUri}"></script>
@@ -711,36 +827,6 @@ export function obterHtmlPainelGabarito(
       flex-wrap: wrap;
       align-items: center;
       gap: 8px 16px;
-    }
-
-    .modos {
-      display: inline-flex;
-    }
-
-    .modo {
-      color: var(--texto);
-      background: transparent;
-      border-color: var(--linha-forte);
-    }
-
-    .modo + .modo {
-      border-left: 0;
-    }
-
-    .modo[aria-pressed="true"] {
-      color: var(--sobre-tinta);
-      background: var(--tinta);
-      border-color: var(--tinta);
-    }
-
-    .modo:hover:not(:disabled) {
-      box-shadow: none;
-      transform: none;
-      background: var(--superficie);
-    }
-
-    .modo[aria-pressed="true"]:hover:not(:disabled) {
-      background: var(--tinta);
     }
 
     .opacidade {
@@ -866,8 +952,8 @@ export function obterHtmlPainelGabarito(
     .componente {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 8px 8px 10px;
+      gap: 8px;
+      padding: 5px 8px 5px 10px;
       border-bottom: 1px dashed var(--linha-tracejada);
       border-left: 2px solid transparent;
       cursor: pointer;
@@ -883,24 +969,17 @@ export function obterHtmlPainelGabarito(
     }
 
     .componente .amostra {
-      width: 22px;
-      height: 22px;
+      width: 16px;
+      height: 16px;
     }
 
-    .info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 0;
+    /* A forma da amostra diz se o componente é um círculo. */
+    .componente .amostra.circulo {
+      border-radius: 50%;
     }
 
-    .info strong {
-      font-family: var(--fonte-titulo);
-      font-weight: 600;
-    }
-
-    .info strong span {
-      margin-right: 6px;
+    .componente .numero-componente {
+      min-width: 3.2ch;
       font-family: var(--fonte-mono);
       font-size: 11px;
       font-weight: 500;
@@ -913,10 +992,20 @@ export function obterHtmlPainelGabarito(
       gap: 4px;
     }
 
+    /* Só para leitores de tela. */
+    .so-leitor {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
     .valor {
       min-height: 0;
-      padding: 1px 6px;
-      font-size: 11.5px;
+      padding: 1px 5px;
+      font-size: 11px;
       letter-spacing: 0;
       text-transform: none;
       color: var(--texto);
@@ -967,6 +1056,7 @@ export function obterHtmlPainelGabarito(
           <button type="button" class="modo" data-modo="sobreposto" aria-pressed="false">Sobrepor à sua página</button>
           <button type="button" class="modo" data-modo="lado" aria-pressed="false">Lado a lado</button>
         </div>
+        <button type="button" class="modo" id="botaoLista" aria-pressed="true" aria-controls="listaComponentes" title="Mostrar ou esconder a lista de componentes">Componentes</button>
         <div class="opacidade" id="controleOpacidade" hidden>
           <span>Sua página</span>
           <input type="range" id="opacidade" min="0" max="100" step="1" value="50" aria-label="Opacidade do gabarito">

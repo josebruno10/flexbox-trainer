@@ -1,6 +1,10 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { AuthService } from "../../auth/authService";
+import {
+  BarraDeStatus,
+  EstadoBarraDeStatus,
+} from "../../provider/barra-de-status";
 import { ProvedorBarraLateralFlexBox } from "../../provider/provedor-barra-lateral";
 import { criarDesafioGerado } from "../../services/desafio";
 import {
@@ -44,6 +48,7 @@ type OpcoesProvedorTeste = {
   teamId?: number;
   registro?: vscode.Memento;
   extensoesIa?: { id: string; nome: string }[];
+  barraDeStatus?: BarraDeStatus;
 };
 
 type Requisicao = {
@@ -498,6 +503,43 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(interno.avaliacaoAtual?.repetida, undefined);
   });
 
+  test("guarda as precisões do desafio para o histórico e a barra de status", async () => {
+    mockarConfiguracaoServidorValida();
+    const notas = [42.5, 80];
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () =>
+        json({ pontuacao: notas.shift() }),
+    });
+    const estadosBarra: (EstadoBarraDeStatus | undefined)[] = [];
+    const barraDeStatus = {
+      atualizar: (estado: EstadoBarraDeStatus | undefined) => estadosBarra.push(estado),
+    } as unknown as BarraDeStatus;
+    const registro = criarRegistroFalso();
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, { registro, barraDeStatus });
+    const interno = prepararVerificacao(provedor, 232);
+    const id = interno.desafioAtual!.challengeId;
+    await registro.update(CHAVE_REGISTRO, { cod: 91, challengeId: id });
+
+    await interno.verificarTentativaAtual(id, FORMAS);
+    // A mesma página não volta ao servidor nem conta como outra tentativa.
+    await interno.verificarTentativaAtual(id, FORMAS);
+    await interno.verificarTentativaAtual(id, [
+      { ...FORMAS[0], cor: "#123456" },
+      FORMAS[1],
+    ]);
+
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "historicoNotas")?.payload, [42.5, 80]);
+    assert.strictEqual(estadosBarra[estadosBarra.length - 1]?.precisao, 80);
+    assert.strictEqual(estadosBarra[estadosBarra.length - 1]?.invalidado, false);
+
+    interno.testarConexaoServidor = async () => undefined;
+    await provedor.iniciarNovoDesafio();
+
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "historicoNotas")?.payload, []);
+    assert.strictEqual(estadosBarra[estadosBarra.length - 1]?.precisao, undefined);
+  });
+
   test("reenvia a mesma página depois de uma correção que falhou", async () => {
     mockarConfiguracaoServidorValida();
     let correcoes = 0;
@@ -945,6 +987,7 @@ function criarProvedorParaTeste(
     authService,
     opcoes.registro ?? criarRegistroFalso(),
     () => opcoes.extensoesIa ?? [],
+    opcoes.barraDeStatus,
   );
   const interno = provedor as unknown as ProvedorInterno;
 

@@ -151,4 +151,22 @@ suite("Interface do desafio", () => {
       }
     }
   });
+
+  test("mostra o gabarito e a sua página no mesmo quadro, alternando", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlWebview(webview, vscode.Uri.parse("file:///extensao"), "Aluno");
+    const quadro = html.indexOf('id="quadroDesafio"');
+    const fimQuadro = html.indexOf("</div>", quadro);
+
+    assert.ok(quadro >= 0);
+    for (const id of ["canvasAlvo", "canvasPreviewAluno"]) {
+      const posicao = html.indexOf(`id="${id}"`);
+      assert.ok(posicao > quadro && posicao < fimQuadro, `${id} fora do quadro`);
+    }
+    assert.ok(html.includes('data-vista="gabarito" aria-pressed="true"'));
+    assert.ok(html.includes('data-vista="pagina" aria-pressed="false"'));
+  });
 });

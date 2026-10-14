@@ -76,6 +76,7 @@ type MensagemDaExtensao =
   | { type: "statusServidor"; payload: StatusConexaoServidorRecebido }
   | { type: "estadoAutenticacao"; payload: EstadoAutenticacaoRecebido }
   | { type: "extensoesIa"; payload: Array<{ id: string; nome: string }> }
+  | { type: "historicoNotas"; payload: number[] }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
   | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };
 
@@ -86,6 +87,7 @@ const LIMITE_VERIFICACAO_MS = 120_000;
 let verificacaoPendente: { id: number; challengeId: string } | undefined;
 let contadorVerificacoes = 0;
 let resultadoDuranteVerificacao: ResultadoAvaliacaoRecebido | undefined;
+let historicoDuranteVerificacao: number[] | undefined;
 let limiteVerificacao: number | undefined;
 
 const vscode = acquireVsCodeApi();
@@ -113,6 +115,17 @@ const canvasPreviewAluno = document.getElementById(
 const quadroAvaliacao = document.getElementById(
   "quadroAvaliacao",
 ) as HTMLDivElement;
+const quadroDesafio = document.getElementById("quadroDesafio") as HTMLDivElement;
+const quadroVazio = document.getElementById("quadroVazio") as HTMLElement;
+const vistas = document.getElementById("vistas") as HTMLDivElement;
+const botoesVista = Array.from(
+  vistas.querySelectorAll<HTMLButtonElement>("[data-vista]"),
+);
+const historicoNotas = document.getElementById("historicoNotas") as HTMLElement;
+const valorTentativas = document.getElementById("valorTentativas") as HTMLElement;
+const valorMelhor = document.getElementById("valorMelhor") as HTMLElement;
+// No histórico cabem as três últimas tentativas na largura da barra.
+const TENTATIVAS_NO_HISTORICO = 3;
 const caixaResultado = document.getElementById(
   "caixaResultado",
 ) as HTMLDivElement;
@@ -246,6 +259,24 @@ botaoCadastrar.addEventListener("click", () => {
 
 canvasAnotacoes.addEventListener("click", selecionarComponenteNoCanvas);
 
+for (const botao of botoesVista) {
+  botao.addEventListener("click", () =>
+    definirVista(botao.dataset.vista === "pagina" ? "pagina" : "gabarito"),
+  );
+}
+
+function definirVista(vista: "gabarito" | "pagina"): void {
+  quadroDesafio.dataset.vista = vista;
+  for (const botao of botoesVista) {
+    botao.setAttribute("aria-pressed", String(botao.dataset.vista === vista));
+  }
+  if (vista === "pagina") {
+    sobMouseId = undefined;
+    canvasAnotacoes.removeAttribute("data-sobre-componente");
+    desenharDestaques();
+  }
+}
+
 canvasAnotacoes.addEventListener("mousemove", (evento) => {
   const id = componenteSobPonteiro(evento)?.id;
   canvasAnotacoes.toggleAttribute("data-sobre-componente", id !== undefined);
@@ -282,6 +313,8 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   mostrarItensDoDesafio(true);
 
   if (mudouDesafio) {
+    // Um desafio novo começa mostrando o gabarito.
+    definirVista("gabarito");
     componenteSelecionadoId = undefined;
     destacadoId = undefined;
     sobMouseId = undefined;
@@ -291,6 +324,7 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     window.clearTimeout(limiteVerificacao);
     verificacaoPendente = undefined;
     resultadoDuranteVerificacao = undefined;
+    historicoDuranteVerificacao = undefined;
   }
 
   // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
@@ -300,8 +334,10 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
   desenharDestaques();
   renderizarDetalheComponente();
+  // Sem "px": na grade de dados ele quebraria a linha; o detalhe logo acima
+  // já mostra a unidade.
   valorFormato.textContent =
-    `${formatarMedida(desafio.width)} × ${formatarMedida(desafio.height)} px`;
+    `${formatarMedida(desafio.width)} × ${formatarMedida(desafio.height)}`;
   valorFundo.replaceChildren(
     criarAmostra(desafio.backgroundColor),
     normalizarHex(desafio.backgroundColor),
@@ -365,8 +401,10 @@ function desenharEstadoInicial(): void {
 }
 
 // Detalhe, dados e as ações sobre o desafio só existem depois de gerar um.
+// Até lá, gerar o desafio é a ação principal; depois, é verificar.
 function mostrarItensDoDesafio(visiveis: boolean): void {
   for (const item of [
+    vistas,
     detalheComponente,
     metaDesafio,
     botaoAbrirAba,
@@ -374,6 +412,9 @@ function mostrarItensDoDesafio(visiveis: boolean): void {
   ]) {
     item.hidden = !visiveis;
   }
+  quadroVazio.hidden = visiveis;
+  botaoNovoDesafio.classList.toggle("principal", !visiveis);
+  botaoNovoDesafio.classList.toggle("secundario", visiveis);
 }
 
 function selecionarComponenteNoCanvas(evento: MouseEvent): void {
@@ -608,6 +649,38 @@ function concluirVerificacao(): void {
   const resultado = resultadoDuranteVerificacao;
   resultadoDuranteVerificacao = undefined;
   renderizarResultado(resultado);
+  if (historicoDuranteVerificacao) {
+    renderizarHistorico(historicoDuranteVerificacao);
+    historicoDuranteVerificacao = undefined;
+  }
+}
+
+// As últimas precisões do desafio e a melhor: a evolução, sem dizer o que
+// está errado.
+function renderizarHistorico(notas: number[]): void {
+  historicoNotas.hidden = notas.length < 2;
+  if (notas.length < 2) {
+    return;
+  }
+
+  const ultimas = notas.slice(-TENTATIVAS_NO_HISTORICO);
+  const partes: Array<Node | string> = notas.length > ultimas.length ? ["… "] : [];
+  ultimas.forEach((nota, indice) => {
+    const atual = indice === ultimas.length - 1;
+    const valor = document.createElement("span");
+    valor.className = atual ? "atual" : "anterior";
+    valor.textContent = formatarPorcentagem(nota) + (atual ? "%" : "");
+    partes.push(...(indice > 0 ? [" → ", valor] : [valor]));
+  });
+  valorTentativas.replaceChildren(...partes);
+  valorMelhor.textContent = `${formatarPorcentagem(Math.max(...notas))}%`;
+}
+
+function formatarPorcentagem(valor: number): string {
+  return valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function medirFormasDoAluno(): ReturnType<typeof medirFormas> {
@@ -839,13 +912,7 @@ function escreverNota(valor: number): void {
   notaExibida = valor;
   const porcento = document.createElement("small");
   porcento.textContent = "%";
-  valorNota.replaceChildren(
-    valor.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }),
-    porcento,
-  );
+  valorNota.replaceChildren(formatarPorcentagem(valor), porcento);
 }
 
 function renderizarEstadoAutenticacao(
@@ -937,6 +1004,14 @@ window.addEventListener(
 
     if (mensagem.type === "dadosWorkspace") {
       void renderizarWorkspace(mensagem.payload);
+    }
+
+    if (mensagem.type === "historicoNotas") {
+      if (verificacaoPendente) {
+        historicoDuranteVerificacao = mensagem.payload;
+      } else {
+        renderizarHistorico(mensagem.payload);
+      }
     }
 
     if (mensagem.type === "resultadoAvaliacao") {

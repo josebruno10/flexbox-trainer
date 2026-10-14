@@ -51,6 +51,7 @@ const controleOpacidade = elemento<HTMLDivElement>("controleOpacidade");
 const opacidade = elemento<HTMLInputElement>("opacidade");
 const valorOpacidade = elemento<HTMLElement>("valorOpacidade");
 const ajuda = elemento<HTMLDivElement>("ajuda");
+const botaoLista = elemento<HTMLButtonElement>("botaoLista");
 const resumo = elemento<HTMLDivElement>("resumo");
 const lista = elemento<HTMLUListElement>("listaComponentes");
 const vazio = elemento<HTMLDivElement>("vazio");
@@ -61,6 +62,8 @@ let htmlAluno: string | undefined;
 let modo: Modo = "gabarito";
 let selecionadoId: number | undefined;
 let sobMouseId: number | undefined;
+// Lado a lado, a lista começa escondida para as imagens ficarem maiores.
+let listaVisivel = true;
 let limpezaSelecao: number | undefined;
 
 window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) => {
@@ -83,11 +86,13 @@ window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) =>
   }
 });
 
-document.querySelectorAll<HTMLButtonElement>(".modo").forEach((botao) => {
+document.querySelectorAll<HTMLButtonElement>(".modo[data-modo]").forEach((botao) => {
   botao.addEventListener("click", () => definirModo(botao.dataset.modo as Modo));
 });
 
 opacidade.addEventListener("input", aplicarOpacidade);
+
+botaoLista.addEventListener("click", () => mostrarLista(!listaVisivel));
 
 canvas.addEventListener("click", (evento) => {
   selecionar(blocoSobPonteiro(evento)?.id, true);
@@ -152,14 +157,25 @@ function renderizarPagina(): void {
 }
 
 function definirModo(novo: Modo): void {
+  const mudou = novo !== modo;
   modo = novo;
+  if (mudou) {
+    mostrarLista(novo !== "lado");
+  }
   palco.dataset.modo = novo;
-  document.querySelectorAll<HTMLButtonElement>(".modo").forEach((botao) => {
+  document.querySelectorAll<HTMLButtonElement>(".modo[data-modo]").forEach((botao) => {
     botao.setAttribute("aria-pressed", String(botao.dataset.modo === novo));
   });
   controleOpacidade.hidden = novo !== "sobreposto";
   ajuda.textContent = AJUDA[novo];
   aplicarOpacidade();
+  ajustarTamanho();
+}
+
+function mostrarLista(visivel: boolean): void {
+  listaVisivel = visivel;
+  lista.hidden = !visivel;
+  botaoLista.setAttribute("aria-pressed", String(visivel));
   ajustarTamanho();
 }
 
@@ -180,7 +196,7 @@ function ajustarTamanho(): void {
   const umaColuna = window.innerWidth <= LARGURA_UMA_COLUNA;
   const quadros = modo === "lado" ? 2 : 1;
   const larguraLivre =
-    window.innerWidth - ESPACO * 2 - (umaColuna ? 0 : LARGURA_LISTA + ESPACO);
+    window.innerWidth - ESPACO * 2 - (umaColuna || !listaVisivel ? 0 : LARGURA_LISTA + ESPACO);
   const larguraPorQuadro = (larguraLivre - (quadros - 1) * ESPACO) / quadros;
   const topo = palco.getBoundingClientRect().top + window.scrollY;
   // Legenda dos quadros lado a lado e a linha de ajuda embaixo.
@@ -242,11 +258,20 @@ function renderizarLista(atual: GabaritoRecebido): void {
       item.dataset.id = String(bloco.id);
       item.classList.toggle("selecionado", bloco.id === selecionadoId);
 
-      const nome = document.createElement("strong");
+      // Uma linha por componente: a amostra (redonda nos círculos), o número
+      // e os valores, que se copiam com um clique.
       const circulo = bloco.shape === "circle";
+      const forma = circulo ? "Círculo" : "Retângulo";
+      item.title = `${forma} #${bloco.id}`;
+
+      const amostra = criarAmostra(bloco.color);
+      amostra.classList.toggle("circulo", circulo);
       const numero = document.createElement("span");
+      numero.className = "numero-componente";
       numero.textContent = `#${bloco.id}`;
-      nome.append(numero, circulo ? "Círculo" : "Retângulo");
+      const nomeParaLeitor = document.createElement("span");
+      nomeParaLeitor.className = "so-leitor";
+      nomeParaLeitor.textContent = forma;
 
       const largura = formatarMedida(bloco.width);
       const altura = formatarMedida(bloco.height);
@@ -255,18 +280,15 @@ function renderizarLista(atual: GabaritoRecebido): void {
       valores.className = "valores";
       valores.append(
         ...(circulo
-          ? [criarValor(`diâm. ${largura} px`, `${largura}px`, "Copiar o diâmetro")]
+          ? [criarValor(`diâm. ${largura}`, `${largura}px`, "Copiar o diâmetro")]
           : [
-              criarValor(`larg. ${largura} px`, `${largura}px`, "Copiar a largura"),
-              criarValor(`alt. ${altura} px`, `${altura}px`, "Copiar a altura"),
+              criarValor(`larg. ${largura}`, `${largura}px`, "Copiar a largura"),
+              criarValor(`alt. ${altura}`, `${altura}px`, "Copiar a altura"),
             ]),
         criarValor(cor, cor, "Copiar a cor"),
       );
 
-      const info = document.createElement("div");
-      info.className = "info";
-      info.append(nome, valores);
-      item.append(criarAmostra(bloco.color), info);
+      item.append(amostra, numero, nomeParaLeitor, valores);
       item.addEventListener("click", () => selecionar(bloco.id, false));
       item.addEventListener("mouseenter", () => {
         sobMouseId = bloco.id;

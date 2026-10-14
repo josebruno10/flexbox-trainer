@@ -7,6 +7,15 @@ As mudanças de cada versão do FlexBox Trainer.
 ### Login
 - Pré-cadastro no torneio para quem entra com um e-mail que não está lá: a extensão pede nome, ano de ingresso, período, sede e nível, cria o usuário e coloca o aluno no time genérico. Fica desligado (`flexboxTrainer.preCadastro`) até as rotas serem confirmadas com a organização.
 
+### Telas
+- Barra lateral mais curta: o gabarito e a sua página dividem o mesmo quadro, com **Gabarito | Sua página** para alternar, e os dados ficam em duas colunas. O **Verificar** aparece sem rolar.
+- Uma ação principal por vez, em degradê: **Gerar novo desafio** antes do primeiro desafio, **Verificar** depois. **Encerrar desafio** ficou discreto.
+- Abaixo da nota, as últimas tentativas do desafio e a melhor delas.
+- A barra de status mostra o tempo e a última precisão; clicar nela abre a barra lateral.
+- Antes do primeiro desafio, o quadro diz como começar.
+- Na aba do gabarito, um componente por linha (a amostra é redonda nos círculos), e o botão **Componentes** esconde a lista; no modo Lado a lado ela começa escondida.
+- Ícone novo na barra de atividades, no formato do ícone da extensão, e o ícone colorido na aba do gabarito.
+
 ### Documentação
 - Imagens das telas no README e na página da versão.
 

@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <rect x="10" y="10" width="108" height="108" rx="22" fill="#127681"/>
-  <rect x="28" y="30" width="72" height="14" rx="7" fill="#F8F7F3"/>
-  <rect x="28" y="54" width="48" height="14" rx="7" fill="#F4D35E"/>
-  <rect x="28" y="78" width="60" height="14" rx="7" fill="#EE964B"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.6" stroke-linejoin="round">
+  <!-- O VS Code usa só o formato (é um molde na cor do tema): os mesmos
+       blocos e o círculo do ícone da extensão, em traço. -->
+  <rect x="3.5" y="3.5" width="17" height="6" rx="1"/>
+  <rect x="3.5" y="12.5" width="7.5" height="8" rx="1"/>
+  <circle cx="16.75" cy="16.5" r="4"/>
 </svg>

@@ -70,9 +70,9 @@ Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar 
 1. **Gerar novo desafio** cria uma imagem nova. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela.
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
-4. Salve os arquivos para atualizar a pré-visualização e a comparação.
+4. Salve os arquivos para atualizar a pré-visualização e a comparação. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
 5. Clique em **Verificar**. A barra lateral mostra as etapas e, no fim, a **precisão oficial do servidor**.
-6. Ajuste e verifique de novo. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
+6. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
 7. **Encerrar desafio** congela o cronômetro quando você terminar.
 
 Só contam elementos com cor de fundo sólida (`background` ou `background-color`). Texto, imagens, gradientes e sombras não são comparados.
@@ -90,8 +90,11 @@ Salvar no editor, inclusive com formatação ao salvar, e criar os arquivos pelo
 
 ## A barra lateral
 
+A barra lateral tem três partes: **Desafio** (o quadro, as medidas e os dados do gabarito), **Sua página** (os arquivos e o **Verificar**) e **Resultado** (a precisão e as tentativas).
+
 | Botão | O que faz |
 |---|---|
+| Gabarito, Sua página | Alternam o que o quadro mostra: o gabarito ou a sua página |
 | Gerar novo desafio | Cria um desafio novo e reinicia o cronômetro |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
 | Testar servidor | Confere se a sua sessão está valendo no servidor |
@@ -102,13 +105,17 @@ Salvar no editor, inclusive com formatação ao salvar, e criar os arquivos pelo
 | Verificar | Mede a sua página e envia para a correção |
 | Sair | Encerra a sua sessão |
 
+Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
+
 ## A aba do gabarito
 
 Abra pelo botão **Abrir em uma aba**, pelo atalho **Abrir gabarito em uma aba** que aparece no topo do `index.html` e do `style.css`, ou pela paleta de comandos. A aba acompanha o desafio atual e tem três modos:
 
-- **Gabarito**: a imagem grande e a lista de todos os componentes, com largura, altura (ou diâmetro) e cor. Clique em um componente, na imagem ou na lista, para destacá-lo por alguns segundos (Esc tira o destaque na hora); clique em um valor para copiá-lo.
+- **Gabarito**: a imagem grande e a lista de todos os componentes, um por linha, com largura, altura (ou diâmetro, nos círculos, que têm a amostra redonda) e cor. Clique em um componente, na imagem ou na lista, para destacá-lo por alguns segundos (Esc tira o destaque na hora); clique em um valor para copiá-lo.
 - **Sobrepor à sua página**: o gabarito por cima da sua página. Arraste o controle entre "Sua página" e "Gabarito" para ver onde cada uma difere.
-- **Lado a lado**: o gabarito e a sua página, um ao lado do outro.
+- **Lado a lado**: o gabarito e a sua página, um ao lado do outro. A lista começa escondida, para as imagens ficarem maiores.
+
+O botão **Componentes** mostra ou esconde a lista em qualquer modo.
 
 A sua página aparece na aba exatamente como ela é medida para a correção, e é atualizada quando você salva os arquivos.
 

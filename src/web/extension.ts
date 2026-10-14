@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
+import { BarraDeStatus } from "./provider/barra-de-status";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
@@ -14,13 +15,16 @@ export async function activate(context: vscode.ExtensionContext) {
   initializeLogger(context);
 
   const authService = new AuthService(context);
+  const barraDeStatus = new BarraDeStatus();
   const provedor = new ProvedorBarraLateralFlexBox(
     context.extensionUri,
     authService,
     context.globalState,
+    undefined,
+    barraDeStatus,
   );
 
-  context.subscriptions.push(authService);
+  context.subscriptions.push(authService, barraDeStatus);
 
   context.subscriptions.push(
     vscode.window.registerUriHandler({

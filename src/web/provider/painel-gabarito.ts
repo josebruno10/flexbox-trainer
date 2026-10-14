@@ -51,7 +51,9 @@ export class PainelGabarito implements vscode.Disposable {
     painel.iconPath = vscode.Uri.joinPath(
       this.extensionUri,
       "resources",
-      "flexbox-trainer.svg",
+      // Na aba o ícone aparece com as cores dele; o SVG da barra de
+      // atividades é só um molde.
+      "icone.png",
     );
     painel.webview.html = obterHtmlPainelGabarito(
       painel.webview,

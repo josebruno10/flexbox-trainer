@@ -33,6 +33,7 @@ import {
   verificarConexaoServidor,
 } from "../services/servidor";
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
+import { BarraDeStatus, EstadoBarraDeStatus } from "./barra-de-status";
 import { PainelGabarito } from "./painel-gabarito";
 
 const CRIAR_DINAMICA = "Criar dinâmica de treino";
@@ -76,6 +77,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   // Criada na primeira vez que o aluno abre o gabarito em uma aba.
   private painelGabarito?: PainelGabarito;
 
+  // Precisões das correções do desafio atual, da primeira à última.
+  private historicoNotas: number[] = [];
+
   // Última correção com nota: uma página igual não é reenviada ao servidor.
   private ultimaCorrecao?: {
     challengeId: string;
@@ -90,6 +94,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     private readonly registroGabaritos: vscode.Memento,
     private readonly detectarExtensoesIa: () => ExtensaoIa[] = () =>
       encontrarExtensoesIa(),
+    // Opcional para os testes não criarem itens na barra de status.
+    private readonly barraDeStatus?: BarraDeStatus,
   ) {
     this.extensionUri = extensionUri;
     this.authService = authService;
@@ -111,6 +117,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         this.painelGabarito?.atualizar(undefined);
         this.painelGabarito?.atualizarPagina(undefined);
         this.ultimaCorrecao = undefined;
+        this.historicoNotas = [];
       }
 
       this.enviarEstado();
@@ -285,6 +292,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.painelGabarito?.atualizar(this.desafioAtual);
     this.gabaritoAtual = undefined;
     this.avaliacaoAtual = undefined;
+    this.historicoNotas = [];
     this.inicioTentativaMs = Date.now();
     this.fimTentativaMs = undefined;
     this.enviarEstado();
@@ -674,6 +682,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         resultadoServidor.source === "servidor"
           ? { challengeId, assinatura, resultado: resultadoServidor }
           : undefined;
+      if (resultadoServidor.source === "servidor") {
+        this.historicoNotas = [
+          ...this.historicoNotas,
+          resultadoServidor.precision,
+        ];
+      }
 
       this.enviarEstado();
 
@@ -751,6 +765,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   private enviarEstado(): void {
+    // A barra de status vale mesmo com a barra lateral fechada.
+    this.barraDeStatus?.atualizar(this.estadoBarraDeStatus());
+
     if (!this.visualizacaoWebview) {
       return;
     }
@@ -786,12 +803,30 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       payload: this.resumoWorkspaceAtual,
     });
 
+    this.visualizacaoWebview.webview.postMessage({
+      type: "historicoNotas",
+      payload: this.historicoNotas,
+    });
+
     if (this.avaliacaoAtual) {
       this.visualizacaoWebview.webview.postMessage({
         type: "resultadoAvaliacao",
         payload: this.avaliacaoAtual,
       });
     }
+  }
+
+  private estadoBarraDeStatus(): EstadoBarraDeStatus | undefined {
+    if (!this.authService.isAutenticado() || !this.desafioAtual) {
+      return undefined;
+    }
+
+    return {
+      inicioMs: this.inicioTentativaMs,
+      fimMs: this.fimTentativaMs,
+      precisao: this.historicoNotas[this.historicoNotas.length - 1],
+      invalidado: Boolean(this.motivoInvalidacao),
+    };
   }
 
   private renderizarWebviewAtual(): void {
