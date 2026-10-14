@@ -149,4 +149,16 @@ const webviewAppConfig = {
   infrastructureLogging: { level: "log" },
 };
 
-module.exports = [webExtensionConfig, nodeExtensionConfig, webviewAppConfig];
+/** Suíte de testes para o host Node do desktop (npm run test:desktop). */
+/** @type WebpackConfig */
+const desktopTestConfig = {
+  ...nodeExtensionConfig,
+  entry: { "test/desktop": "./src/web/test/desktop.ts" },
+  externals: { vscode: "commonjs vscode", mocha: "commonjs mocha" },
+};
+
+// O pacote dos testes do desktop só é gerado quando pedido.
+module.exports = (env = {}) =>
+  env.testesDesktop
+    ? [desktopTestConfig]
+    : [webExtensionConfig, nodeExtensionConfig, webviewAppConfig];

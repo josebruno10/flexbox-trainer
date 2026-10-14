@@ -4,7 +4,7 @@ export class LoginProvider {
   public constructor(private readonly authService: AuthService) {}
 
   public async abrirLogin(): Promise<void> {
-    await this.authService.abrirFluxoAutenticacao("login");
+    await this.authService.abrirLoginGoogle();
   }
 
   public async revalidarSessao(): Promise<void> {

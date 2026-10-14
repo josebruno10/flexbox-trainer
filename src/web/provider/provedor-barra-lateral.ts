@@ -181,8 +181,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
               width: mensagem.width,
               height: mensagem.height,
             };
-            console.log(
-              `[FlexBox Trainer] Gabarito PNG gerado: ${mensagem.challengeId} (${mensagem.width}x${mensagem.height})`,
+            log.info(
+              `Gabarito PNG gerado: ${mensagem.challengeId} (${mensagem.width}x${mensagem.height})`,
             );
           }
           return;
@@ -279,8 +279,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
 
-    console.log("[FlexBox Trainer] Iniciando novo desafio...");
     this.desafioAtual = criarDesafioGerado();
+    log.info(`Novo desafio: ${this.desafioAtual.challengeId}.`);
     this.motivoInvalidacao = undefined;
     this.painelGabarito?.atualizar(this.desafioAtual);
     this.gabaritoAtual = undefined;

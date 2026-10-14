@@ -193,6 +193,8 @@ npm run compile-web   # compila
 npm run watch-web     # compila a cada alteração
 npm run lint          # verifica o estilo do código
 npm test              # roda os testes em um VS Code no Chromium
+npm run test:desktop  # roda os mesmos testes no VS Code desktop (precisa do comando `code`)
+npm run typecheck     # confere os tipos e acusa código sem uso
 ```
 
 Os testes simulam as respostas do servidor e não criam dados reais.

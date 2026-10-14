@@ -70,7 +70,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.login", async () => {
-      await authService.abrirFluxoAutenticacao("login");
+      await authService.abrirLoginGoogle();
     }),
   );
 
@@ -217,7 +217,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.iniciar", async () => {
       if (!authService.isAutenticado()) {
-        await authService.abrirFluxoAutenticacao("login");
+        await authService.abrirLoginGoogle();
         await vscode.commands.executeCommand(
           "workbench.view.extension.flexboxTrainer",
         );

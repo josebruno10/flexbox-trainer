@@ -148,11 +148,13 @@
   "scripts": {
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
     "pretest": "npm run compile-web",
+    "test:desktop": "webpack --env testesDesktop && node scripts/testes-desktop.mjs",
     "vscode:prepublish": "npm run package-web",
     "compile-web": "webpack",
     "watch-web": "webpack --watch",
     "package-web": "webpack --mode production --devtool hidden-source-map",
     "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p . --noUnusedLocals --noUnusedParameters",
     "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
   },
   "devDependencies": {

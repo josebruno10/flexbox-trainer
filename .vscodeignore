@@ -19,3 +19,4 @@ resources/icone.svg
 *.vsix
 .claude/**
 docs/**
+scripts/**

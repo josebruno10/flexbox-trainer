@@ -3,7 +3,6 @@ import { log } from "../services/logger";
 import { EstadoAutenticacao } from "../types";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
-type ModoAutenticacao = "login";
 type ProvedorAutenticacao = "gmail" | "github" | "microsoft";
 
 type PerfilServidor = {
@@ -175,15 +174,7 @@ export class AuthService implements vscode.Disposable {
     }
   }
 
-  public async abrirFluxoAutenticacao(
-    modo: ModoAutenticacao,
-  ): Promise<void> {
-    await this.abrirLoginGoogle(modo);
-  }
-
-  public async abrirLoginGoogle(
-    modo: ModoAutenticacao = "login",
-  ): Promise<void> {
+  public async abrirLoginGoogle(): Promise<void> {
     const configuracao = vscode.workspace.getConfiguration("flexboxTrainer");
     const urlSite = configuracao.get<string>("authSiteUrl", "").trim();
 
@@ -206,7 +197,8 @@ export class AuthService implements vscode.Disposable {
     // toString() codificaria = e & da query do callback do vscode.dev.
     url.searchParams.set("callback", callbackExterno.toString(true));
     url.searchParams.set("state", estado);
-    url.searchParams.set("mode", modo);
+    // O site devolve o modo no retorno; só existe o login.
+    url.searchParams.set("mode", "login");
     url.searchParams.set("apiBaseUrl", this.lerUrlBaseApiAutenticacao());
 
     const googleClientId = configuracao

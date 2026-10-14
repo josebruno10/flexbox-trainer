@@ -2,6 +2,18 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Login
+- Pré-cadastro no torneio para quem entra com um e-mail que não está lá: a extensão pede nome, ano de ingresso, período, sede e nível, cria o usuário e coloca o aluno no time genérico. Fica desligado (`flexboxTrainer.preCadastro`) até as rotas serem confirmadas com a organização.
+
+### Documentação
+- Imagens das telas no README e na página da versão.
+
+### Para quem desenvolve
+- `npm run test:desktop` roda a suíte no host Node do VS Code desktop, e `npm run typecheck` confere os tipos e o código sem uso.
+- Ferramentas de build e teste atualizadas, com 10 das 13 vulnerabilidades corrigidas (nenhuma ia para o `.vsix`).
+
 ## [0.1.0] - 2026-10-14
 
 Primeira versão para instalar pelo arquivo `.vsix`.
