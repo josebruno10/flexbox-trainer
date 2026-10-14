@@ -5,8 +5,14 @@ import {
   BarraDeStatus,
   EstadoBarraDeStatus,
 } from "../../provider/barra-de-status";
-import { ProvedorBarraLateralFlexBox } from "../../provider/provedor-barra-lateral";
-import { criarDesafioGerado } from "../../services/desafio";
+import {
+  ProgressoGuia,
+  ProvedorBarraLateralFlexBox,
+} from "../../provider/provedor-barra-lateral";
+import {
+  criarDesafioGerado,
+  criarDesafioPorCodigo,
+} from "../../services/desafio";
 import { modeloCss, modeloHtml } from "../../services/workspace";
 import {
   ConfiguracaoServidor,
@@ -94,8 +100,12 @@ suite("Provedor da barra lateral", () => {
   const showInformationMessageOriginal = vscode.window.showInformationMessage;
   const showWarningMessageOriginal = vscode.window.showWarningMessage;
   const executeCommandOriginal = vscode.commands.executeCommand;
+  const showInputBoxOriginal = vscode.window.showInputBox;
+  const showQuickPickOriginal = vscode.window.showQuickPick;
 
   teardown(() => {
+    vscode.window.showInputBox = showInputBoxOriginal;
+    vscode.window.showQuickPick = showQuickPickOriginal;
     Date.now = dateNowOriginal;
     globalThis.fetch = fetchOriginal;
     vscode.workspace.getConfiguration = getConfigurationOriginal;
@@ -597,6 +607,138 @@ suite("Provedor da barra lateral", () => {
     await provedor.testarServidorPeloComando();
     assert.deepStrictEqual(informacoes, ["Servidor OK, sessão válida (HTTP 200)."]);
     assert.strictEqual(ultimaMensagem(mensagens, "statusServidor"), undefined);
+  });
+
+  suite("Desafio por código e histórico", () => {
+    // Um desafio de código pronto para verificar, com o gabarito já enviado.
+    async function prepararCodigo(
+      provedor: ProvedorBarraLateralFlexBox,
+      registro: vscode.Memento,
+      codigo: string,
+    ): Promise<ProvedorInterno> {
+      const interno = prepararVerificacao(provedor, 260);
+      interno.desafioAtual = criarDesafioPorCodigo(codigo);
+      interno.gabaritoAtual = {
+        ...interno.gabaritoAtual!,
+        challengeId: interno.desafioAtual.challengeId,
+      };
+      await registro.update(CHAVE_REGISTRO, {
+        cod: 91,
+        challengeId: interno.desafioAtual.challengeId,
+      });
+      return interno;
+    }
+
+    function historicoEnviado(mensagens: MensagemWebview[]) {
+      return ultimaMensagem(mensagens, "historicoDesafios")?.payload as {
+        registros: { codigo: string; melhor: number }[];
+        total: number;
+        recorde: number | null;
+      };
+    }
+
+    test("abre o desafio do código digitado e refaz o mesmo desafio", async () => {
+      vscode.window.showInputBox = (async () => " 482 917 ") as typeof vscode.window.showInputBox;
+      const provedor = criarProvedorParaTeste([]);
+      const interno = provedor as unknown as ProvedorInterno;
+      interno.testarConexaoServidor = async () => undefined;
+
+      await provedor.abrirDesafioPorCodigo();
+
+      const primeiro = interno.desafioAtual!;
+      assert.strictEqual(primeiro.codigo, "482917");
+      assert.deepStrictEqual(primeiro.blocks, criarDesafioPorCodigo("482917").blocks);
+
+      await provedor.refazerDesafio();
+
+      assert.strictEqual(interno.desafioAtual!.codigo, "482917");
+      assert.deepStrictEqual(interno.desafioAtual!.blocks, primeiro.blocks);
+      assert.notStrictEqual(interno.desafioAtual!.challengeId, primeiro.challengeId);
+    });
+
+    test("não abre nada com um código inválido ou cancelado", async () => {
+      const provedor = criarProvedorParaTeste([]);
+      const interno = provedor as unknown as ProvedorInterno;
+      interno.testarConexaoServidor = async () => undefined;
+
+      for (const resposta of [undefined, "", "12345"]) {
+        vscode.window.showInputBox = (async () => resposta) as typeof vscode.window.showInputBox;
+        await provedor.abrirDesafioPorCodigo();
+      }
+      await provedor.refazerDesafio("abc");
+
+      assert.strictEqual(interno.desafioAtual, undefined);
+    });
+
+    test("grava cada nota no histórico e mostra o recorde quando o desafio é refeito", async () => {
+      mockarConfiguracaoServidorValida();
+      const notas = [42.5, 80];
+      mockarServidor({
+        "POST /tipo-dinamica/treino/corrigir-formas": () =>
+          json({ pontuacao: notas.shift() }),
+      });
+      const registro = criarRegistroFalso();
+      const mensagens: MensagemWebview[] = [];
+      const provedor = criarProvedorParaTeste(mensagens, { registro });
+      const interno = await prepararCodigo(provedor, registro, "482917");
+
+      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+      assert.deepStrictEqual(
+        historicoEnviado(mensagens).registros.map(({ codigo, melhor }) => [codigo, melhor]),
+        [["482917", 42.5]],
+      );
+      // Na primeira vez, o recorde é a própria nota: não aparece.
+      assert.strictEqual(historicoEnviado(mensagens).recorde, null);
+
+      // Refeito, o desafio mostra o recorde da vez anterior como a nota a bater.
+      await prepararCodigo(provedor, registro, "482917");
+      interno.enviarEstado();
+      assert.strictEqual(historicoEnviado(mensagens).recorde, 42.5);
+
+      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+        { ...FORMAS[0], cor: "#123456" },
+        FORMAS[1],
+      ]);
+
+      const depois = historicoEnviado(mensagens);
+      assert.deepStrictEqual(depois.registros.map(({ melhor }) => melhor), [80]);
+      assert.strictEqual(depois.recorde, 80);
+      assert.strictEqual(depois.total, 1);
+    });
+
+    test("avisa o guia do que o aluno já fez", async () => {
+      mockarConfiguracaoServidorValida();
+      mockarServidor({
+        "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 64 }),
+      });
+      const registro = criarRegistroFalso();
+      const provedor = criarProvedorParaTeste([], { registro });
+      const progressos: ProgressoGuia[] = [];
+      provedor.onDidMudarProgresso((progresso) => progressos.push(progresso));
+      const interno = provedor as unknown as ProvedorInterno;
+
+      const pastaAberta = (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
+      interno.enviarEstado();
+      assert.deepStrictEqual(progressos[progressos.length - 1], {
+        autenticado: true,
+        pastaAberta,
+        semExtensoesIa: true,
+        temDesafio: false,
+        verificou: false,
+      });
+
+      await prepararCodigo(provedor, registro, "482917");
+      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+
+      assert.deepStrictEqual(progressos[progressos.length - 1], {
+        autenticado: true,
+        pastaAberta,
+        semExtensoesIa: true,
+        temDesafio: true,
+        verificou: true,
+      });
+    });
   });
 
   test("guarda as precisões do desafio para o histórico e a barra de status", async () => {

@@ -12,6 +12,8 @@ import {
   escreverArquivosDeTreino,
 } from "./services/workspace";
 
+const CHAVE_GUIA_ABERTO = "flexboxTrainer.guiaAberto";
+
 export async function activate(context: vscode.ExtensionContext) {
   initializeLogger(context);
 
@@ -81,6 +83,54 @@ export async function activate(context: vscode.ExtensionContext) {
         provedor.agendarAtualizacaoPreview();
       }
     }),
+  );
+
+  // O guia de primeiros passos marca cada passo pelo que o aluno já fez.
+  const contextoGuia = new Map<string, boolean>();
+  context.subscriptions.push(
+    provedor.onDidMudarProgresso((progresso) => {
+      for (const [chave, valor] of Object.entries(progresso)) {
+        if (contextoGuia.get(chave) !== valor) {
+          contextoGuia.set(chave, valor);
+          void vscode.commands.executeCommand(
+            "setContext",
+            `flexboxTrainer.${chave}`,
+            valor,
+          );
+        }
+      }
+    }),
+  );
+
+  const abrirBarraLateral = () =>
+    vscode.commands.executeCommand("workbench.view.extension.flexboxTrainer");
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("flexbox-trainer.novoDesafio", async () => {
+      await abrirBarraLateral();
+      if (!authService.isAutenticado()) {
+        void vscode.window.showInformationMessage("Entre antes de gerar um desafio.");
+        return;
+      }
+      await provedor.iniciarNovoDesafio();
+    }),
+    vscode.commands.registerCommand("flexbox-trainer.abrirPorCodigo", async () => {
+      await abrirBarraLateral();
+      await provedor.abrirDesafioPorCodigo();
+    }),
+    vscode.commands.registerCommand("flexbox-trainer.refazerDesafio", () =>
+      provedor.refazerDesafio(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.verHistorico", () =>
+      provedor.verHistorico(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.abrirGuia", () =>
+      vscode.commands.executeCommand(
+        "workbench.action.openWalkthrough",
+        `${context.extension.id}#primeirosPassos`,
+        false,
+      ),
+    ),
   );
 
   context.subscriptions.push(
@@ -259,6 +309,20 @@ export async function activate(context: vscode.ExtensionContext) {
   // armazenamento seguro ou a API de autenticação estiverem lentos/offline.
   // A inicialização da sessão atualiza a webview assim que for concluída.
   void authService.inicializar();
+
+  // Uma única vez, na primeira vez que a extensão roda (inclusive depois de
+  // atualizar de uma versão sem guia), abre o guia de primeiros passos.
+  if (
+    context.extensionMode !== vscode.ExtensionMode.Test &&
+    !context.globalState.get<boolean>(CHAVE_GUIA_ABERTO)
+  ) {
+    void context.globalState.update(CHAVE_GUIA_ABERTO, true);
+    void vscode.commands.executeCommand(
+      "workbench.action.openWalkthrough",
+      `${context.extension.id}#primeirosPassos`,
+      false,
+    );
+  }
 }
 
 export function deactivate() {}

@@ -31,6 +31,19 @@ type DesafioRecebido = {
   }>;
   tempoAtualMs?: number;
   encerrado?: boolean;
+  codigo?: string;
+};
+
+type RegistroHistoricoRecebido = {
+  codigo: string;
+  melhor: number;
+  tempoMelhorMs: number;
+};
+
+type HistoricoDesafiosRecebido = {
+  registros: RegistroHistoricoRecebido[];
+  total: number;
+  recorde: number | null;
 };
 
 type ResumoWorkspaceRecebido = {
@@ -77,6 +90,7 @@ type MensagemDaExtensao =
   | { type: "estadoAutenticacao"; payload: EstadoAutenticacaoRecebido }
   | { type: "extensoesIa"; payload: Array<{ id: string; nome: string }> }
   | { type: "historicoNotas"; payload: number[] }
+  | { type: "historicoDesafios"; payload: HistoricoDesafiosRecebido }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
   | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };
 
@@ -88,6 +102,7 @@ let verificacaoPendente: { id: number; challengeId: string } | undefined;
 let contadorVerificacoes = 0;
 let resultadoDuranteVerificacao: ResultadoAvaliacaoRecebido | undefined;
 let historicoDuranteVerificacao: number[] | undefined;
+let historicoDesafiosDuranteVerificacao: HistoricoDesafiosRecebido | undefined;
 let limiteVerificacao: number | undefined;
 
 const vscode = acquireVsCodeApi();
@@ -99,7 +114,7 @@ const canvasAnotacoes = document.getElementById(
 const seloDesafio = document.getElementById("seloDesafio") as HTMLSpanElement;
 const metaDesafio = document.getElementById("metaDesafio") as HTMLElement;
 const valorTempo = document.getElementById("valorTempo") as HTMLElement;
-const valorFormato = document.getElementById("valorFormato") as HTMLElement;
+const botaoCodigo = document.getElementById("botaoCodigo") as HTMLButtonElement;
 const valorFundo = document.getElementById("valorFundo") as HTMLElement;
 const valorComponentes = document.getElementById(
   "valorComponentes",
@@ -127,6 +142,18 @@ const botoesVista = Array.from(
 const historicoNotas = document.getElementById("historicoNotas") as HTMLElement;
 const valorTentativas = document.getElementById("valorTentativas") as HTMLElement;
 const valorMelhor = document.getElementById("valorMelhor") as HTMLElement;
+const linhaTentativas = document.getElementById("linhaTentativas") as HTMLElement;
+const linhaMelhor = document.getElementById("linhaMelhor") as HTMLElement;
+const linhaRecorde = document.getElementById("linhaRecorde") as HTMLElement;
+const valorRecorde = document.getElementById("valorRecorde") as HTMLElement;
+const secaoHistorico = document.getElementById("secaoHistorico") as HTMLElement;
+const listaHistorico = document.getElementById("listaHistorico") as HTMLElement;
+const botaoVerHistorico = document.getElementById(
+  "botaoVerHistorico",
+) as HTMLButtonElement;
+// O recorde do código em andamento, quando o aluno já o fez antes.
+let recordeAtual: number | undefined;
+let notasAtuais: number[] = [];
 // No histórico cabem as três últimas tentativas na largura da barra.
 const TENTATIVAS_NO_HISTORICO = 3;
 const caixaResultado = document.getElementById(
@@ -158,6 +185,10 @@ const botaoNovoDesafio = document.getElementById(
 ) as HTMLButtonElement;
 const botaoEncerrarDesafio = document.getElementById(
   "botaoEncerrarDesafio",
+) as HTMLButtonElement;
+const botaoRefazer = document.getElementById("botaoRefazer") as HTMLButtonElement;
+const botaoPorCodigo = document.getElementById(
+  "botaoPorCodigo",
 ) as HTMLButtonElement;
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById(
@@ -219,6 +250,27 @@ function aplicarProporcaoDoDesafio(largura: number, altura: number): void {
 
 botaoNovoDesafio?.addEventListener("click", () => {
   vscode.postMessage({ type: "novoDesafio" });
+});
+
+botaoPorCodigo.addEventListener("click", () => {
+  vscode.postMessage({ type: "abrirPorCodigo" });
+});
+
+botaoRefazer.addEventListener("click", () => {
+  vscode.postMessage({ type: "refazer" });
+});
+
+botaoVerHistorico.addEventListener("click", () => {
+  vscode.postMessage({ type: "verHistorico" });
+});
+
+botaoCodigo.addEventListener("click", () => {
+  if (!desafioAtual?.codigo) {
+    return;
+  }
+  vscode.postMessage({ type: "copiarCodigo" });
+  botaoCodigo.classList.add("copiado");
+  window.setTimeout(() => botaoCodigo.classList.remove("copiado"), 900);
 });
 
 botaoEncerrarDesafio?.addEventListener("click", () => {
@@ -322,6 +374,7 @@ function desenharDesafio(desafio: DesafioRecebido): void {
     verificacaoPendente = undefined;
     resultadoDuranteVerificacao = undefined;
     historicoDuranteVerificacao = undefined;
+    historicoDesafiosDuranteVerificacao = undefined;
   }
 
   // O cronômetro fica congelado ao encerrar, mas o aluno ainda pode
@@ -331,10 +384,8 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
   desenharDestaques();
   renderizarDetalheComponente();
-  // Sem "px": na grade de dados ele quebraria a linha; o detalhe logo acima
-  // já mostra a unidade.
-  valorFormato.textContent =
-    `${formatarMedida(desafio.width)} × ${formatarMedida(desafio.height)}`;
+  botaoCodigo.textContent = desafio.codigo ? formatarCodigo(desafio.codigo) : "--";
+  botaoCodigo.disabled = !desafio.codigo;
   valorFundo.replaceChildren(
     criarAmostra(desafio.backgroundColor),
     normalizarHex(desafio.backgroundColor),
@@ -365,6 +416,9 @@ function renderizarMetaDesafio(): void {
     (desafioAtual.encerrado ? 0 : Date.now() - instanteTempoRecebido);
   valorTempo.textContent = formatarTempo(tempoDecorrido);
   const estado = desafioAtual.encerrado ? "encerrado" : "andamento";
+  // Encerrado, a ação seguinte é refazer o mesmo desafio.
+  botaoEncerrarDesafio.hidden = Boolean(desafioAtual.encerrado);
+  botaoRefazer.hidden = !desafioAtual.encerrado || !desafioAtual.codigo;
   if (seloDesafio.dataset.estado !== estado) {
     seloDesafio.dataset.estado = estado;
     seloDesafio.textContent = desafioAtual.encerrado
@@ -409,7 +463,12 @@ function mostrarItensDoDesafio(visiveis: boolean): void {
   ]) {
     item.hidden = !visiveis;
   }
+  if (!visiveis) {
+    botaoRefazer.hidden = true;
+  }
   quadroVazio.hidden = visiveis;
+  // Sem desafio, abrir por código ocupa a linha toda, logo abaixo de gerar.
+  botaoPorCodigo.classList.toggle("largo", !visiveis);
   botaoNovoDesafio.classList.toggle("principal", !visiveis);
   botaoNovoDesafio.classList.toggle("secundario", visiveis);
 }
@@ -637,13 +696,25 @@ function concluirVerificacao(): void {
     renderizarHistorico(historicoDuranteVerificacao);
     historicoDuranteVerificacao = undefined;
   }
+  if (historicoDesafiosDuranteVerificacao) {
+    renderizarHistoricoDesafios(historicoDesafiosDuranteVerificacao);
+    historicoDesafiosDuranteVerificacao = undefined;
+  }
 }
 
 // As últimas precisões do desafio e a melhor: a evolução, sem dizer o que
 // está errado.
 function renderizarHistorico(notas: number[]): void {
-  historicoNotas.hidden = notas.length < 2;
-  if (notas.length < 2) {
+  notasAtuais = notas;
+  const comTentativas = notas.length >= 2;
+  linhaTentativas.hidden = !comTentativas;
+  linhaMelhor.hidden = !comTentativas;
+  linhaRecorde.hidden = recordeAtual === undefined;
+  historicoNotas.hidden = !comTentativas && recordeAtual === undefined;
+  if (recordeAtual !== undefined) {
+    valorRecorde.textContent = `${formatarPorcentagem(recordeAtual)}%`;
+  }
+  if (!comTentativas) {
     return;
   }
 
@@ -658,6 +729,45 @@ function renderizarHistorico(notas: number[]): void {
   });
   valorTentativas.replaceChildren(...partes);
   valorMelhor.textContent = `${formatarPorcentagem(Math.max(...notas))}%`;
+}
+
+// Os desafios mais recentes do aluno, com a melhor nota e o tempo dela; cada
+// um pode ser refeito. O recorde do desafio em andamento vai para o Resultado.
+function renderizarHistoricoDesafios(historico: HistoricoDesafiosRecebido): void {
+  recordeAtual = historico.recorde ?? undefined;
+  renderizarHistorico(notasAtuais);
+
+  secaoHistorico.hidden = historico.registros.length === 0;
+  botaoVerHistorico.hidden = historico.total <= historico.registros.length;
+  botaoVerHistorico.textContent = `Ver todos (${historico.total})`;
+  listaHistorico.replaceChildren(
+    ...historico.registros.map((registro) => {
+      const item = document.createElement("li");
+      item.classList.toggle("atual", registro.codigo === desafioAtual?.codigo);
+      const codigo = document.createElement("span");
+      codigo.textContent = formatarCodigo(registro.codigo);
+      const nota = document.createElement("span");
+      nota.textContent = `${formatarPorcentagem(registro.melhor)}%`;
+      const tempo = document.createElement("span");
+      tempo.className = "tempo";
+      tempo.textContent = formatarTempo(registro.tempoMelhorMs);
+      const refazer = document.createElement("button");
+      refazer.type = "button";
+      refazer.className = "discreto";
+      refazer.textContent = "↻";
+      refazer.title = `Refazer o desafio ${formatarCodigo(registro.codigo)}`;
+      refazer.setAttribute("aria-label", refazer.title);
+      refazer.addEventListener("click", () => {
+        vscode.postMessage({ type: "refazer", codigo: registro.codigo });
+      });
+      item.append(codigo, nota, tempo, refazer);
+      return item;
+    }),
+  );
+}
+
+function formatarCodigo(codigo: string): string {
+  return `${codigo.slice(0, 3)} ${codigo.slice(3)}`;
 }
 
 function formatarPorcentagem(valor: number): string {
@@ -988,6 +1098,14 @@ window.addEventListener(
 
     if (mensagem.type === "dadosWorkspace") {
       void renderizarWorkspace(mensagem.payload);
+    }
+
+    if (mensagem.type === "historicoDesafios") {
+      if (verificacaoPendente) {
+        historicoDesafiosDuranteVerificacao = mensagem.payload;
+      } else {
+        renderizarHistoricoDesafios(mensagem.payload);
+      }
     }
 
     if (mensagem.type === "historicoNotas") {

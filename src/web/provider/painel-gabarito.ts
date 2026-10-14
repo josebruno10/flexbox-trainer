@@ -126,6 +126,7 @@ export class PainelGabarito implements vscode.Disposable {
       payload: desafio
         ? {
             challengeId: desafio.challengeId,
+            codigo: desafio.codigo,
             width: desafio.width,
             height: desafio.height,
             backgroundColor: desafio.backgroundColor,

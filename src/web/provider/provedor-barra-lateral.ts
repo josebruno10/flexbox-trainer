@@ -13,7 +13,12 @@ import {
   ResultadoAvaliacao,
   StatusConexaoServidor,
 } from "../types";
-import { criarDesafioGerado } from "../services/desafio";
+import {
+  formatarCodigo,
+  normalizarCodigo,
+} from "../services/codigoDesafio";
+import { criarDesafioPorCodigo } from "../services/desafio";
+import { HistoricoDesafios, RegistroHistorico } from "../services/historico";
 import {
   criarArquivosDeTreino,
   criarResumoWorkspaceVazio,
@@ -35,7 +40,11 @@ import {
   verificarConexaoServidor,
 } from "../services/servidor";
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
-import { BarraDeStatus, EstadoBarraDeStatus } from "./barra-de-status";
+import {
+  BarraDeStatus,
+  EstadoBarraDeStatus,
+  formatarTempo,
+} from "./barra-de-status";
 import { PainelGabarito } from "./painel-gabarito";
 
 const CRIAR_DINAMICA = "Criar dinâmica de treino";
@@ -43,6 +52,20 @@ const ABRIR_PASTA = "Abrir pasta";
 const VER_EXTENSOES = "Ver extensões";
 const CADASTRAR = "Cadastrar";
 const LIMPAR_E_GERAR = "Limpar e gerar";
+// Na barra lateral cabem os desafios mais recentes; o resto fica no comando
+// Histórico de Desafios.
+const HISTORICO_NA_BARRA = 5;
+
+/** O que o guia de primeiros passos precisa saber para marcar cada passo. */
+export type ProgressoGuia = {
+  autenticado: boolean;
+  // A chave workspaceFolderCount do VS Code já vale antes de o guia ser
+  // registrado, e o guia só percebe mudanças; esta é definida depois.
+  pastaAberta: boolean;
+  semExtensoesIa: boolean;
+  temDesafio: boolean;
+  verificou: boolean;
+};
 // Espera depois da última tecla antes de redesenhar a página do aluno.
 const ESPERA_DIGITACAO_MS = 500;
 // Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
@@ -91,6 +114,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   // Precisões das correções do desafio atual, da primeira à última.
   private historicoNotas: number[] = [];
 
+  // Os desafios já verificados, com a melhor nota de cada um.
+  private readonly historico: HistoricoDesafios;
+
+  private readonly progressoMudou = new vscode.EventEmitter<ProgressoGuia>();
+
+  /** Para o guia de primeiros passos marcar o que o aluno já fez. */
+  public readonly onDidMudarProgresso = this.progressoMudou.event;
+
   // Última correção com nota: uma página igual não é reenviada ao servidor.
   private ultimaCorrecao?: {
     challengeId: string;
@@ -111,6 +142,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.extensionUri = extensionUri;
     this.authService = authService;
     this.loginProvider = new LoginProvider(authService);
+    // O mesmo armazenamento global da extensão, com uma chave por aluno.
+    this.historico = new HistoricoDesafios(registroGabaritos);
     this.estadoAutenticacao = authService.getEstadoAtual();
 
     this.authService.onDidChangeEstado((estado) => {
@@ -216,6 +249,28 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "abrirPorCodigo") {
+          void this.abrirDesafioPorCodigo();
+          return;
+        }
+
+        if (mensagem.type === "refazer") {
+          void this.refazerDesafio(
+            typeof mensagem.codigo === "string" ? mensagem.codigo : undefined,
+          );
+          return;
+        }
+
+        if (mensagem.type === "verHistorico") {
+          void this.verHistorico();
+          return;
+        }
+
+        if (mensagem.type === "copiarCodigo") {
+          void this.copiarCodigo();
+          return;
+        }
+
         if (mensagem.type === "abrirPainelGabarito") {
           this.abrirPainelGabarito();
           return;
@@ -268,7 +323,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  public async iniciarNovoDesafio(): Promise<void> {
+  /** Sem código, sorteia um desafio; com código, abre exatamente aquele. */
+  public async iniciarNovoDesafio(codigo?: string): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
@@ -305,8 +361,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      this.desafioAtual = criarDesafioGerado();
-      log.info(`Novo desafio: ${this.desafioAtual.challengeId}.`);
+      this.desafioAtual = criarDesafioPorCodigo(codigo);
+      log.info(
+        `Novo desafio: código ${this.desafioAtual.codigo} (${this.desafioAtual.challengeId}).`,
+      );
       this.motivoInvalidacao = undefined;
       this.painelGabarito?.atualizar(this.desafioAtual);
       this.gabaritoAtual = undefined;
@@ -561,6 +619,84 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.painelGabarito?.aplicarCores();
   }
 
+  /** Pede um código (o que o professor ou um colega passou) e abre o desafio. */
+  public async abrirDesafioPorCodigo(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      void vscode.window.showWarningMessage("Entre antes de abrir um desafio.");
+      return;
+    }
+
+    const texto = await vscode.window.showInputBox({
+      title: "Abrir desafio por código",
+      prompt: "O código de 6 dígitos que o professor ou um colega passou.",
+      placeHolder: "482 917",
+      ignoreFocusOut: true,
+      validateInput: (valor) =>
+        !valor.trim() || normalizarCodigo(valor)
+          ? undefined
+          : "Digite os 6 dígitos do código.",
+    });
+    const codigo = texto ? normalizarCodigo(texto) : undefined;
+    if (codigo) {
+      await this.iniciarNovoDesafio(codigo);
+    }
+  }
+
+  /** Começa de novo um desafio: o atual ou um do histórico. */
+  public async refazerDesafio(codigo = this.desafioAtual?.codigo): Promise<void> {
+    const valido = codigo ? normalizarCodigo(codigo) : undefined;
+    if (!valido) {
+      void vscode.window.showInformationMessage("Gere um desafio antes de refazê-lo.");
+      return;
+    }
+    await this.iniciarNovoDesafio(valido);
+  }
+
+  /** Todos os desafios do histórico; escolher um começa ele de novo. */
+  public async verHistorico(): Promise<void> {
+    const registros = this.historico.listar(this.authService.getSessaoAtual()?.email);
+    if (registros.length === 0) {
+      void vscode.window.showInformationMessage(
+        "Os desafios que você verificar aparecem no histórico.",
+      );
+      return;
+    }
+
+    const escolhido = await vscode.window.showQuickPick(
+      registros.map((registro) => ({
+        label: formatarCodigo(registro.codigo),
+        description: `${formatarPorcentagem(registro.melhor)}% em ${formatarTempo(registro.tempoMelhorMs)}`,
+        detail:
+          `${registro.verificacoes} ${registro.verificacoes === 1 ? "verificação" : "verificações"}` +
+          ` · feito ${registro.vezes} ${registro.vezes === 1 ? "vez" : "vezes"}` +
+          ` · ${new Date(registro.ultimaVez).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`,
+        codigo: registro.codigo,
+      })),
+      {
+        title: "Histórico de desafios",
+        placeHolder: "Escolha um desafio para refazer",
+        matchOnDescription: true,
+      },
+    );
+    if (escolhido) {
+      await this.refazerDesafio(escolhido.codigo);
+    }
+  }
+
+  public async copiarCodigo(): Promise<void> {
+    const codigo = this.desafioAtual?.codigo;
+    if (!codigo) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(codigo);
+    vscode.window.setStatusBarMessage(`Código ${formatarCodigo(codigo)} copiado.`, 2500);
+  }
+
   /** Abre a página das extensões de IA habilitadas, para desabilitá-las. */
   public async verExtensoesIa(): Promise<ExtensaoIa[]> {
     const lista = this.detectarExtensoesIa();
@@ -772,6 +908,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           ...this.historicoNotas,
           resultadoServidor.precision,
         ];
+        await this.registrarNoHistorico(resultadoServidor.precision);
       }
 
       this.enviarEstado();
@@ -871,8 +1008,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   private enviarEstado(): void {
-    // A barra de status vale mesmo com a barra lateral fechada.
+    // A barra de status e o guia valem mesmo com a barra lateral fechada.
     this.barraDeStatus?.atualizar(this.estadoBarraDeStatus());
+    this.progressoMudou.fire(this.progressoGuia());
 
     if (!this.visualizacaoWebview) {
       return;
@@ -914,12 +1052,72 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       payload: this.historicoNotas,
     });
 
+    const registros = this.registrosDoAluno();
+    this.visualizacaoWebview.webview.postMessage({
+      type: "historicoDesafios",
+      payload: {
+        registros: registros.slice(0, HISTORICO_NA_BARRA),
+        total: registros.length,
+        recorde: this.recordeDoDesafio() ?? null,
+      },
+    });
+
     if (this.avaliacaoAtual) {
       this.visualizacaoWebview.webview.postMessage({
         type: "resultadoAvaliacao",
         payload: this.avaliacaoAtual,
       });
     }
+  }
+
+  // A nota entra no histórico do aluno com o tempo em que foi alcançada.
+  private async registrarNoHistorico(precisao: number): Promise<void> {
+    const desafio = this.desafioAtual;
+    if (!desafio?.codigo) {
+      return;
+    }
+
+    const instante = Date.now();
+    await this.historico.registrarNota(this.authService.getSessaoAtual()?.email, {
+      codigo: desafio.codigo,
+      tentativa: desafio.challengeId,
+      precisao,
+      tempoMs: (this.fimTentativaMs ?? instante) - this.inicioTentativaMs,
+      instante,
+    });
+  }
+
+  private registrosDoAluno(): RegistroHistorico[] {
+    return this.authService.isAutenticado()
+      ? this.historico.listar(this.authService.getSessaoAtual()?.email)
+      : [];
+  }
+
+  // O melhor que o aluno já fez neste código antes: aparece quando ele refaz
+  // um desafio, como a nota a bater.
+  private recordeDoDesafio(): number | undefined {
+    const desafio = this.desafioAtual;
+    const registro = desafio?.codigo
+      ? this.registrosDoAluno().find((item) => item.codigo === desafio.codigo)
+      : undefined;
+    if (!registro || !desafio) {
+      return undefined;
+    }
+    const deOutraVez =
+      registro.ultimaTentativa !== desafio.challengeId || registro.vezes > 1;
+    return deOutraVez ? registro.melhor : undefined;
+  }
+
+  private progressoGuia(): ProgressoGuia {
+    const autenticado = this.authService.isAutenticado();
+    return {
+      autenticado,
+      pastaAberta: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
+      semExtensoesIa: this.detectarExtensoesIa().length === 0,
+      temDesafio: autenticado && Boolean(this.desafioAtual),
+      verificou:
+        this.historicoNotas.length > 0 || this.registrosDoAluno().length > 0,
+    };
   }
 
   private estadoBarraDeStatus(): EstadoBarraDeStatus | undefined {
@@ -1010,4 +1208,11 @@ function mostrarFalhaAoAbrirLogin(error: unknown): void {
   const mensagem =
     error instanceof Error ? error.message : "Não foi possível abrir o login.";
   void vscode.window.showErrorMessage(`Erro no login: ${mensagem}`);
+}
+
+function formatarPorcentagem(valor: number): string {
+  return valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }

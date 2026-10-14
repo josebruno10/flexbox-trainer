@@ -696,6 +696,60 @@ export function obterHtmlWebview(
       margin-top: 10px;
     }
 
+    /* O código parece texto, mas é um botão: copia ao clicar. */
+    button.valor-codigo {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--texto);
+      background: transparent;
+      cursor: copy;
+    }
+
+    button.valor-codigo:hover:not(:disabled) {
+      box-shadow: none;
+      transform: none;
+      color: var(--acento);
+    }
+
+    button.valor-codigo.copiado {
+      color: var(--acento);
+    }
+
+    .lista-historico {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .lista-historico li {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0 4px 8px;
+      border-bottom: 1px dashed var(--linha-tracejada);
+      border-left: 2px solid transparent;
+      font-family: var(--fonte-mono);
+      font-size: 12px;
+    }
+
+    /* O desafio em andamento, se já estiver no histórico. */
+    .lista-historico li.atual {
+      border-left-color: var(--acento);
+    }
+
+    .lista-historico .tempo {
+      color: var(--texto-suave);
+    }
+
+    .lista-historico button {
+      padding: 2px 6px;
+      font-size: 13px;
+    }
+
     .historico .atual {
       font-weight: 500;
       color: var(--texto);
@@ -747,15 +801,17 @@ export function obterHtmlWebview(
     </div>
     <div class="detalhe" id="detalheComponente" hidden></div>
     <dl class="dados dados-grade" id="metaDesafio" hidden>
+      <div><dt>Código</dt><dd><button type="button" id="botaoCodigo" class="valor-codigo" title="Copiar o código: com ele, outra pessoa abre este mesmo desafio">--</button></dd></div>
       <div><dt>Tempo</dt><dd id="valorTempo">--:--</dd></div>
-      <div><dt>Formato</dt><dd id="valorFormato">--</dd></div>
       <div><dt>Fundo</dt><dd id="valorFundo">--</dd></div>
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
     </dl>
     <div class="acoes">
       <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
+      <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 6 dígitos, como o que o professor passar">Abrir por código</button>
       <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>Abrir em uma aba</button>
-      <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
+      <button id="botaoEncerrarDesafio" class="encerrar largo" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
+      <button id="botaoRefazer" class="encerrar largo" title="Começa este mesmo desafio de novo, do zero" hidden>↻ Refazer este desafio</button>
     </div>
   </section>
 
@@ -783,9 +839,18 @@ export function obterHtmlWebview(
     </div>
     <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
     <dl class="dados historico" id="historicoNotas" hidden>
-      <div><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
-      <div><dt>Melhor</dt><dd id="valorMelhor"></dd></div>
+      <div id="linhaTentativas"><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
+      <div id="linhaMelhor"><dt>Melhor</dt><dd id="valorMelhor"></dd></div>
+      <div id="linhaRecorde" title="A melhor nota que você já tirou neste desafio"><dt>Recorde</dt><dd id="valorRecorde"></dd></div>
     </dl>
+  </section>
+
+  <section class="bloco surge" style="--ordem: 3" aria-label="Histórico" id="secaoHistorico" hidden>
+    <div class="cabecalho">
+      <h2 class="rotulo"><span class="numero">03</span> / Histórico</h2>
+      <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>Ver todos</button>
+    </div>
+    <ol class="lista-historico" id="listaHistorico" aria-label="Os desafios mais recentes, com a melhor nota e o tempo"></ol>
   </section>
 
   <script src="${scriptUri}"></script>

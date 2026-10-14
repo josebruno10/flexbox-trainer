@@ -2,6 +2,16 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Desafios
+- Cada desafio tem um código de 6 dígitos que gera sempre a mesma imagem: **Abrir por código** abre o desafio que o professor passar, e o código aparece nos dados do desafio (clique para copiar) e na aba do gabarito.
+- **Refazer este desafio**, depois de encerrar, começa o mesmo desafio do zero.
+- Histórico com a melhor nota e o tempo de cada desafio verificado, guardado neste computador e separado por e-mail. Cada linha pode ser refeita, e ao refazer um desafio o Resultado mostra o recorde nele.
+
+### Primeiro uso
+- Guia de primeiros passos na tela de boas-vindas do VS Code, que abre uma vez, na primeira vez que a extensão roda, e marca o que o aluno já fez.
+
 ## [0.3.0] - 2026-10-14
 
 ### Telas

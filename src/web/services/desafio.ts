@@ -1,4 +1,5 @@
 import { Bloco, Desafio } from "../types";
+import { aleatorioDoCodigo, sortearCodigo } from "./codigoDesafio";
 
 // Porta do gerador de Vitor Maia (Gerador-de-imagens-para-torneio-de-CSS,
 // commit 05ac618). As decisões aleatórias seguem o script original; muda a
@@ -44,6 +45,20 @@ type Regiao = {
 export type OpcoesGeracaoDesafio = {
   aleatorio?: Aleatorio;
 };
+
+/**
+ * O desafio de um código: o mesmo código gera sempre a mesma imagem. Sem
+ * código, sorteia um. Cada vez é uma tentativa nova, com outro challengeId.
+ */
+export function criarDesafioPorCodigo(codigo: string = sortearCodigo()): Desafio {
+  const desafio = criarDesafioGerado({ aleatorio: aleatorioDoCodigo(codigo) });
+  const tentativa =
+    Date.now().toString(36) +
+    Math.floor(Math.random() * 0xffffff)
+      .toString(36)
+      .padStart(5, "0");
+  return { ...desafio, challengeId: `challenge-${codigo}-${tentativa}`, codigo };
+}
 
 export function criarDesafioGerado(
   opcoes: OpcoesGeracaoDesafio = {},

@@ -22,6 +22,8 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Como a extensão oficial do torneio, não aceita IA durante o desafio: não deixa começar nem corrigir com extensões de IA habilitadas (Copilot, Claude Code, Codex, Continue, Cline e outras) e invalida o desafio se uma delas for habilitada ou se o código for alterado fora do editor (veja [As regras do desafio](#as-regras-do-desafio)).
 - Cria o `index.html` e o `style.css` quando a pasta ainda não os tem.
 - Marca o tempo de cada tentativa.
+- Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio.
+- Guarda um histórico com a melhor nota e o tempo de cada desafio.
 
 ## Requisitos
 
@@ -58,6 +60,8 @@ Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar 
 
 ## Primeiro uso
 
+Na primeira vez que a extensão roda, ela abre o **guia de primeiros passos**, que mostra cada passo abaixo e marca o que você já fez. Para abri-lo de novo, use **FlexBox Trainer: Guia de Primeiros Passos** ou o menu **⋯** do topo da barra lateral.
+
 1. Clique no ícone do **FlexBox Trainer** na barra de atividades, à esquerda.
 2. Entre com **Google**, **GitHub** ou **Microsoft**. Use a conta cujo e-mail está cadastrado no torneio. Se o e-mail não estiver cadastrado, a barra lateral avisa em amarelo e a correção não funciona.
 3. Clique em **Gerar novo desafio**. Se a pasta aberta ainda não tiver `index.html` e `style.css`, a extensão os cria com uma base mínima e os abre. Sem pasta aberta, ela oferece **Abrir pasta**.
@@ -65,15 +69,26 @@ Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar 
 
 ## Como treinar
 
-1. **Gerar novo desafio** cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio.
+1. **Gerar novo desafio** cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite os 6 dígitos.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela.
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
 4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
 5. Clique em **Verificar**. A barra lateral mostra as etapas e, no fim, a **precisão oficial do servidor**.
 6. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
-7. **Encerrar desafio** congela o cronômetro quando você terminar.
+7. **Encerrar desafio** congela o cronômetro quando você terminar. Depois, **Refazer este desafio** começa o mesmo desafio de novo, do zero.
 
 Só contam elementos com cor de fundo sólida (`background` ou `background-color`). Texto, imagens, gradientes e sombras não são comparados.
+
+### Código do desafio e histórico
+
+Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio (clique nele para copiar) e no topo da aba do gabarito. O mesmo código gera sempre a mesma imagem:
+
+- **Em sala:** o professor passa um código, e cada aluno abre o desafio com **Abrir por código**. Todos treinam o mesmo layout, cada um na própria dinâmica de treino.
+- **Sozinho:** refaça um desafio para tentar uma nota maior ou um tempo menor.
+
+O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
+
+O histórico fica só neste computador, separado por e-mail: num laboratório, cada aluno vê os próprios desafios.
 
 ## As regras do desafio
 
@@ -89,23 +104,28 @@ Salvar no editor, inclusive com formatação ao salvar, e criar ou limpar os arq
 
 ## A barra lateral
 
-A barra lateral tem duas partes: **Desafio** (o quadro, que alterna entre o gabarito e a sua página, as medidas e os dados do gabarito) e **Resultado** (o **Verificar**, a precisão e as tentativas). Se faltar o `index.html` ou o `style.css` na pasta aberta, o Resultado avisa e oferece criá-los. O caminho dos arquivos usados aparece ao parar o mouse sobre **Sua página**.
+A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gabarito e a sua página, as medidas e os dados do gabarito, com o código), **Resultado** (o **Verificar**, a precisão e as tentativas) e **Histórico**, que aparece depois da primeira verificação. Se faltar o `index.html` ou o `style.css` na pasta aberta, o Resultado avisa e oferece criá-los. O caminho dos arquivos usados aparece ao parar o mouse sobre **Sua página**.
 
 | Botão | O que faz |
 |---|---|
 | Gabarito, Sua página | Alternam o que o quadro mostra: o gabarito ou a sua página |
 | Gerar novo desafio | Cria um desafio novo e reinicia o cronômetro |
+| Abrir por código | Abre o desafio de um código de 6 dígitos, como o que o professor passar |
+| O código, nos dados do desafio | Copia o código, para outra pessoa abrir o mesmo desafio |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
+| Refazer este desafio | Aparece depois de encerrar; começa o mesmo desafio de novo, do zero |
 | Abrir em uma aba | Abre o gabarito, as medidas e a comparação em uma aba do editor |
 | ↻ (ao lado de Sua página) | Atualiza a sua página na hora. Ela já atualiza sozinha enquanto você digita; use se demorar |
 | Criar index.html e style.css | Aparece quando falta algum dos dois; cria só o que falta, sem sobrescrever nada |
 | Ver extensões | Aparece no aviso de extensões de IA; abre a página delas para você desabilitar |
 | Verificar | Mede a sua página e envia para a correção |
+| ↻, no Histórico | Refaz aquele desafio |
+| Ver todos, no Histórico | Lista todos os desafios do histórico; escolher um o refaz |
 | Sair | Encerra a sua sessão |
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, o **Guia de Primeiros Passos** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -132,6 +152,11 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Fazer Login | Abre o login pelo Google no navegador |
 | FlexBox Trainer: Sair | Encerra a sessão |
 | FlexBox Trainer: Iniciar | Abre a barra lateral (e o login, se precisar) |
+| FlexBox Trainer: Gerar Novo Desafio | Sorteia um desafio novo |
+| FlexBox Trainer: Abrir Desafio por Código | Abre o desafio de um código de 6 dígitos |
+| FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
+| FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
+| FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |
 | FlexBox Trainer: Criar index.html e style.css | Cria na pasta aberta os arquivos que faltarem |
 | FlexBox Trainer: Ver Extensões de IA Habilitadas | Mostra as extensões de IA que impedem começar e corrigir desafios e abre a página delas |
@@ -208,6 +233,8 @@ npm run typecheck     # confere os tipos e acusa código sem uso
 ```
 
 Os testes simulam as respostas do servidor e não criam dados reais.
+
+Os códigos de desafio dependem do gerador: se ele mudar, os códigos já passados à turma geram outros desafios. Um teste em `codigoDesafio.test.ts` avisa quando isso acontece.
 
 Com `flexboxTrainer.modoDesenvolvedor` ligado, o comando **FlexBox Trainer: Gerar Solução Exata do Desafio (teste)** grava em `index.html` e `style.css` uma página que reproduz o desafio pixel a pixel (com flexbox ou com posição absoluta), para testar se a correção chega a 100%. Ele entrega a resposta, então fica escondido para os alunos.
 

@@ -101,7 +101,7 @@ export class BarraDeStatus implements vscode.Disposable {
   }
 }
 
-function formatarTempo(tempoMs: number): string {
+export function formatarTempo(tempoMs: number): string {
   const totalSegundos = Math.max(0, Math.floor(tempoMs / 1000));
   const horas = Math.floor(totalSegundos / 3600);
   const minutos = Math.floor((totalSegundos % 3600) / 60);

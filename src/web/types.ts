@@ -14,6 +14,9 @@ export type Bloco = {
 
 export type Desafio = {
   challengeId: string;
+  // Reproduz a mesma imagem (veja services/codigoDesafio.ts). Os desafios
+  // criados pela extensão sempre têm um; os dos testes podem não ter.
+  codigo?: string;
   width: number;
   height: number;
   backgroundColor: string;
@@ -127,5 +130,9 @@ export type MensagemRecebidaBarraLateral =
   | { type: "abrirPainelGabarito" }
   | { type: "verExtensoesIa" }
   | { type: "criarArquivos" }
+  | { type: "abrirPorCodigo" }
+  | { type: "refazer"; codigo?: unknown }
+  | { type: "verHistorico" }
+  | { type: "copiarCodigo" }
   | { type: "cadastrarNoTorneio" }
   | { type: "logout" };

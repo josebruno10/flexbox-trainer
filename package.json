@@ -59,6 +59,26 @@
         "title": "FlexBox Trainer: Sair"
       },
       {
+        "command": "flexbox-trainer.novoDesafio",
+        "title": "FlexBox Trainer: Gerar Novo Desafio"
+      },
+      {
+        "command": "flexbox-trainer.abrirPorCodigo",
+        "title": "FlexBox Trainer: Abrir Desafio por Código"
+      },
+      {
+        "command": "flexbox-trainer.refazerDesafio",
+        "title": "FlexBox Trainer: Refazer o Desafio Atual"
+      },
+      {
+        "command": "flexbox-trainer.verHistorico",
+        "title": "FlexBox Trainer: Histórico de Desafios"
+      },
+      {
+        "command": "flexbox-trainer.abrirGuia",
+        "title": "FlexBox Trainer: Guia de Primeiros Passos"
+      },
+      {
         "command": "flexbox-trainer.abrirGabarito",
         "title": "FlexBox Trainer: Abrir Gabarito em uma Aba"
       },
@@ -97,6 +117,10 @@
         {
           "command": "flexbox-trainer.gerarSolucaoTeste",
           "when": "config.flexboxTrainer.modoDesenvolvedor"
+        },
+        {
+          "command": "flexbox-trainer.refazerDesafio",
+          "when": "flexboxTrainer.temDesafio"
         }
       ],
       "view/title": [
@@ -106,9 +130,29 @@
           "group": "navigation"
         },
         {
+          "command": "flexbox-trainer.abrirPorCodigo",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_desafio@1"
+        },
+        {
+          "command": "flexbox-trainer.refazerDesafio",
+          "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
+          "group": "1_desafio@2"
+        },
+        {
+          "command": "flexbox-trainer.verHistorico",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_desafio@3"
+        },
+        {
+          "command": "flexbox-trainer.abrirGuia",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "2_ajuda@1"
+        },
+        {
           "command": "flexbox-trainer.testarServidor",
           "when": "view == flexbox-trainer.sidebar",
-          "group": "1_servidor"
+          "group": "2_ajuda@2"
         }
       ]
     },
@@ -203,7 +247,118 @@
           "description": "Oferece cadastrar no Frontend Teams Cup quem entra com um e-mail que não está no torneio, colocando o aluno no time genérico. Cria o usuário no servidor da competição; fica desligado até as rotas de cadastro serem confirmadas com a organização."
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "primeirosPassos",
+        "title": "Primeiros passos no FlexBox Trainer",
+        "description": "Do login à primeira precisão, treinando como no torneio.",
+        "steps": [
+          {
+            "id": "entrar",
+            "title": "Entre com a sua conta",
+            "description": "Use a conta cujo e-mail está cadastrado no Frontend Teams Cup, de preferência pelo Google.\n[Abrir o FlexBox Trainer](command:flexbox-trainer.iniciar)",
+            "media": {
+              "image": {
+                "dark": "media/guia/entrar-escuro.png",
+                "light": "media/guia/entrar-claro.png",
+                "hc": "media/guia/entrar-escuro.png",
+                "hcLight": "media/guia/entrar-claro.png"
+              },
+              "altText": "A tela de entrada do FlexBox Trainer, com Google, GitHub e Microsoft"
+            },
+            "completionEvents": [
+              "onContext:flexboxTrainer.autenticado"
+            ]
+          },
+          {
+            "id": "pasta",
+            "title": "Abra uma pasta para treinar",
+            "description": "Pode ser uma pasta vazia: a extensão cria o index.html e o style.css.\n[Abrir pasta](command:workbench.action.files.openFolder)",
+            "media": {
+              "image": {
+                "dark": "media/guia/pasta-escuro.png",
+                "light": "media/guia/pasta-claro.png",
+                "hc": "media/guia/pasta-escuro.png",
+                "hcLight": "media/guia/pasta-claro.png"
+              },
+              "altText": "A barra lateral antes do primeiro desafio, com o botão Gerar novo desafio"
+            },
+            "completionEvents": [
+              "onContext:flexboxTrainer.pastaAberta"
+            ]
+          },
+          {
+            "id": "gerar",
+            "title": "Gere um desafio",
+            "description": "Como no torneio, desabilite antes as extensões de IA, como o Copilot: com elas, o desafio não começa.\n[Gerar novo desafio](command:flexbox-trainer.novoDesafio)\n[Ver extensões de IA](command:flexbox-trainer.verExtensoesIa)",
+            "media": {
+              "image": {
+                "dark": "media/guia/gerar-escuro.png",
+                "light": "media/guia/gerar-claro.png",
+                "hc": "media/guia/gerar-escuro.png",
+                "hcLight": "media/guia/gerar-claro.png"
+              },
+              "altText": "Um desafio na barra lateral, com as medidas de um componente e os dados do gabarito"
+            },
+            "completionEvents": [
+              "onContext:flexboxTrainer.temDesafio"
+            ]
+          },
+          {
+            "id": "verificar",
+            "title": "Recrie e verifique",
+            "description": "Recrie a imagem em index.html e style.css, com flexbox, grid ou position. Clique num componente do gabarito para ver as medidas e a cor. Depois, clique em Verificar: o servidor do torneio devolve a precisão.",
+            "media": {
+              "image": {
+                "dark": "media/guia/verificar-escuro.png",
+                "light": "media/guia/verificar-claro.png",
+                "hc": "media/guia/verificar-escuro.png",
+                "hcLight": "media/guia/verificar-claro.png"
+              },
+              "altText": "O resultado de uma verificação, com a precisão e as tentativas"
+            },
+            "completionEvents": [
+              "onContext:flexboxTrainer.verificou"
+            ]
+          },
+          {
+            "id": "codigo",
+            "title": "Treine com a turma",
+            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O histórico guarda a sua melhor nota em cada desafio, e dá para refazer um para bater o recorde.\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
+            "media": {
+              "image": {
+                "dark": "media/guia/codigo-escuro.png",
+                "light": "media/guia/codigo-claro.png",
+                "hc": "media/guia/codigo-escuro.png",
+                "hcLight": "media/guia/codigo-claro.png"
+              },
+              "altText": "O código do desafio e o histórico com a melhor nota de cada um"
+            },
+            "completionEvents": [
+              "onStepSelected"
+            ]
+          },
+          {
+            "id": "cores",
+            "title": "Escolha as cores",
+            "description": "O verde é a cor padrão; há outras, como a Campus, verde com vermelho.\n[Escolher cores](command:flexbox-trainer.escolherCores)",
+            "media": {
+              "image": {
+                "dark": "media/guia/cores-escuro.png",
+                "light": "media/guia/cores-claro.png",
+                "hc": "media/guia/cores-escuro.png",
+                "hcLight": "media/guia/cores-claro.png"
+              },
+              "altText": "A barra lateral com as cores Campus, em verde e vermelho"
+            },
+            "completionEvents": [
+              "onCommand:flexbox-trainer.escolherCores"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",

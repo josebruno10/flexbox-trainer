@@ -12,7 +12,7 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 
 type GabaritoRecebido = Pick<
   Desafio,
-  "challengeId" | "width" | "height" | "backgroundColor" | "blocks"
+  "challengeId" | "codigo" | "width" | "height" | "backgroundColor" | "blocks"
 >;
 
 type Modo = "gabarito" | "sobreposto" | "lado";
@@ -228,7 +228,10 @@ function ajustarTamanho(): void {
 function renderizarResumo(atual: GabaritoRecebido): void {
   const rotulo = document.createElement("p");
   rotulo.className = "rotulo";
-  rotulo.textContent = "Gabarito";
+  // O código identifica o desafio, para conferir que é o mesmo da turma.
+  rotulo.textContent = atual.codigo
+    ? `Desafio ${atual.codigo.slice(0, 3)} ${atual.codigo.slice(3)}`
+    : "Gabarito";
   const titulo = document.createElement("strong");
   titulo.className = "titulo-tela";
   titulo.textContent =
