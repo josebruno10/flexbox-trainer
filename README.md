@@ -4,6 +4,16 @@ Extensão do VS Code para treinar a recriação de layouts com HTML e CSS, no fo
 
 O treino segue as condições do torneio: a extensão mostra as medidas e as cores do gabarito, como no torneio, mas não dá dicas do que está errado, e o desafio tem que ser feito do começo ao fim no editor, sem IA. Quem descobre é você.
 
+<p align="center">
+  <img src="docs/imagens/barra-lateral.png" alt="Barra lateral com um desafio, as medidas de um componente, a página do aluno e a precisão de 87,42%" width="300">
+  &nbsp;&nbsp;
+  <img src="docs/imagens/login.png" alt="Tela de login com Google, GitHub e Microsoft" width="300">
+</p>
+
+<p align="center">
+  <img src="docs/imagens/aba-lado-a-lado.png" alt="Aba do gabarito com o gabarito e a página do aluno lado a lado e a lista de componentes com as medidas" width="900">
+</p>
+
 ## O que ela faz
 
 - Gera desafios aleatórios de 800 × 800 px, com cabeçalhos, colunas, grades de cartões e fileiras de círculos.
@@ -101,6 +111,10 @@ Abra pelo botão **Abrir em uma aba**, pelo atalho **Abrir gabarito em uma aba**
 - **Lado a lado**: o gabarito e a sua página, um ao lado do outro.
 
 A sua página aparece na aba exatamente como ela é medida para a correção, e é atualizada quando você salva os arquivos.
+
+<p align="center">
+  <img src="docs/imagens/aba-gabarito.png" alt="Aba do gabarito no modo Gabarito, com a lista de componentes e as medidas de cada um" width="900">
+</p>
 
 ## Comandos
 

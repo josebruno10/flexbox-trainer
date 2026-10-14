@@ -18,3 +18,4 @@ exemplo-treino/**
 resources/icone.svg
 *.vsix
 .claude/**
+docs/**
