@@ -2,13 +2,31 @@
   "name": "flexbox-trainer",
   "publisher": "josebruno10",
   "displayName": "FlexBox Trainer",
-  "description": "Treinador de recriação de layouts com FlexBox para o VS Code",
-  "version": "0.0.1",
+  "description": "Extensão para treinamento de recriação de layouts em HTML e CSS, no formato do Frontend Teams Cup.",
+  "icon": "resources/icone.png",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/josebruno10/flexbox-trainer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/josebruno10/flexbox-trainer/issues"
+  },
   "engines": {
     "vscode": "^1.110.0"
   },
   "categories": [
+    "Education",
     "Other"
+  ],
+  "keywords": [
+    "html",
+    "css",
+    "flexbox",
+    "layout",
+    "treino",
+    "frontend teams cup"
   ],
   "main": "./dist/node/extension.js",
   "browser": "./dist/web/extension.js",

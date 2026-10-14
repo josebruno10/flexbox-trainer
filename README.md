@@ -23,7 +23,17 @@ O treino segue as condições do torneio: a extensão mostra as medidas e as cor
 
 ## Instalar e abrir
 
-Por enquanto a extensão roda a partir do código. Você vai precisar de Git, Node.js 20 ou mais novo e VS Code.
+### Pelo arquivo `.vsix` (para treinar)
+
+1. Pegue o arquivo `flexbox-trainer-0.1.0.vsix` com a equipe.
+2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.1.0.vsix`.
+3. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
+
+Para atualizar, instale o `.vsix` novo do mesmo jeito.
+
+### Pelo código (para desenvolver)
+
+Você vai precisar de Git, Node.js 20 ou mais novo e VS Code.
 
 ```bash
 git clone https://github.com/josebruno10/flexbox-trainer.git
@@ -36,11 +46,11 @@ No VS Code, abra **Executar e Depurar** (`Ctrl+Shift+D`), escolha **Run Extensio
 
 Essa janela usa as extensões que você tem instaladas. Se alguma for de IA, você não consegue começar nem corrigir desafios até desabilitá-la (veja [Problemas comuns](#problemas-comuns)).
 
-Se você já tinha o projeto, rode `git pull` e `npm install` antes.
+Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar o `.vsix`, rode `npx @vscode/vsce package`.
 
 ## Primeiro uso
 
-1. Na nova janela, clique no ícone do **FlexBox Trainer** na barra de atividades, à esquerda.
+1. Clique no ícone do **FlexBox Trainer** na barra de atividades, à esquerda.
 2. Entre com **Google**, **GitHub** ou **Microsoft**. Use a conta cujo e-mail está cadastrado no torneio. Se o e-mail não estiver cadastrado, a barra lateral avisa em amarelo e a correção não funciona.
 3. Clique em **Gerar novo desafio**. Se a pasta aberta ainda não tiver `index.html` e `style.css`, a extensão os cria com uma base mínima e os abre. Sem pasta aberta, ela oferece **Abrir pasta**.
 4. Na primeira vez que clicar em **Verificar**, a extensão pergunta se pode criar a sua **dinâmica de treino**: um espaço só seu no servidor, onde ela guarda a imagem do desafio para corrigir. Clique em **Criar dinâmica de treino** e confirme o código sugerido. Isso acontece uma única vez.
@@ -175,3 +185,7 @@ Os testes simulam as respostas do servidor e não criam dados reais.
 Com `flexboxTrainer.modoDesenvolvedor` ligado, o comando **FlexBox Trainer: Gerar Solução Exata do Desafio (teste)** grava em `index.html` e `style.css` uma página que reproduz o desafio pixel a pixel (com flexbox ou com posição absoluta), para testar se a correção chega a 100%. Ele entrega a resposta, então fica escondido para os alunos.
 
 O servidor é o mesmo da competição. Nunca exclua dados nele e evite testar às terças à noite, quando ele está em uso.
+
+## Licença
+
+MIT (veja `LICENSE`). As fontes Space Grotesk e DM Mono, em `media/fontes`, seguem a licença SIL Open Font License 1.1, com os textos ao lado delas.
