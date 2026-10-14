@@ -591,6 +591,106 @@ suite("AuthService", () => {
     assert.strictEqual(storage.valor?.includes("oauth-github"), false);
   });
 
+  test("procura o aluno pelos outros e-mails verificados da conta do GitHub", async () => {
+    const storage: MockStorage = {};
+    const authService = new AuthService(criarContextoFalso(storage));
+    vscode.authentication.getSession = async () =>
+      ({
+        accessToken: "oauth-github",
+        account: { label: "Aluno GitHub" },
+      }) as vscode.AuthenticationSession;
+    vscode.window.showErrorMessage = async () => undefined;
+    const buscados: string[] = [];
+
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.hostname === "api.github.com" && url.pathname === "/user") {
+        return respostaJson({ login: "aluno", email: "pessoal@example.com" });
+      }
+      if (url.hostname === "api.github.com" && url.pathname === "/user/emails") {
+        return respostaJson([
+          { email: "pessoal@example.com", verified: true, primary: true },
+          { email: "falso@example.com", verified: false, primary: false },
+          { email: "Aluno@Example.com", verified: true, primary: false },
+        ]);
+      }
+      if (url.pathname.endsWith("/login")) {
+        return respostaJson({ access_token: "token-github-servidor" });
+      }
+      if (url.pathname.endsWith("/auth/me")) {
+        // O /auth/me traz o e-mail principal e o ID do GitHub.
+        return respostaJson(
+          perfilServidor({ id: 176078921, email: "pessoal@example.com", time_id: undefined }),
+        );
+      }
+      if (url.pathname.endsWith("/usuarios/por-email")) {
+        const email = url.searchParams.get("email") ?? "";
+        buscados.push(email);
+        return email === "aluno@example.com"
+          ? respostaJson(perfilServidor())
+          : respostaJson({ detail: "Usuário não encontrado" }, 404);
+      }
+      if (url.pathname.endsWith("/usuarios/74/time")) {
+        return respostaJson({ id: 46, nome_time: "Time de teste" });
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.loginComProvedorVSCode("github");
+
+    // O e-mail não verificado nunca é usado.
+    assert.deepStrictEqual(buscados, ["pessoal@example.com", "aluno@example.com"]);
+    assert.strictEqual(authService.getSessaoAtual()?.userId, 74);
+    assert.strictEqual(authService.getSessaoAtual()?.teamId, 46);
+    assert.strictEqual(authService.getEstadoAtual().aviso, undefined);
+    assert.deepStrictEqual(authService.getSessaoAtual()?.emailsProvedor, [
+      "pessoal@example.com",
+      "aluno@example.com",
+    ]);
+  });
+
+  test("ao reabrir, revalida o aluno pelos e-mails da conta guardados na sessão", async () => {
+    const sessao = {
+      accessToken: "token-restaurado",
+      serverToken: "token-restaurado",
+      email: "pessoal@example.com",
+      displayName: "Aluno",
+      tokenGmail: "github",
+      userId: 74,
+      teamId: 46,
+      emailsProvedor: ["pessoal@example.com", "aluno@example.com"],
+      remember: true,
+      authenticatedAt: Date.now(),
+      expiresAt: Date.now() + 60_000,
+    };
+    const authService = new AuthService(
+      criarContextoFalso({ valor: JSON.stringify(sessao) }),
+    );
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/auth/me")) {
+        return respostaJson(
+          perfilServidor({ id: 176078921, email: "pessoal@example.com", time_id: undefined }),
+        );
+      }
+      if (url.pathname.endsWith("/usuarios/por-email")) {
+        return url.searchParams.get("email") === "aluno@example.com"
+          ? respostaJson(perfilServidor())
+          : respostaJson({ detail: "Usuário não encontrado" }, 404);
+      }
+      if (url.pathname.endsWith("/usuarios/74/time")) {
+        return respostaJson({ id: 46, nome_time: "Time de teste" });
+      }
+      throw new Error(`Fetch inesperado: ${url.toString()}`);
+    };
+
+    await authService.inicializar();
+
+    // Sem os e-mails guardados, a sessão passaria a usar o ID do GitHub.
+    assert.strictEqual(authService.getSessaoAtual()?.userId, 74);
+    assert.strictEqual(authService.getEstadoAtual().aviso, undefined);
+  });
+
   test("tenta de novo quando o provedor do GitHub demora a registrar", async () => {
     const authService = new AuthService(criarContextoFalso());
     let pedidos = 0;

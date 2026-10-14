@@ -261,6 +261,7 @@ export class AuthService implements vscode.Disposable {
       );
       const perfilServidor = await this.buscarPerfilAutenticado(
         resultadoLogin.serverToken,
+        perfilProvedor.emails,
       );
 
       await this.salvarSessaoServidor(
@@ -276,6 +277,7 @@ export class AuthService implements vscode.Disposable {
         provedor,
         true,
         resultadoLogin.resposta,
+        perfilProvedor.emails,
       );
     } catch (error) {
       const mensagem =
@@ -444,6 +446,7 @@ export class AuthService implements vscode.Disposable {
     provedor: ProvedorAutenticacao,
     remember: boolean,
     respostaLogin: unknown,
+    emailsProvedor: string[] = [],
   ): Promise<void> {
     if (!tokenServidor.trim()) {
       throw new Error("O servidor não retornou um token de acesso.");
@@ -470,6 +473,7 @@ export class AuthService implements vscode.Disposable {
       tokenGmail: provedor,
       userId: perfil.userId,
       teamId: perfil.teamId,
+      emailsProvedor: emailsProvedor.length > 0 ? emailsProvedor : undefined,
       remember,
       authenticatedAt: Date.now(),
       expiresAt: this.extrairExpiracao(respostaLogin, tokenServidor),
@@ -518,6 +522,7 @@ export class AuthService implements vscode.Disposable {
 
   private async buscarPerfilAutenticado(
     tokenServidor: string,
+    emailsProvedor: string[] = [],
   ): Promise<PerfilServidor> {
     const resposta = await this.fetchComTimeout(
       `${this.lerUrlBaseApiAutenticacao()}/auth/me`,
@@ -553,10 +558,19 @@ export class AuthService implements vscode.Disposable {
     // O /auth/me pode trazer o ID do provedor de login (o do GitHub, por
     // exemplo), que não existe na tabela de usuários. A extensão oficial do
     // torneio identifica o aluno pelo e-mail e busca o time pelo ID dele.
-    const usuarioServidor = await this.buscarUsuarioPorEmail(
-      tokenServidor,
-      perfil.email,
-    );
+    // O e-mail cadastrado no torneio pode ser um secundário da conta, então
+    // a busca tenta cada e-mail verificado, a começar pelo do /auth/me.
+    const candidatos = this.normalizarEmails([perfil.email, ...emailsProvedor]);
+    let usuarioServidor: PerfilServidor | undefined;
+    let emailCadastrado: string | undefined;
+
+    for (const email of candidatos) {
+      usuarioServidor = await this.buscarUsuarioPorEmail(tokenServidor, email);
+      if (usuarioServidor?.userId) {
+        emailCadastrado = email;
+        break;
+      }
+    }
 
     const idDoAuthMe = perfil.userId;
 
@@ -574,18 +588,21 @@ export class AuthService implements vscode.Disposable {
     }
 
     log.info(
-      usuarioServidor?.userId
-        ? `Aluno identificado pelo e-mail ${perfil.email}: ID ${perfil.userId}, ` +
+      emailCadastrado
+        ? `Aluno identificado pelo e-mail ${emailCadastrado}: ID ${perfil.userId}, ` +
             `time ${perfil.teamId ?? "nenhum"} (o /auth/me informou ${idDoAuthMe ?? "nenhum"}).`
-        : `E-mail ${perfil.email} não encontrado em /usuarios/por-email; usando o ` +
-            `/auth/me: ID ${perfil.userId ?? "nenhum"}, time ${perfil.teamId ?? "nenhum"}.`,
+        : `Nenhum e-mail da conta (${candidatos.join(", ")}) encontrado em ` +
+            `/usuarios/por-email; usando o /auth/me: ID ${perfil.userId ?? "nenhum"}, ` +
+            `time ${perfil.teamId ?? "nenhum"}.`,
     );
     // Sem cadastro, o servidor aceita o login mas devolve o ID do provedor,
     // que não existe no torneio; a correção não funcionaria.
-    this.avisoCadastro = usuarioServidor?.userId
+    this.avisoCadastro = emailCadastrado
       ? undefined
-      : `O e-mail ${perfil.email} não está cadastrado no torneio. Saia e entre ` +
-        "com a conta cadastrada (de preferência pelo Google) para poder corrigir.";
+      : (candidatos.length > 1
+          ? `Nenhum e-mail desta conta (${candidatos.join(", ")}) está cadastrado no torneio.`
+          : `O e-mail ${perfil.email} não está cadastrado no torneio.`) +
+        " Saia e entre com a conta cadastrada (de preferência pelo Google) para poder corrigir.";
 
     if (!perfil.userId) {
       throw new Error("O servidor não informou o ID do usuário.");
@@ -687,6 +704,7 @@ export class AuthService implements vscode.Disposable {
     try {
       const perfil = await this.buscarPerfilAutenticado(
         this.sessaoAtual.serverToken,
+        this.sessaoAtual.emailsProvedor,
       );
       this.sessaoAtual = {
         ...this.sessaoAtual,

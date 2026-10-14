@@ -9,6 +9,9 @@ export type SessaoAutenticacao = {
   tokenGmail: string;
   userId?: number;
   teamId?: number;
+  // E-mails verificados da conta do GitHub ou da Microsoft. Ao revalidar a
+  // sessão, o aluno volta a ser procurado por eles, não só pelo do /auth/me.
+  emailsProvedor?: string[];
   remember: boolean;
   authenticatedAt: number;
   expiresAt: number;
