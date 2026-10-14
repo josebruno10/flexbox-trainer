@@ -47,7 +47,15 @@ suite("Cores da extensão", () => {
     assert.strictEqual(lerTemaCores(), "oceano");
 
     configurarTema("arco-íris");
-    assert.strictEqual(lerTemaCores(), "magenta");
+    assert.strictEqual(lerTemaCores(), "floresta");
+  });
+
+  test("as opções das configurações são os conjuntos da extensão, com o verde como padrão", () => {
+    const pacote = vscode.extensions.getExtension("josebruno10.flexbox-trainer")?.packageJSON;
+    const configuracao = pacote?.contributes.configuration.properties["flexboxTrainer.temaCores"];
+
+    assert.deepStrictEqual(configuracao.enum, Object.keys(TEMAS));
+    assert.strictEqual(configuracao.default, "floresta");
   });
 
   test("as telas trazem as cores do conjunto escolhido", () => {

@@ -2,6 +2,15 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Telas
+- O verde (Floresta) passa a ser a cor padrão da extensão.
+- Mais cores de destaque: Campus (verde com toques de vermelho), Noite (anil) e Grafite (cinzas).
+
+### Documentação
+- O README ficou curto, com o essencial para quem vai instalar; o manual completo foi para `docs/MANUAL.md`.
+
 ## [0.2.0] - 2026-10-14
 
 ### Login

@@ -159,30 +159,39 @@
         },
         "flexboxTrainer.temaCores": {
           "type": "string",
-          "default": "magenta",
+          "default": "floresta",
           "scope": "application",
           "enum": [
-            "magenta",
-            "oceano",
             "floresta",
+            "campus",
+            "oceano",
+            "noite",
             "violeta",
+            "magenta",
             "sol",
+            "grafite",
             "vscode"
           ],
           "enumItemLabels": [
-            "Magenta",
-            "Oceano",
             "Floresta",
+            "Campus",
+            "Oceano",
+            "Noite",
             "Violeta",
+            "Magenta",
             "Pôr do sol",
+            "Grafite",
             "Tema do VS Code"
           ],
           "enumDescriptions": [
-            "Magenta e laranja (padrão)",
+            "Verdes (padrão)",
+            "Verde com toques de vermelho",
             "Azul e verde-água",
-            "Verdes",
+            "Anil",
             "Roxo e lilás",
+            "Magenta e laranja",
             "Amarelo, laranja e vermelho",
+            "Cinzas, para quase nenhuma cor",
             "A cor de destaque do tema que você usa no VS Code"
           ],
           "description": "Cores de destaque do FlexBox Trainer: o degradê, o botão principal e os destaques. O resto segue o tema do VS Code."

@@ -3,7 +3,7 @@ import { lerTemaCores, NomeTema, variaveisDoTema } from "./temas";
 
 // Identidade comum às três telas. As cores vêm do tema do VS Code, para
 // combinar com o claro e o escuro; as de destaque vêm do conjunto escolhido
-// (o padrão é magenta e laranja), e as fontes (Space Grotesk e DM Mono,
+// (o padrão é o verde, a cor do projeto), e as fontes (Space Grotesk e DM Mono,
 // licença OFL) ficam em media/fontes.
 function estilosBase(
   webview: vscode.Webview,

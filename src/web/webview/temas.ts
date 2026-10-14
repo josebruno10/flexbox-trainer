@@ -2,7 +2,16 @@ import * as vscode from "vscode";
 
 // Cores de destaque da extensão. O resto (fundo, texto, bordas) vem do tema
 // do VS Code; aqui ficam só o degradê, o botão principal e o destaque.
-export type NomeTema = "magenta" | "oceano" | "floresta" | "violeta" | "sol" | "vscode";
+export type NomeTema =
+  | "floresta"
+  | "campus"
+  | "oceano"
+  | "noite"
+  | "violeta"
+  | "magenta"
+  | "sol"
+  | "grafite"
+  | "vscode";
 
 export type CoresTema = {
   nome: string;
@@ -18,16 +27,27 @@ export type CoresTema = {
   acento: string;
 };
 
-export const TEMA_PADRAO: NomeTema = "magenta";
+// O verde é a cor principal do projeto, como a do Instituto Federal.
+export const TEMA_PADRAO: NomeTema = "floresta";
 
+// Na ordem em que aparecem para escolher.
 export const TEMAS: Record<NomeTema, CoresTema> = {
-  magenta: {
-    nome: "Magenta",
-    descricao: "Magenta e laranja",
-    degrade: "linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720)",
-    degradeBotao: "linear-gradient(100deg, #b5179e, #d6245e 50%, #c94010)",
+  floresta: {
+    nome: "Floresta",
+    descricao: "Verdes",
+    degrade: "linear-gradient(100deg, #65a30d, #16a34a 45%, #059669)",
+    degradeBotao: "linear-gradient(100deg, #4d7c0f, #15803d 50%, #047857)",
     sobreBotao: "#ffffff",
-    acento: "#f32f67",
+    acento: "#16a34a",
+  },
+  // Como a logo do IF: o verde nos blocos e o vermelho nos destaques.
+  campus: {
+    nome: "Campus",
+    descricao: "Verde com toques de vermelho",
+    degrade: "linear-gradient(100deg, #3fae4f, #2f9e41 45%, #218a3c)",
+    degradeBotao: "linear-gradient(100deg, #24803a, #1f7a35 50%, #1a6d36)",
+    sobreBotao: "#ffffff",
+    acento: "#dc2626",
   },
   oceano: {
     nome: "Oceano",
@@ -37,13 +57,13 @@ export const TEMAS: Record<NomeTema, CoresTema> = {
     sobreBotao: "#ffffff",
     acento: "#0891b2",
   },
-  floresta: {
-    nome: "Floresta",
-    descricao: "Verdes",
-    degrade: "linear-gradient(100deg, #65a30d, #16a34a 45%, #059669)",
-    degradeBotao: "linear-gradient(100deg, #4d7c0f, #15803d 50%, #047857)",
+  noite: {
+    nome: "Noite",
+    descricao: "Anil",
+    degrade: "linear-gradient(100deg, #6366f1, #4f46e5 45%, #4338ca)",
+    degradeBotao: "linear-gradient(100deg, #4338ca, #3730a3 50%, #312e81)",
     sobreBotao: "#ffffff",
-    acento: "#16a34a",
+    acento: "#6366f1",
   },
   violeta: {
     nome: "Violeta",
@@ -53,6 +73,14 @@ export const TEMAS: Record<NomeTema, CoresTema> = {
     sobreBotao: "#ffffff",
     acento: "#a855f7",
   },
+  magenta: {
+    nome: "Magenta",
+    descricao: "Magenta e laranja",
+    degrade: "linear-gradient(100deg, #df18b1, #ec3370 45%, #f95720)",
+    degradeBotao: "linear-gradient(100deg, #b5179e, #d6245e 50%, #c94010)",
+    sobreBotao: "#ffffff",
+    acento: "#f32f67",
+  },
   sol: {
     nome: "Pôr do sol",
     descricao: "Amarelo, laranja e vermelho",
@@ -60,6 +88,14 @@ export const TEMAS: Record<NomeTema, CoresTema> = {
     degradeBotao: "linear-gradient(100deg, #b45309, #c2410c 50%, #b91c1c)",
     sobreBotao: "#ffffff",
     acento: "#ea580c",
+  },
+  grafite: {
+    nome: "Grafite",
+    descricao: "Cinzas, para quase nenhuma cor",
+    degrade: "linear-gradient(100deg, #9ca3af, #6b7280 45%, #4b5563)",
+    degradeBotao: "linear-gradient(100deg, #4b5563, #374151 50%, #1f2937)",
+    sobreBotao: "#ffffff",
+    acento: "#6b7280",
   },
   vscode: {
     nome: "Tema do VS Code",
