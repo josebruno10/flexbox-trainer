@@ -60,6 +60,8 @@ export type EstadoAutenticacao = {
   email?: string;
   avatarUrl?: string;
   aviso?: string;
+  // O e-mail não está no torneio e o pré-cadastro está ligado.
+  podeCadastrar?: boolean;
 };
 
 export type ResumoWorkspace = {
@@ -126,4 +128,5 @@ export type MensagemRecebidaBarraLateral =
   | { type: "abrirPainelGabarito" }
   | { type: "verExtensoesIa" }
   | { type: "criarArquivos" }
+  | { type: "cadastrarNoTorneio" }
   | { type: "logout" };

@@ -135,6 +135,12 @@
           "default": false,
           "scope": "application",
           "description": "Mostra ferramentas de teste, como o comando que gera a solução exata do desafio. Deixe desligado para alunos: a solução entrega a resposta."
+        },
+        "flexboxTrainer.preCadastro": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Oferece cadastrar no Frontend Teams Cup quem entra com um e-mail que não está no torneio, colocando o aluno no time genérico. Cria o usuário no servidor da competição; fica desligado até as rotas de cadastro serem confirmadas com a organização."
         }
       }
     }

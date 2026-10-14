@@ -66,6 +66,7 @@ type EstadoAutenticacaoRecebido = {
   email?: string;
   avatarUrl?: string;
   aviso?: string;
+  podeCadastrar?: boolean;
 };
 
 type MensagemDaExtensao =
@@ -148,6 +149,12 @@ const botaoVerificar = document.getElementById(
   "botaoVerificar",
 ) as HTMLButtonElement;
 const botaoSair = document.getElementById("botaoSair");
+const cadastroTorneio = document.getElementById(
+  "cadastroTorneio",
+) as HTMLDivElement;
+const botaoCadastrar = document.getElementById(
+  "botaoCadastrar",
+) as HTMLButtonElement;
 const botaoAbrirAba = document.getElementById(
   "botaoAbrirAba",
 ) as HTMLButtonElement;
@@ -231,6 +238,10 @@ botaoAbrirAba?.addEventListener("click", () => {
 
 botaoSair?.addEventListener("click", () => {
   vscode.postMessage({ type: "logout" });
+});
+
+botaoCadastrar.addEventListener("click", () => {
+  vscode.postMessage({ type: "cadastrarNoTorneio" });
 });
 
 canvasAnotacoes.addEventListener("click", selecionarComponenteNoCanvas);
@@ -843,6 +854,10 @@ function renderizarEstadoAutenticacao(
   if (!statusAutenticacao) {
     return;
   }
+
+  cadastroTorneio.hidden = !(
+    estado.status === "authenticated" && estado.podeCadastrar
+  );
 
   if (estado.status === "checking") {
     statusAutenticacao.textContent = estado.message || "Validando a sessão…";

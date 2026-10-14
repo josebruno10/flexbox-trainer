@@ -90,6 +90,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Habilitar ou desabilitar uma extensão atualiza o aviso de IA e, se
     // houver desafio, pode invalidá-lo.
     vscode.extensions.onDidChange(() => provedor.atualizarExtensoesIa()),
+    vscode.workspace.onDidChangeConfiguration((evento) => {
+      if (evento.affectsConfiguration("flexboxTrainer.preCadastro")) {
+        authService.atualizarOfertaCadastro();
+      }
+    }),
     // index.html e style.css gravados fora do editor (por um assistente de IA
     // no terminal, por exemplo) também invalidam o desafio.
     new MonitorAlteracoesExternas((alteracao) => {

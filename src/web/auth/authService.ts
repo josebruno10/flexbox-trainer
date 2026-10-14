@@ -20,6 +20,20 @@ type PerfilProvedor = {
   avatarUrl?: string;
 };
 
+export type DadosCadastro = {
+  nome: string;
+  // Ano de ingresso, como na extensão oficial.
+  turma: number;
+  periodo: number;
+  sede: number;
+  nivel: number;
+};
+
+export type OpcoesCadastro = {
+  sedes: { id: number; nome: string }[];
+  niveis: { cod: number; nome: string }[];
+};
+
 type ResultadoTrocaLogin = {
   serverToken: string;
   resposta: unknown;
@@ -37,6 +51,13 @@ const TIMEOUT_PERFIL_MS = 10_000;
 const TENTATIVAS_PROVEDOR_VSCODE = 3;
 // Evento que a extensão oficial do torneio usa para achar o time da conta.
 const EVENTO_DO_TIME = 2;
+// Time do torneio para quem se cadastra sem time, como na extensão oficial.
+const TIME_GENERICO = 45;
+// Níveis de reserva quando o servidor não lista as categorias.
+const NIVEIS_PADRAO = [
+  { cod: 1, nome: "Médio" },
+  { cod: 2, nome: "Graduação" },
+];
 const PROVEDORES_SUPORTADOS = new Set<ProvedorAutenticacao>([
   "gmail",
   "github",
@@ -423,6 +444,206 @@ export class AuthService implements vscode.Disposable {
       // O logout local precisa funcionar mesmo com a API indisponível.
     } finally {
       await this.encerrarSessao("Desconectado.");
+    }
+  }
+
+  /**
+   * O pré-cadastro cria o aluno no servidor da competição; fica desligado
+   * até as rotas serem confirmadas com a organização do torneio.
+   */
+  public preCadastroLigado(): boolean {
+    return (
+      vscode.workspace
+        .getConfiguration("flexboxTrainer")
+        .get<boolean>("preCadastro", false) === true
+    );
+  }
+
+  /** Republica a sessão quando a configuração do pré-cadastro muda. */
+  public atualizarOfertaCadastro(): void {
+    if (this.isAutenticado() && this.sessaoAtual) {
+      this.publicarSessaoAutenticada(this.sessaoAtual);
+    }
+  }
+
+  public podeCadastrarNoTorneio(): boolean {
+    return Boolean(
+      this.isAutenticado() && this.avisoCadastro && this.preCadastroLigado(),
+    );
+  }
+
+  /** Sedes do evento e níveis do torneio, para o formulário de cadastro. */
+  public async carregarOpcoesCadastro(): Promise<OpcoesCadastro> {
+    const token = this.exigirTokenParaCadastro();
+    const base = this.lerUrlBaseApiAutenticacao();
+    const [sedes, niveis] = await Promise.all([
+      this.buscarListaOpcional(token, `${base}/eventos/${EVENTO_DO_TIME}/sedes`, "sedes"),
+      this.buscarListaOpcional(token, `${base}/categorias`, "categorias"),
+    ]);
+
+    return {
+      sedes: sedes
+        .map((item) => this.comoObjeto(item))
+        .map((sede) => ({
+          id: Number(sede?.id),
+          nome: this.primeiroTexto(
+            sede?.nome_campus,
+            sede?.instituicao,
+            sede?.campus,
+            sede?.nome,
+          ) || `Sede ${sede?.id}`,
+        }))
+        .filter((sede) => Number.isInteger(sede.id) && sede.id > 0),
+      niveis: (() => {
+        const lidos = niveis
+          .map((item) => this.comoObjeto(item))
+          .map((nivel) => ({
+            cod: Number(nivel?.cod ?? nivel?.id),
+            nome: this.primeiroTexto(nivel?.nome, nivel?.descricao),
+          }))
+          .filter((nivel) => Number.isInteger(nivel.cod) && nivel.cod > 0 && nivel.nome);
+        return lidos.length > 0 ? lidos : NIVEIS_PADRAO;
+      })(),
+    };
+  }
+
+  /**
+   * Cadastra no torneio o e-mail da sessão, põe o aluno no time genérico se
+   * ele ficar sem time e procura o aluno de novo, para a correção funcionar.
+   */
+  public async cadastrarNoTorneio(dados: DadosCadastro): Promise<void> {
+    if (!this.podeCadastrarNoTorneio()) {
+      throw new Error("O cadastro no torneio não está disponível nesta sessão.");
+    }
+
+    const token = this.exigirTokenParaCadastro();
+    const sessao = this.sessaoAtual as SessaoAutenticacao;
+    const base = this.lerUrlBaseApiAutenticacao();
+
+    // Se alguém já cadastrou o e-mail, não cria um segundo usuário.
+    let userId = (await this.buscarUsuarioPorEmail(token, sessao.email))?.userId;
+
+    if (!userId) {
+      const corpo = new URLSearchParams({
+        nome: dados.nome.trim(),
+        email: sessao.email,
+        turma: String(dados.turma),
+        periodo: String(dados.periodo),
+        sede: String(dados.sede),
+        nivel: String(dados.nivel),
+        categoria: String(dados.nivel),
+      });
+      if (sessao.avatarUrl) {
+        corpo.set("url_image_perfil", sessao.avatarUrl);
+      }
+      const resposta = await this.enviarFormulario(
+        token,
+        `${base}/usuarios`,
+        corpo,
+        "cadastrar o aluno",
+      );
+      userId =
+        this.extrairPerfil(await this.lerJSONOuVazio(resposta)).userId ??
+        (await this.buscarUsuarioPorEmail(token, sessao.email))?.userId;
+    }
+
+    if (!userId) {
+      throw new Error("O servidor não informou o ID do aluno cadastrado.");
+    }
+
+    if (!(await this.buscarTimeDoUsuario(token, userId))) {
+      try {
+        await this.enviarFormulario(
+          token,
+          `${base}/times/${TIME_GENERICO}/integrantes`,
+          new URLSearchParams({
+            usuario_id: String(userId),
+            funcao: "INTEGRANTE",
+            evento: String(EVENTO_DO_TIME),
+          }),
+          "pôr o aluno no time genérico",
+        );
+      } catch (error) {
+        // Já estar no time não é erro.
+        if (!/duplicad|duplicate|já existe|ja existe|already|unique/i.test(String(error))) {
+          throw error;
+        }
+      }
+    }
+
+    log.info(`Aluno ${userId} cadastrado no torneio com o e-mail ${sessao.email}.`);
+    await this.validarSessaoComApi();
+
+    if (this.avisoCadastro) {
+      throw new Error(
+        "O cadastro foi enviado, mas o servidor ainda não encontra o aluno. Saia e entre de novo.",
+      );
+    }
+  }
+
+  private exigirTokenParaCadastro(): string {
+    const token = this.getAccessToken();
+    if (!token) {
+      throw new Error("Entre antes de se cadastrar no torneio.");
+    }
+    return token;
+  }
+
+  private async enviarFormulario(
+    token: string,
+    url: string,
+    corpo: URLSearchParams,
+    acao: string,
+  ): Promise<Response> {
+    const resposta = await this.fetchComTimeout(
+      url,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: corpo.toString(),
+      },
+      TIMEOUT_AUTENTICACAO_MS,
+      acao,
+    );
+
+    if (!resposta.ok) {
+      const detalhe = await this.extrairDetalheResposta(resposta);
+      throw new ErroApiAutenticacao(
+        `Não foi possível ${acao} (HTTP ${resposta.status}): ${detalhe}`,
+        resposta.status,
+      );
+    }
+
+    return resposta;
+  }
+
+  // Lista vazia quando a rota falha: o formulário usa valores de reserva.
+  private async buscarListaOpcional(
+    token: string,
+    url: string,
+    nome: string,
+  ): Promise<unknown[]> {
+    try {
+      const resposta = await this.fetchComTimeout(
+        url,
+        { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } },
+        TIMEOUT_PERFIL_MS,
+        `carregar ${nome}`,
+      );
+      if (!resposta.ok) {
+        return [];
+      }
+      const dados = await this.lerJSONOuVazio(resposta);
+      const raiz = this.comoObjeto(dados);
+      const lista = Array.isArray(dados) ? dados : raiz?.[nome] ?? raiz?.data;
+      return Array.isArray(lista) ? lista : [];
+    } catch (error) {
+      log.error(`Não foi possível carregar ${nome}`, error);
+      return [];
     }
   }
 
@@ -889,6 +1110,7 @@ export class AuthService implements vscode.Disposable {
       avatarUrl: sessao.avatarUrl,
       message: `Conectado como ${sessao.displayName}.`,
       aviso: this.avisoCadastro,
+      podeCadastrar: Boolean(this.avisoCadastro && this.preCadastroLigado()),
     });
   }
 

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AuthService } from "../auth/authService";
 import { LoginProvider } from "../auth/loginProvider";
+import { pedirDadosCadastro } from "../auth/formularioCadastro";
 import {
   ConfiguracaoServidor,
   Desafio,
@@ -37,6 +38,7 @@ import { PainelGabarito } from "./painel-gabarito";
 const CRIAR_DINAMICA = "Criar dinâmica de treino";
 const ABRIR_PASTA = "Abrir pasta";
 const VER_EXTENSOES = "Ver extensões";
+const CADASTRAR = "Cadastrar";
 // Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
 const LARGURA_PADRAO = 800;
 const ALTURA_PADRAO = 800;
@@ -208,6 +210,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
         if (mensagem.type === "criarArquivos") {
           void this.criarArquivosDeTreino();
+          return;
+        }
+
+        if (mensagem.type === "cadastrarNoTorneio") {
+          void this.cadastrarNoTorneio();
           return;
         }
 
@@ -418,6 +425,59 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         `Desafio invalidado: ${this.motivoInvalidacao} Gere outro e faça-o ` +
         "no editor, sem IA.",
     };
+  }
+
+  /**
+   * Cadastra no torneio o e-mail da sessão, que ainda não existe lá, para a
+   * correção funcionar. Cria um usuário no servidor da competição.
+   */
+  public async cadastrarNoTorneio(): Promise<void> {
+    const sessao = this.authService.getSessaoAtual();
+    if (!sessao || !this.authService.podeCadastrarNoTorneio()) {
+      return;
+    }
+
+    const confirmacao = await vscode.window.showInformationMessage(
+      `Cadastrar ${sessao.email} no Frontend Teams Cup?`,
+      {
+        modal: true,
+        detail:
+          "O e-mail desta conta não está no torneio. O cadastro cria o seu " +
+          "usuário no servidor e coloca você no time genérico, para poder corrigir.",
+      },
+      CADASTRAR,
+    );
+    if (confirmacao !== CADASTRAR) {
+      return;
+    }
+
+    try {
+      const opcoes = await this.authService.carregarOpcoesCadastro();
+      const dados = await pedirDadosCadastro(
+        sessao.email,
+        sessao.displayName,
+        opcoes,
+      );
+      if (!dados) {
+        return;
+      }
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Cadastrando no torneio…",
+        },
+        () => this.authService.cadastrarNoTorneio(dados),
+      );
+      void vscode.window.showInformationMessage(
+        "Cadastro feito. Você já pode corrigir os desafios.",
+      );
+    } catch (error) {
+      const mensagem =
+        error instanceof Error ? error.message : "Erro desconhecido.";
+      log.error("Não foi possível cadastrar no torneio", error);
+      void vscode.window.showErrorMessage(`Cadastro no torneio: ${mensagem}`);
+    }
   }
 
   /** Abre a página das extensões de IA habilitadas, para desabilitá-las. */
