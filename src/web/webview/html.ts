@@ -478,11 +478,26 @@ export function obterHtmlWebview(
        dois, no mesmo lugar, mostra onde eles diferem. */
     .vistas {
       display: flex;
+      gap: 6px;
       margin-bottom: 8px;
+    }
+
+    .vistas .modos {
+      flex: 1 1 auto;
+      display: flex;
     }
 
     .vistas .modo {
       flex: 1 1 0;
+    }
+
+    /* A página já atualiza enquanto o aluno digita; o botão é para quando
+       demorar. */
+    button.atualizar {
+      flex: 0 0 32px;
+      padding: 0;
+      font-size: 15px;
+      letter-spacing: 0;
     }
 
     .canvas-desafio .preview {
@@ -556,13 +571,9 @@ export function obterHtmlWebview(
       color: var(--texto);
     }
 
-    .caminho {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     .falta {
+      margin: 0 0 4px;
+      font-size: 12px;
       color: var(--erro);
     }
 
@@ -612,6 +623,18 @@ export function obterHtmlWebview(
 
     .nota {
       margin-bottom: 10px;
+    }
+
+    .nota.resultado {
+      margin-top: 16px;
+    }
+
+    .linha {
+      margin-top: 12px;
+    }
+
+    .nota.resultado + .linha {
+      margin-top: 0;
     }
 
     .valor-nota {
@@ -685,9 +708,12 @@ export function obterHtmlWebview(
       <h2 class="rotulo"><span class="numero">01</span> / Desafio</h2>
       <span class="selo" id="seloDesafio" data-estado="vazio">Sem desafio</span>
     </div>
-    <div class="modos vistas" id="vistas" role="group" aria-label="O que mostrar no quadro" hidden>
-      <button type="button" class="modo" data-vista="gabarito" aria-pressed="true">Gabarito</button>
-      <button type="button" class="modo" data-vista="pagina" aria-pressed="false">Sua página</button>
+    <div class="vistas" id="vistas" hidden>
+      <div class="modos" role="group" aria-label="O que mostrar no quadro">
+        <button type="button" class="modo" data-vista="gabarito" aria-pressed="true">Gabarito</button>
+        <button type="button" class="modo" id="botaoVistaPagina" data-vista="pagina" aria-pressed="false">Sua página</button>
+      </div>
+      <button type="button" id="botaoAtualizarPreview" class="secundario atualizar" title="Atualizar a sua página agora. Ela já atualiza sozinha enquanto você digita." aria-label="Atualizar a sua página">↻</button>
     </div>
     <div class="canvas-desafio" id="quadroDesafio" data-vista="gabarito">
       <canvas id="canvasAlvo" width="960" height="540"></canvas>
@@ -709,32 +735,26 @@ export function obterHtmlWebview(
     </div>
   </section>
 
-  <section class="bloco surge" style="--ordem: 2" aria-label="Sua página">
+  <section class="bloco surge" style="--ordem: 2" aria-label="Resultado">
     <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">02</span> / Sua página</h2>
-      <button id="botaoAtualizarPreview" class="discreto" title="Relê os arquivos sem salvar">Atualizar preview</button>
+      <h2 class="rotulo"><span class="numero">02</span> / Resultado</h2>
+      <button id="botaoTestarConexao" class="discreto" title="Confere a sessão no servidor">Testar servidor</button>
     </div>
-    <dl class="dados" id="listaWorkspace">
-      <div><dt>HTML</dt><dd id="arquivoHtml">--</dd></div>
-      <div><dt>CSS</dt><dd id="arquivoCss">--</dd></div>
-    </dl>
+    <div id="avisoArquivos" hidden>
+      <p class="falta" id="textoArquivos"></p>
+      <div class="acoes">
+        <button id="botaoCriarArquivos" class="largo secundario arquivos">Criar index.html e style.css</button>
+      </div>
+    </div>
     <div
       id="quadroAvaliacao"
       class="preview-avaliacao"
       aria-hidden="true"
     ></div>
     <div class="acoes">
-      <button id="botaoCriarArquivos" class="largo secundario arquivos" hidden>Criar index.html e style.css</button>
       <button id="botaoVerificar" class="largo principal" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
     </div>
-  </section>
-
-  <section class="bloco surge" style="--ordem: 3" aria-label="Resultado">
-    <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">03</span> / Resultado</h2>
-      <button id="botaoTestarConexao" class="discreto" title="Confere a sessão no servidor">Testar servidor</button>
-    </div>
-    <div class="nota" id="notaResultado" hidden>
+    <div class="nota resultado" id="notaResultado" hidden>
       <strong class="valor-nota" id="valorNota"></strong>
       <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
     </div>

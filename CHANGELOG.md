@@ -13,6 +13,7 @@ As mudanças de cada versão do FlexBox Trainer.
 - Abaixo da nota, as últimas tentativas do desafio e a melhor delas.
 - A barra de status mostra o tempo e a última precisão; clicar nela abre a barra lateral.
 - Antes do primeiro desafio, o quadro diz como começar.
+- A sua página atualiza enquanto você digita, sem precisar salvar. O **Atualizar preview** virou o ↻ ao lado de **Sua página**, para quando demorar, e as linhas dos arquivos deram lugar a um aviso que só aparece quando falta o `index.html` ou o `style.css`.
 - Na aba do gabarito, um componente por linha (a amostra é redonda nos círculos), e o botão **Componentes** esconde a lista; no modo Lado a lado ela começa escondida.
 - Ícone novo na barra de atividades, no formato do ícone da extensão, e o ícone colorido na aba do gabarito.
 

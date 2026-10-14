@@ -70,6 +70,16 @@ export async function activate(context: vscode.ExtensionContext) {
         void provedor.atualizarPreviewWorkspace();
       }
     }),
+    // Sem precisar salvar: a página do aluno atualiza enquanto ele digita.
+    vscode.workspace.onDidChangeTextDocument((evento) => {
+      if (
+        evento.contentChanges.length > 0 &&
+        ehDocumentoDeTreino(evento.document) &&
+        authService.isAutenticado()
+      ) {
+        provedor.agendarAtualizacaoPreview();
+      }
+    }),
   );
 
   context.subscriptions.push(

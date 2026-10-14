@@ -18,7 +18,7 @@ O treino segue as condições do torneio: a extensão mostra as medidas e as cor
 
 - Gera desafios aleatórios de 800 × 800 px, com cabeçalhos, colunas, grades de cartões e fileiras de círculos.
 - Mostra o tamanho e a cor de cada componente do gabarito, na barra lateral ou em uma aba do editor.
-- Atualiza a pré-visualização da sua página sempre que você salva os arquivos.
+- Atualiza a pré-visualização da sua página enquanto você digita, sem precisar salvar.
 - Compara o gabarito com a sua página, sobrepostos ou lado a lado.
 - Envia a sua página para o servidor do torneio corrigir e mostra a precisão oficial. As correções de treino não entram no ranking.
 - Como a extensão oficial do torneio, não aceita IA durante o desafio: não deixa começar nem corrigir com extensões de IA habilitadas (Copilot, Claude Code, Codex, Continue, Cline e outras) e invalida o desafio se uma delas for habilitada ou se o código for alterado fora do editor (veja [As regras do desafio](#as-regras-do-desafio)).
@@ -70,7 +70,7 @@ Se você já tinha o projeto, rode `git pull` e `npm install` antes. Para gerar 
 1. **Gerar novo desafio** cria uma imagem nova. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela.
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
-4. Salve os arquivos para atualizar a pré-visualização e a comparação. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
+4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
 5. Clique em **Verificar**. A barra lateral mostra as etapas e, no fim, a **precisão oficial do servidor**.
 6. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
 7. **Encerrar desafio** congela o cronômetro quando você terminar.
@@ -90,7 +90,7 @@ Salvar no editor, inclusive com formatação ao salvar, e criar os arquivos pelo
 
 ## A barra lateral
 
-A barra lateral tem três partes: **Desafio** (o quadro, as medidas e os dados do gabarito), **Sua página** (os arquivos e o **Verificar**) e **Resultado** (a precisão e as tentativas).
+A barra lateral tem duas partes: **Desafio** (o quadro, que alterna entre o gabarito e a sua página, as medidas e os dados do gabarito) e **Resultado** (o **Verificar**, a precisão e as tentativas). Se faltar o `index.html` ou o `style.css` na pasta aberta, o Resultado avisa e oferece criá-los. O caminho dos arquivos usados aparece ao parar o mouse sobre **Sua página**.
 
 | Botão | O que faz |
 |---|---|
@@ -99,7 +99,7 @@ A barra lateral tem três partes: **Desafio** (o quadro, as medidas e os dados d
 | Encerrar desafio | Congela o cronômetro do desafio atual |
 | Testar servidor | Confere se a sua sessão está valendo no servidor |
 | Abrir em uma aba | Abre o gabarito, as medidas e a comparação em uma aba do editor |
-| Atualizar preview | Relê `index.html` e `style.css` sem precisar salvar |
+| ↻ (ao lado de Sua página) | Atualiza a sua página na hora. Ela já atualiza sozinha enquanto você digita; use se demorar |
 | Criar index.html e style.css | Aparece quando falta algum dos dois; cria só o que falta, sem sobrescrever nada |
 | Ver extensões | Aparece no aviso de extensões de IA; abre a página delas para você desabilitar |
 | Verificar | Mede a sua página e envia para a correção |
@@ -117,7 +117,7 @@ Abra pelo botão **Abrir em uma aba**, pelo atalho **Abrir gabarito em uma aba**
 
 O botão **Componentes** mostra ou esconde a lista em qualquer modo.
 
-A sua página aparece na aba exatamente como ela é medida para a correção, e é atualizada quando você salva os arquivos.
+A sua página aparece na aba exatamente como ela é medida para a correção, e acompanha o que você digita.
 
 <p align="center">
   <img src="docs/imagens/aba-gabarito.png" alt="Aba do gabarito no modo Gabarito, com a lista de componentes e as medidas de cada um" width="900">

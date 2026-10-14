@@ -40,6 +40,8 @@ const CRIAR_DINAMICA = "Criar dinâmica de treino";
 const ABRIR_PASTA = "Abrir pasta";
 const VER_EXTENSOES = "Ver extensões";
 const CADASTRAR = "Cadastrar";
+// Espera depois da última tecla antes de redesenhar a página do aluno.
+const ESPERA_DIGITACAO_MS = 500;
 // Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
 const LARGURA_PADRAO = 800;
 const ALTURA_PADRAO = 800;
@@ -76,6 +78,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   // Criada na primeira vez que o aluno abre o gabarito em uma aba.
   private painelGabarito?: PainelGabarito;
+
+  private atualizacaoAgendada?: ReturnType<typeof setTimeout>;
 
   // Precisões das correções do desafio atual, da primeira à última.
   private historicoNotas: number[] = [];
@@ -510,6 +514,18 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     return resumo.temArquivoHtml || resumo.temArquivoCss
       ? resumo.htmlPreview
       : undefined;
+  }
+
+  /**
+   * A página do aluno acompanha a digitação: várias teclas seguidas viram uma
+   * só atualização, meio segundo depois da última.
+   */
+  public agendarAtualizacaoPreview(): void {
+    clearTimeout(this.atualizacaoAgendada);
+    this.atualizacaoAgendada = setTimeout(() => {
+      this.atualizacaoAgendada = undefined;
+      void this.atualizarPreviewWorkspace();
+    }, ESPERA_DIGITACAO_MS);
   }
 
   public async atualizarPreviewWorkspace(): Promise<void> {

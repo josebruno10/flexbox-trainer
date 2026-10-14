@@ -540,6 +540,22 @@ suite("Provedor da barra lateral", () => {
     assert.strictEqual(estadosBarra[estadosBarra.length - 1]?.precisao, undefined);
   });
 
+  test("junta as teclas seguidas numa só atualização da página do aluno", async () => {
+    const provedor = criarProvedorParaTeste([]);
+    let atualizacoes = 0;
+    provedor.atualizarPreviewWorkspace = async () => {
+      atualizacoes++;
+    };
+
+    provedor.agendarAtualizacaoPreview();
+    provedor.agendarAtualizacaoPreview();
+    provedor.agendarAtualizacaoPreview();
+    assert.strictEqual(atualizacoes, 0, "Não atualiza a cada tecla.");
+    await new Promise((resolver) => setTimeout(resolver, 700));
+
+    assert.strictEqual(atualizacoes, 1);
+  });
+
   test("reenvia a mesma página depois de uma correção que falhou", async () => {
     mockarConfiguracaoServidorValida();
     let correcoes = 0;

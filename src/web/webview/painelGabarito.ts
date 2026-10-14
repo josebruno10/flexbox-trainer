@@ -33,8 +33,8 @@ const DURACAO_SELECAO_MS = 2500;
 
 const AJUDA: Record<Modo, string> = {
   gabarito: "Clique num componente para destacá-lo e num valor para copiá-lo.",
-  sobreposto: "Arraste o controle para comparar. A sua página atualiza ao salvar.",
-  lado: "A sua página atualiza ao salvar.",
+  sobreposto: "Arraste o controle para comparar. A sua página atualiza enquanto você digita.",
+  lado: "A sua página atualiza enquanto você digita.",
 };
 
 const vscode = acquireVsCodeApi();

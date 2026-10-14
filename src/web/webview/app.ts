@@ -107,8 +107,11 @@ const valorComponentes = document.getElementById(
 const detalheComponente = document.getElementById(
   "detalheComponente",
 ) as HTMLDivElement;
-const arquivoHtml = document.getElementById("arquivoHtml") as HTMLElement;
-const arquivoCss = document.getElementById("arquivoCss") as HTMLElement;
+const avisoArquivos = document.getElementById("avisoArquivos") as HTMLElement;
+const textoArquivos = document.getElementById("textoArquivos") as HTMLElement;
+const botaoVistaPagina = document.getElementById(
+  "botaoVistaPagina",
+) as HTMLButtonElement;
 const canvasPreviewAluno = document.getElementById(
   "canvasPreviewAluno",
 ) as HTMLCanvasElement;
@@ -519,40 +522,26 @@ function criarMedida(texto: string): HTMLSpanElement {
   return medida;
 }
 
-function renderizarArquivo(
-  campo: HTMLElement,
-  existe: boolean,
-  caminho: string,
-): void {
-  campo.classList.toggle("falta", !existe);
-  campo.title = existe ? caminho : "";
-  if (!existe) {
-    campo.textContent = "não encontrado";
-    return;
-  }
-
-  // O caminho inteiro fica na dica; aqui, só a pasta e o arquivo.
-  const curto = document.createElement("span");
-  curto.className = "caminho";
-  curto.textContent = caminho.split(/[\\/]/).filter(Boolean).slice(-2).join("/");
-  campo.replaceChildren(curto);
-}
-
 function renderizarWorkspace(
   resumoWorkspace: ResumoWorkspaceRecebido,
 ): void {
-  renderizarArquivo(
-    arquivoHtml,
-    resumoWorkspace.temArquivoHtml,
-    resumoWorkspace.caminhoHtml,
-  );
-  renderizarArquivo(
-    arquivoCss,
-    resumoWorkspace.temArquivoCss,
-    resumoWorkspace.caminhoCss,
-  );
-  botaoCriarArquivos.hidden =
-    resumoWorkspace.temArquivoHtml && resumoWorkspace.temArquivoCss;
+  // Os arquivos só aparecem quando falta algum; os caminhos ficam na dica
+  // do botão Sua página.
+  const faltando = [
+    resumoWorkspace.temArquivoHtml ? "" : "index.html",
+    resumoWorkspace.temArquivoCss ? "" : "style.css",
+  ].filter(Boolean);
+  avisoArquivos.hidden = faltando.length === 0;
+  textoArquivos.textContent =
+    faltando.length === 2
+      ? "Faltam index.html e style.css na pasta aberta."
+      : `Falta ${faltando[0]} na pasta aberta.`;
+  botaoVistaPagina.title = [
+    resumoWorkspace.temArquivoHtml ? resumoWorkspace.caminhoHtml : "",
+    resumoWorkspace.temArquivoCss ? resumoWorkspace.caminhoCss : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   try {
     const { largura, altura } = dimensoesDoDesafio();
     montarPaginaAluno(
