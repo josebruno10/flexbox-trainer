@@ -32,15 +32,18 @@ export function formatarCodigo(codigo: string): string {
  * computador. Assim a turma treina o mesmo layout sem o professor passar um.
  */
 export function codigoDoDia(data: Date = new Date()): string {
-  const dia = [
+  return String(
+    semente(`flexbox-trainer:dia:${diaLocal(data)}`) % TOTAL_CODIGOS,
+  ).padStart(DIGITOS, "0");
+}
+
+/** A data do computador, como "2026-10-14". */
+export function diaLocal(data: Date): string {
+  return [
     data.getFullYear(),
     String(data.getMonth() + 1).padStart(2, "0"),
     String(data.getDate()).padStart(2, "0"),
   ].join("-");
-  return String(semente(`flexbox-trainer:dia:${dia}`) % TOTAL_CODIGOS).padStart(
-    DIGITOS,
-    "0",
-  );
 }
 
 /** O sorteio do gerador para um código: sempre a mesma sequência. */

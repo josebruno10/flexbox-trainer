@@ -24,6 +24,8 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Marca o tempo de cada tentativa.
 - Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
+- Conta os dias seguidos em que você fez o desafio do dia.
+- Avisa quando sai uma versão nova.
 
 ## Requisitos
 
@@ -39,7 +41,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.3.0.vsix`.
 3. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
 
-Para atualizar, instale o `.vsix` novo do mesmo jeito.
+Para atualizar, instale o `.vsix` novo do mesmo jeito. Uma vez por dia, a extensão confere no GitHub se saiu uma versão nova e avisa; **Baixar** abre a página dela. A consulta não envia nada seu.
 
 ### Pelo código (para desenvolver)
 
@@ -88,6 +90,8 @@ Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio 
 - **Sozinho:** refaça um desafio para tentar uma nota maior ou um tempo menor.
 
 O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
+
+No topo do Histórico, **Desafio do dia** mostra quantos dias seguidos você verificou o desafio do dia. Enquanto o de hoje não foi feito, aparece "falta o de hoje"; um dia inteiro sem ele recomeça a contagem. O desafio de ontem verificado depois da meia-noite ainda conta para ontem.
 
 O histórico fica só neste computador, separado por e-mail: num laboratório, cada aluno vê os próprios desafios.
 

@@ -11,7 +11,9 @@ const { Mocha } = require("mocha");
 export const ARQUIVO_RESULTADO = path.join(__dirname, "resultado-desktop.json");
 
 export function run(): Promise<void> {
-  const mocha = new Mocha({ ui: "tdd", timeout: 4000 });
+  // O mesmo limite da suíte web: com a máquina carregada, gerar e verificar
+  // desafios demora mais.
+  const mocha = new Mocha({ ui: "tdd", timeout: 10_000 });
   mocha.suite.emit("pre-require", globalThis, "suite", mocha);
 
   const contexto = require.context("./suite", true, /\.test\.ts$/);

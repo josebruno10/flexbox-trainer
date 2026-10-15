@@ -6,6 +6,9 @@ export function run(): Promise<void> {
     mocha.setup({
       ui: "tdd",
       reporter: undefined,
+      // Com a máquina carregada, os testes que geram e verificam desafios
+      // passam do limite padrão de 2 s.
+      timeout: 10_000,
     });
 
     // Inclui todos os arquivos da pasta que terminam com `.test`.

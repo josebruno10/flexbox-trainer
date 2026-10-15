@@ -15,11 +15,16 @@ import {
 } from "../types";
 import {
   codigoDoDia,
+  diaLocal,
   formatarCodigo,
   normalizarCodigo,
 } from "../services/codigoDesafio";
 import { criarDesafioPorCodigo } from "../services/desafio";
-import { HistoricoDesafios, RegistroHistorico } from "../services/historico";
+import {
+  HistoricoDesafios,
+  RegistroHistorico,
+  SequenciaDoDia,
+} from "../services/historico";
 import {
   criarArquivosDeTreino,
   criarResumoWorkspaceVazio,
@@ -1152,6 +1157,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         registros: registros.slice(0, HISTORICO_NA_BARRA),
         total: registros.length,
         recorde: this.recordeDoDesafio() ?? null,
+        sequencia: this.sequenciaDoAluno() ?? null,
       },
     });
 
@@ -1197,19 +1203,43 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
 
     const instante = Date.now();
-    await this.historico.registrarNota(this.authService.getSessaoAtual()?.email, {
+    const email = this.authService.getSessaoAtual()?.email;
+    await this.historico.registrarNota(email, {
       codigo: desafio.codigo,
       tentativa: desafio.challengeId,
       precisao,
       tempoMs: (this.fimTentativaMs ?? instante) - this.inicioTentativaMs,
       instante,
     });
+
+    // O desafio do dia de hoje, ou o de ontem terminado depois da meia-noite.
+    const agora = new Date(instante);
+    const ontem = new Date(
+      agora.getFullYear(),
+      agora.getMonth(),
+      agora.getDate() - 1,
+    );
+    const dia = [agora, ontem].find(
+      (data) => codigoDoDia(data) === desafio.codigo,
+    );
+    if (dia) {
+      await this.historico.registrarDesafioDoDia(email, diaLocal(dia));
+    }
   }
 
   private registrosDoAluno(): RegistroHistorico[] {
     return this.authService.isAutenticado()
       ? this.historico.listar(this.authService.getSessaoAtual()?.email)
       : [];
+  }
+
+  private sequenciaDoAluno(): SequenciaDoDia | undefined {
+    return this.authService.isAutenticado()
+      ? this.historico.sequenciaDoDia(
+          this.authService.getSessaoAtual()?.email,
+          diaLocal(new Date(Date.now())),
+        )
+      : undefined;
   }
 
   // O melhor que o aluno já fez neste código antes: aparece quando ele refaz

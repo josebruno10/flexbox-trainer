@@ -167,8 +167,16 @@ const desktopTestConfig = {
   externals: { vscode: "commonjs vscode", mocha: "commonjs mocha" },
 };
 
-// O pacote dos testes do desktop só é gerado quando pedido.
-module.exports = (env = {}) =>
-  env.testesDesktop
-    ? [desktopTestConfig]
-    : [webExtensionConfig, nodeExtensionConfig, webviewAppConfig];
+// O pacote dos testes do desktop só é gerado quando pedido. O de produção, o
+// do .vsix, deixa de fora a suíte web, que não vai no .vsix: minificá-la
+// tomava quase todo o tempo do empacotamento.
+module.exports = (env = {}, argv = {}) => {
+  if (env.testesDesktop) {
+    return [desktopTestConfig];
+  }
+  const web =
+    argv.mode === "production"
+      ? { ...webExtensionConfig, entry: { extension: webExtensionConfig.entry.extension } }
+      : webExtensionConfig;
+  return [web, nodeExtensionConfig, webviewAppConfig];
+};

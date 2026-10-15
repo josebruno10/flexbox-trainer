@@ -45,6 +45,7 @@ type HistoricoDesafiosRecebido = {
   registros: RegistroHistoricoRecebido[];
   total: number;
   recorde: number | null;
+  sequencia: { dias: number; feitoHoje: boolean } | null;
 };
 
 type ResumoWorkspaceRecebido = {
@@ -150,6 +151,8 @@ const linhaRecorde = document.getElementById("linhaRecorde") as HTMLElement;
 const valorRecorde = document.getElementById("valorRecorde") as HTMLElement;
 const secaoHistorico = document.getElementById("secaoHistorico") as HTMLElement;
 const listaHistorico = document.getElementById("listaHistorico") as HTMLElement;
+const linhaSequencia = document.getElementById("linhaSequencia") as HTMLElement;
+const valorSequencia = document.getElementById("valorSequencia") as HTMLElement;
 const botaoVerHistorico = document.getElementById(
   "botaoVerHistorico",
 ) as HTMLButtonElement;
@@ -761,6 +764,13 @@ function renderizarHistoricoDesafios(historico: HistoricoDesafiosRecebido): void
   renderizarHistorico(notasAtuais);
 
   secaoHistorico.hidden = historico.registros.length === 0;
+  const sequencia = historico.sequencia;
+  linhaSequencia.hidden = !sequencia;
+  if (sequencia) {
+    valorSequencia.textContent =
+      (sequencia.dias === 1 ? "1 dia" : `${sequencia.dias} dias seguidos`) +
+      (sequencia.feitoHoje ? "" : " · falta o de hoje");
+  }
   botaoVerHistorico.hidden = historico.total <= historico.registros.length;
   botaoVerHistorico.textContent = `Ver todos (${historico.total})`;
   listaHistorico.replaceChildren(

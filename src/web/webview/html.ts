@@ -724,6 +724,10 @@ export function obterHtmlWebview(
       padding: 0;
     }
 
+    .sequencia {
+      margin-bottom: 6px;
+    }
+
     .lista-historico li {
       display: grid;
       grid-template-columns: 1fr auto auto auto;
@@ -852,6 +856,9 @@ export function obterHtmlWebview(
       <h2 class="rotulo"><span class="numero">03</span> / Histórico</h2>
       <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>Ver todos</button>
     </div>
+    <dl class="dados sequencia" id="linhaSequencia" hidden>
+      <div title="Dias seguidos em que você verificou o desafio do dia"><dt>Desafio do dia</dt><dd id="valorSequencia"></dd></div>
+    </dl>
     <ol class="lista-historico" id="listaHistorico" aria-label="Os desafios mais recentes, com a melhor nota e o tempo"></ol>
   </section>
 

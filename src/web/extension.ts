@@ -9,6 +9,7 @@ import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
+import { avisarVersaoNova } from "./services/versaoNova";
 import { escolherTemaCores } from "./webview/temas";
 import {
   ehDocumentoDeTreino,
@@ -322,6 +323,14 @@ export async function activate(context: vscode.ExtensionContext) {
   // armazenamento seguro ou a API de autenticação estiverem lentos/offline.
   // A inicialização da sessão atualiza a webview assim que for concluída.
   void authService.inicializar();
+
+  // Os testes não consultam o GitHub.
+  if (context.extensionMode !== vscode.ExtensionMode.Test) {
+    void avisarVersaoNova(
+      context.globalState,
+      String(context.extension.packageJSON.version),
+    );
+  }
 
   // Uma única vez, na primeira vez que a extensão roda (inclusive depois de
   // atualizar de uma versão sem guia), abre o guia de primeiros passos.
