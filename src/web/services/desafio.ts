@@ -3,7 +3,7 @@ import { nivelDoCodigo } from "../niveis";
 import { aleatorioDoCodigo, sortearCodigo } from "./codigoDesafio";
 
 // Porta do gerador de Vitor Costa (Gerador-de-imagens-para-torneio-de-CSS,
-// commit 6cbe24e). As decisões aleatórias seguem o script original; muda a
+// commit 271c492). As decisões aleatórias seguem o script original; muda a
 // saída, que vira uma lista de blocos com hierarquia em vez de desenho direto
 // no canvas, e o gerador de números, que pode ser injetado nos testes.
 export const LARGURA_GABARITO = 800;
@@ -18,10 +18,11 @@ const ESPACO_SEQUENCIA = 10;
 const ESPACO_MINIMO_CIRCULOS = 30;
 const DIAMETRO_MINIMO = 20;
 
-// Quantos componentes saem em cada nível, dos menores para os maiores.
-const REMOVIDOS_POR_NIVEL: Record<Nivel, number> = {
-  facil: 15,
-  medio: 9,
+// A parte dos componentes que sai em cada nível, dos menores para os
+// maiores.
+const FRACAO_REMOVIDA: Record<Nivel, number> = {
+  facil: 0.5,
+  medio: 0.3,
   dificil: 0,
 };
 // Nenhum nível tira tanto que sobrem menos componentes que isto.
@@ -120,7 +121,10 @@ export function criarDesafioGerado(
     height: ALTURA_GABARITO,
     backgroundColor: rgbParaHex(corFundo),
     nivel,
-    blocks: tirarOsMenores(contexto, REMOVIDOS_POR_NIVEL[nivel]),
+    blocks: tirarOsMenores(
+      contexto,
+      Math.floor(contexto.blocks.length * FRACAO_REMOVIDA[nivel]),
+    ),
   };
 }
 

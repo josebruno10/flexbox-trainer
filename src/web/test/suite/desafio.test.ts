@@ -113,7 +113,7 @@ suite("Gerador de desafios", () => {
     // Os blocos criados juntos têm o mesmo pai, a mesma cor e o mesmo tamanho.
     const padrao = (bloco: Bloco, pai: string) =>
       [pai, bloco.color, bloco.width, bloco.height].join("|");
-    let tirouOsQuinze = 0;
+    let tirouAPorcentagem = 0;
 
     for (let caso = 0; caso < 100; caso++) {
       const [dificil, medio, facil] = (["dificil", "medio", "facil"] as const).map(
@@ -163,13 +163,18 @@ suite("Gerador de desafios", () => {
         facil.blocks.length >= Math.min(8, dificil.blocks.length),
         `Caso ${caso}: o fácil ficou com poucos componentes.`,
       );
-      if (dificil.blocks.length - facil.blocks.length >= 15) {
-        tirouOsQuinze++;
+      const total = dificil.blocks.length;
+      if (
+        total - facil.blocks.length >= Math.floor(total * 0.5) &&
+        total - medio.blocks.length >= Math.floor(total * 0.3)
+      ) {
+        tirouAPorcentagem++;
       }
     }
 
-    // Quase sempre o fácil tira os 15 menores.
-    assert.ok(tirouOsQuinze >= 90, `Só ${tirouOsQuinze} de 100 tiraram 15.`);
+    // Quase sempre o fácil tira a metade, e o médio, 30%. As exceções são
+    // as imagens pequenas, que param em 8 componentes.
+    assert.ok(tirouAPorcentagem >= 95, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {
