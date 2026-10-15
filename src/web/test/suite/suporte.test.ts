@@ -31,6 +31,7 @@ suite("Relatos de problema e opiniões", () => {
       sistema: "Linux",
       codigo: "482 917 (médio)",
     });
+    assert.ok(enderecoDoProblema(AMBIENTE).includes("codigo=482%20917%20(m%C3%A9dio)"));
   });
 
   test("sem desafio, o código fica em branco", () => {

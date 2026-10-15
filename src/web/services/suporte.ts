@@ -17,22 +17,18 @@ export type Ambiente = {
 
 /** O formulário de problema, já com a versão, o sistema e o desafio. */
 export function enderecoDoProblema(ambiente: Ambiente): string {
-  const parametros = new URLSearchParams({
+  return novaIssue({
     template: "problema.yml",
     versao: ambiente.versao,
     vscode: ambiente.vscode,
     sistema: ambiente.sistema,
+    ...(ambiente.desafio ? { codigo: descreverDesafio(ambiente.desafio) } : {}),
   });
-  if (ambiente.desafio) {
-    parametros.set("codigo", descreverDesafio(ambiente.desafio));
-  }
-  return `${NOVA_ISSUE}?${parametros}`;
 }
 
 /** O questionário de opinião, já com a versão. */
 export function enderecoDaOpiniao(versao: string): string {
-  const parametros = new URLSearchParams({ template: "opiniao.yml", versao });
-  return `${NOVA_ISSUE}?${parametros}`;
+  return novaIssue({ template: "opiniao.yml", versao });
 }
 
 /** As mesmas informações, para colar numa mensagem à equipe. */
@@ -98,6 +94,17 @@ export function nomeDoSistema(plataforma: string | undefined): string {
     darwin: "macOS",
   };
   return (plataforma && nomes[plataforma]) || plataforma || "navegador";
+}
+
+// Espaços viram %20, e não "+", que nem todo leitor de endereço desfaz.
+function novaIssue(parametros: Record<string, string>): string {
+  const consulta = Object.entries(parametros)
+    .map(
+      ([nome, valor]) =>
+        `${encodeURIComponent(nome)}=${encodeURIComponent(valor)}`,
+    )
+    .join("&");
+  return `${NOVA_ISSUE}?${consulta}`;
 }
 
 function descreverDesafio(desafio: { codigo: string; nivel?: Nivel }): string {
