@@ -9,10 +9,10 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensao",
-        "${workspaceFolder}/extensao/exemplo-treino"
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/exemplo-treino"
       ],
-      "outFiles": ["${workspaceFolder}/extensao/dist/node/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/node/**/*.js"],
       "preLaunchTask": "npm: compile-web",
       // Com o depurador, o extension host Node nasce pausado e os logins
       // embutidos do GitHub e da Microsoft nunca registram. Assim F5 e
@@ -26,11 +26,11 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensao",
+        "--extensionDevelopmentPath=${workspaceFolder}",
         "--disable-extensions",
-        "${workspaceFolder}/extensao/exemplo-treino"
+        "${workspaceFolder}/exemplo-treino"
       ],
-      "outFiles": ["${workspaceFolder}/extensao/dist/node/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/node/**/*.js"],
       "preLaunchTask": "npm: compile-web",
       "noDebug": true
     },
@@ -39,10 +39,10 @@
       "type": "pwa-extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensao",
+        "--extensionDevelopmentPath=${workspaceFolder}",
         "--browserType=chromium"
       ],
-      "outFiles": ["${workspaceFolder}/extensao/dist/web/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
       "preLaunchTask": "npm: compile-web"
     },
     {
@@ -51,10 +51,10 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensao",
-        "--extensionTestsPath=${workspaceFolder}/extensao/dist/web/test/suite/index"
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/dist/web/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/extensao/dist/web/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
       "preLaunchTask": "npm: compile-web"
     }
   ]
