@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { PainelGabarito } from "../../provider/painel-gabarito";
+import { PainelGabarito } from "../../provider/painelGabarito";
 import { criarDesafioGerado } from "../../services/desafio";
 import { obterHtmlPainelGabarito } from "../../telas/painelGabarito";
 

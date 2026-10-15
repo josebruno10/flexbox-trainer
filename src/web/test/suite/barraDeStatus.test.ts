@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import {
   BarraDeStatus,
   conteudoBarraDeStatus,
-} from "../../provider/barra-de-status";
+} from "../../provider/barraDeStatus";
 
 suite("Barra de status", () => {
   test("mostra o tempo e a última precisão do desafio em andamento", () => {

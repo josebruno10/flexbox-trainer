@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { ProgressoGuia } from "../../../provider/provedor-barra-lateral";
+import { ProgressoGuia } from "../../../provider/provedorBarraLateral";
 import { criarDesafioPorCodigo } from "../../../services/desafio";
 import {
   criarBarraFalsa,

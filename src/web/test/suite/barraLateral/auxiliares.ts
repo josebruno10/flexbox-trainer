@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { AuthService } from "../../../auth/authService";
-import { BarraDeStatus } from "../../../provider/barra-de-status";
-import { ProvedorBarraLateralFlexBox } from "../../../provider/provedor-barra-lateral";
+import { BarraDeStatus } from "../../../provider/barraDeStatus";
+import { ProvedorBarraLateralFlexBox } from "../../../provider/provedorBarraLateral";
 import { criarDesafioGerado, criarDesafioPorCodigo } from "../../../services/desafio";
 import {
   ConfiguracaoServidor,

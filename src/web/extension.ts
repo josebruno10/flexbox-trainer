@@ -3,8 +3,8 @@ import { AuthService } from "./auth/authService";
 import {
   BarraDeStatus,
   COMANDO_ABRIR_BARRA,
-} from "./provider/barra-de-status";
-import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
+} from "./provider/barraDeStatus";
+import { ProvedorBarraLateralFlexBox } from "./provider/provedorBarraLateral";
 import { sincronizarComOutrosComputadores } from "./sincronizacao";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";

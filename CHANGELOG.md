@@ -15,7 +15,8 @@ As mudanças de cada versão do FlexBox Trainer.
 - A contagem de dias seguidos do desafio do dia, no Histórico. O **Desafio do dia** continua.
 
 ### Para quem desenvolve
-- Os arquivos grandes foram divididos por assunto: as telas (`telas/`), o script da barra lateral (`webview/barra/`), o da aba do gabarito (`webview/aba/`), a medição das formas (`webview/formas/`), o login (`auth/`), as rotas do servidor (`services/servidor/`), o gerador (`services/gerador/`), a verificação do provedor (`provider/barra-lateral/verificacao.ts`) e os testes (`test/suite/auth/`, `test/suite/barraLateral/`).
+- Os arquivos de código passam a ter nomes em camelCase (`provider/barra-lateral/` virou `provider/barraLateral/`, por exemplo).
+- Os arquivos grandes foram divididos por assunto: as telas (`telas/`), o script da barra lateral (`webview/barra/`), o da aba do gabarito (`webview/aba/`), a medição das formas (`webview/formas/`), o login (`auth/`), as rotas do servidor (`services/servidor/`), o gerador (`services/gerador/`), a verificação do provedor (`provider/barraLateral/verificacao.ts`) e os testes (`test/suite/auth/`, `test/suite/barraLateral/`).
 - Ao publicar uma versão, um teste de ponta a ponta confere num VS Code de verdade que a versão anterior se atualiza para ela com um clique e mostra o que mudou (`npm run test:e2e`).
 
 ## [0.5.1] - 2026-10-15

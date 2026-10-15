@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { BarraDeStatus, EstadoBarraDeStatus } from "../../../provider/barra-de-status";
+import { BarraDeStatus, EstadoBarraDeStatus } from "../../../provider/barraDeStatus";
 import {
   CHAVE_REGISTRO,
   criarProvedorParaTeste,

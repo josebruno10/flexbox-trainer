@@ -1,6 +1,6 @@
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
 import { codigoDoDia, formatarCodigo } from "../../services/codigoDesafio";
-import { formatarTempo } from "../barra-de-status";
+import { formatarTempo } from "../barraDeStatus";
 
 export type MelhorDaTentativa = { precisao: number; tempoMs: number };
 

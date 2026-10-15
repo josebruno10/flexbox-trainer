@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { criarResumoWorkspaceVazio } from "../../services/workspace";
 import { Desafio, ResumoWorkspace } from "../../types";
-import { PainelGabarito } from "../painel-gabarito";
+import { PainelGabarito } from "../painelGabarito";
 
 // Espera depois da última tecla antes de redesenhar a página do aluno.
 const ESPERA_DIGITACAO_MS = 500;

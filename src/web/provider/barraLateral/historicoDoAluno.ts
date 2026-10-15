@@ -7,7 +7,7 @@ import {
   RegistroHistorico,
 } from "../../services/historico";
 import { Desafio, Nivel } from "../../types";
-import { formatarTempo } from "../barra-de-status";
+import { formatarTempo } from "../barraDeStatus";
 import { formatarPorcentagem } from "./resultado";
 
 // Na barra lateral cabem os desafios mais recentes; o resto fica no comando

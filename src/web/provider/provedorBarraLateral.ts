@@ -40,38 +40,38 @@ import {
   BarraDeStatus,
   COMANDO_ABRIR_BARRA,
   EstadoBarraDeStatus,
-} from "./barra-de-status";
+} from "./barraDeStatus";
 import {
   confirmarLimpeza,
   criarArquivosComAviso,
-} from "./barra-lateral/arquivosDeTreino";
-import { cadastrarNoTorneio } from "./barra-lateral/cadastro";
-import { pedirCodigo } from "./barra-lateral/codigos";
-import { sessaoRecusada, testarConexao } from "./barra-lateral/conexao";
-import { Corretor } from "./barra-lateral/corretor";
-import { mensagensDaBarra, ProgressoGuia } from "./barra-lateral/estado";
-import { HistoricoDoAluno } from "./barra-lateral/historicoDoAluno";
+} from "./barraLateral/arquivosDeTreino";
+import { cadastrarNoTorneio } from "./barraLateral/cadastro";
+import { pedirCodigo } from "./barraLateral/codigos";
+import { sessaoRecusada, testarConexao } from "./barraLateral/conexao";
+import { Corretor } from "./barraLateral/corretor";
+import { mensagensDaBarra, ProgressoGuia } from "./barraLateral/estado";
+import { HistoricoDoAluno } from "./barraLateral/historicoDoAluno";
 import { CHAVE_NIVEL } from "../sincronizacao";
-import { PaginaDoAluno } from "./barra-lateral/paginaDoAluno";
-import { ControladorDaBarra, rotearMensagem } from "./barra-lateral/mensagens";
+import { PaginaDoAluno } from "./barraLateral/paginaDoAluno";
+import { ControladorDaBarra, rotearMensagem } from "./barraLateral/mensagens";
 import {
   avisarExtensoesIa,
   ehArquivoDeTreino,
   motivoExtensoesIa,
   resultadoInvalidado,
-} from "./barra-lateral/regras";
-import { TentativaEmCurso, verificarTentativa } from "./barra-lateral/verificacao";
+} from "./barraLateral/regras";
+import { TentativaEmCurso, verificarTentativa } from "./barraLateral/verificacao";
 import {
   melhorEntre,
   MelhorDaTentativa,
   textoDoResultado,
-} from "./barra-lateral/resultado";
+} from "./barraLateral/resultado";
 
-export type { ProgressoGuia } from "./barra-lateral/estado";
+export type { ProgressoGuia } from "./barraLateral/estado";
 
 /**
  * A barra lateral: guarda o desafio em andamento e coordena as partes que
- * ficam em barra-lateral/ (mensagens, correção, histórico, arquivos).
+ * ficam em barraLateral/ (mensagens, correção, histórico, arquivos).
  */
 export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public static readonly viewType = "flexbox-trainer.sidebar";
@@ -514,7 +514,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     );
   }
 
-  // O que a verificação (barra-lateral/verificacao.ts) lê e muda aqui.
+  // O que a verificação (barraLateral/verificacao.ts) lê e muda aqui.
   private tentativaEmCurso(): TentativaEmCurso {
     return {
       autenticado: () => this.authService.isAutenticado(),
@@ -700,7 +700,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       : obterHtmlAutenticacao(webview, this.extensionUri);
   }
 
-  // O que cada pedido da barra lateral faz (veja barra-lateral/mensagens.ts).
+  // O que cada pedido da barra lateral faz (veja barraLateral/mensagens.ts).
   private controladorDaBarra(): ControladorDaBarra {
     return {
       autenticado: () => this.authService.isAutenticado(),
