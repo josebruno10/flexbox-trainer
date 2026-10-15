@@ -4,6 +4,7 @@ import {
   criarDesafioGerado,
   LARGURA_GABARITO,
 } from "../../services/desafio";
+import { FRACAO_REMOVIDA } from "../../services/gerador/dificuldade";
 import { Bloco } from "../../types";
 
 suite("Gerador de desafios", () => {
@@ -164,17 +165,23 @@ suite("Gerador de desafios", () => {
         `Caso ${caso}: o fácil ficou com poucos componentes.`,
       );
       const total = dificil.blocks.length;
-      if (
-        total - facil.blocks.length >= Math.floor(total * 0.5) &&
-        total - medio.blocks.length >= Math.floor(total * 0.3)
-      ) {
+      const tirou = (desafio: { blocks: Bloco[] }, nivel: "facil" | "medio") =>
+        total - desafio.blocks.length >= Math.floor(total * FRACAO_REMOVIDA[nivel]);
+      if (tirou(facil, "facil") && tirou(medio, "medio")) {
         tirouAPorcentagem++;
+      } else {
+        // Quem não tirou a porcentagem parou perto do mínimo de 8: o próximo
+        // padrão inteiro deixaria o desafio com menos.
+        assert.ok(
+          facil.blocks.length <= 12 && medio.blocks.length >= facil.blocks.length,
+          `Caso ${caso}: parou com ${facil.blocks.length} componentes no fácil.`,
+        );
       }
     }
 
-    // Quase sempre o fácil tira a metade, e o médio, 30%. As exceções são
-    // as imagens pequenas, que param em 8 componentes.
-    assert.ok(tirouAPorcentagem >= 95, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
+    // Quase sempre o fácil tira 65%, e o médio, 30%. As exceções são as
+    // imagens pequenas, que param perto dos 8 componentes.
+    assert.ok(tirouAPorcentagem >= 90, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {

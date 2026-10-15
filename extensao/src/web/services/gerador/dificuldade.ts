@@ -2,9 +2,11 @@ import { Bloco, Nivel } from "../../types";
 import { ContextoGeracao } from "./regioes";
 
 // A parte dos componentes que sai em cada nível, dos menores para os
-// maiores.
+// maiores. O script do Vitor tira 50% no fácil; aqui são 65%, porque com a
+// metade o fácil ainda parecia um médio (mediana de 15 componentes, contra
+// 11 agora e 21 no médio). Acima de uns 70%, quase tudo para no mínimo.
 export const FRACAO_REMOVIDA: Record<Nivel, number> = {
-  facil: 0.5,
+  facil: 0.65,
   medio: 0.3,
   dificil: 0,
 };

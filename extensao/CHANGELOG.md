@@ -4,6 +4,9 @@ As mudanças de cada versão do FlexBox Trainer.
 
 ## [Não lançado]
 
+### Desafios
+- O fácil ficou mais fácil: tira 65% dos componentes (os menores), e não mais a metade. Um desafio fácil típico passa de 15 para 11 componentes (um médio tem 21). Os códigos do nível fácil passam a gerar a imagem com menos componentes.
+
 ### Sessão e histórico
 - Ao abrir o VS Code, a sessão guardada aparece na hora: a barra lateral não fica mais em "Validando a sessão…" esperando o servidor. A confirmação continua em segundo plano; se o servidor recusar a sessão, ela é encerrada como antes.
 - Com a Sincronização de Configurações do VS Code ligada, o histórico, o gráfico da evolução e o nível escolhido acompanham o aluno nos outros computadores. Só os do aluno da sessão.
