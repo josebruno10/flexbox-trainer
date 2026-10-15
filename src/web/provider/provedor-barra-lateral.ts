@@ -34,7 +34,6 @@ import {
   ExtensaoIa,
 } from "../services/extensoesIa";
 import { lerConfiguracaoServidor } from "../services/servidor/configuracao";
-import { ErroHttpServidor } from "../services/servidor/requisicao";
 import { obterHtmlWebview } from "../webview/telas/barraLateral";
 import { obterHtmlAutenticacao } from "../webview/telas/entrada";
 import {
@@ -61,6 +60,7 @@ import {
   motivoExtensoesIa,
   resultadoInvalidado,
 } from "./barra-lateral/regras";
+import { TentativaEmCurso, verificarTentativa } from "./barra-lateral/verificacao";
 import {
   melhorEntre,
   MelhorDaTentativa,
@@ -516,116 +516,43 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.verificarQuandoPronta = false;
   }
 
-  // A barra lateral mostra as etapas e espera o aviso de conclusão, que vai
-  // sempre, mesmo quando a verificação para no meio.
-  private async verificarTentativaAtual(
+  private verificarTentativaAtual(
     challengeId: string,
     formas: FormaMedida[],
     verificacaoId?: number,
   ): Promise<void> {
-    const avisar = (type: string, mensagem?: string): void => {
-      void this.visualizacaoWebview?.webview.postMessage({
-        type,
-        payload: { id: verificacaoId, mensagem },
-      });
+    return verificarTentativa(
+      this.tentativaEmCurso(),
+      this.corretor,
+      challengeId,
+      formas,
+      verificacaoId,
+    );
+  }
+
+  // O que a verificação (barra-lateral/verificacao.ts) lê e muda aqui.
+  private tentativaEmCurso(): TentativaEmCurso {
+    return {
+      autenticado: () => this.authService.isAutenticado(),
+      desafio: () => this.desafioAtual,
+      gabarito: () => this.gabaritoAtual,
+      extensoesIa: () => this.detectarExtensoesIa(),
+      motivoInvalidacao: () => this.motivoInvalidacao,
+      invalidar: (motivo) => this.invalidarDesafio(motivo),
+      resumo: () => this.resumoWorkspaceAtual,
+      definirResumo: (resumo) => this.pagina.definir(resumo),
+      guardarResultado: (resultado) => {
+        this.avaliacaoAtual = resultado;
+      },
+      registrarNota: (precisao) => this.registrarNota(precisao),
+      enviarEstado: () => this.enviarEstado(),
+      criarArquivosQueFaltam: () => void this.criarArquivosDeTreino(false),
+      recusarSessaoSePreciso: (httpStatus) =>
+        this.invalidarSessaoSeRecusada(httpStatus),
+      viewId: ProvedorBarraLateralFlexBox.viewType,
+      postar: (mensagem) =>
+        void this.visualizacaoWebview?.webview.postMessage(mensagem),
     };
-
-    try {
-      await vscode.window.withProgress(
-        { location: { viewId: ProvedorBarraLateralFlexBox.viewType } },
-        () =>
-          this.executarVerificacao(challengeId, formas, (mensagem) =>
-            avisar("progressoVerificacao", mensagem),
-          ),
-      );
-    } finally {
-      avisar("verificacaoConcluida");
-    }
-  }
-
-  private async executarVerificacao(
-    challengeId: string,
-    formas: FormaMedida[],
-    aoProgredir: (mensagem: string) => void,
-  ): Promise<void> {
-    if (
-      !this.authService.isAutenticado() ||
-      this.desafioAtual?.challengeId !== challengeId
-    ) {
-      return;
-    }
-
-    // Como no torneio, nada é corrigido com uma extensão de IA habilitada.
-    const extensoesIa = this.detectarExtensoesIa();
-    if (extensoesIa.length > 0) {
-      this.invalidarDesafio(motivoExtensoesIa(extensoesIa));
-    }
-    if (this.motivoInvalidacao) {
-      this.mostrarResultado(resultadoInvalidado(this.motivoInvalidacao));
-      return;
-    }
-
-    const aindaEhAtual = (): boolean =>
-      this.desafioAtual?.challengeId === challengeId;
-
-    try {
-      const lido = await lerResumoWorkspace();
-      const resumo =
-        lido.temArquivoHtml && lido.temArquivoCss ? lido : this.resumoWorkspaceAtual;
-      if (!aindaEhAtual()) {
-        return;
-      }
-      this.pagina.definir(resumo);
-
-      if (!resumo.temArquivoHtml || !resumo.temArquivoCss) {
-        this.mostrarResultado(falha("missing-files", "Faltam index.html e style.css."));
-        void this.criarArquivosDeTreino(false);
-        return;
-      }
-
-      const gabarito = this.gabaritoAtual;
-      if (gabarito?.challengeId !== challengeId) {
-        this.mostrarResultado(
-          falha("gabarito-error", "O gabarito ainda está sendo desenhado. Tente de novo."),
-        );
-        return;
-      }
-
-      const resultado = await this.corretor.corrigir(
-        { challengeId, formas, gabarito },
-        aoProgredir,
-        aindaEhAtual,
-      );
-      if (!resultado) {
-        return;
-      }
-
-      this.avaliacaoAtual = resultado;
-      if (resultado.source === "servidor" && !resultado.repetida) {
-        await this.registrarNota(resultado.precision);
-      }
-      this.enviarEstado();
-
-      if (resultado.source === "authentication-error") {
-        await this.invalidarSessaoSeRecusada(resultado.httpStatus);
-      }
-    } catch (error) {
-      if (!aindaEhAtual()) {
-        return;
-      }
-
-      this.mostrarResultado(
-        falha("api-error", error instanceof Error ? error.message : "Erro desconhecido"),
-      );
-      if (error instanceof ErroHttpServidor) {
-        await this.invalidarSessaoSeRecusada(error.status);
-      }
-    }
-  }
-
-  private mostrarResultado(resultado: ResultadoAvaliacao): void {
-    this.avaliacaoAtual = resultado;
-    this.enviarEstado();
   }
 
   // Uma nota nova: entra nas tentativas, na melhor da vez e no histórico.
@@ -841,13 +768,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         void this.verificarTentativaAtual(challengeId, formas, verificacaoId),
     };
   }
-}
-
-function falha(
-  source: ResultadoAvaliacao["source"],
-  error: string,
-): ResultadoAvaliacao {
-  return { precision: 0, score: 0, source, error };
 }
 
 function mostrarFalhaAoAbrirLogin(error: unknown): void {
