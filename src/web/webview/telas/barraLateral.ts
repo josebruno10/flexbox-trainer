@@ -120,7 +120,6 @@ export function obterHtmlWebview(
       <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
     </div>
     <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
-    <button type="button" id="botaoRelatarErro" class="discreto relatar" title="Abre o formulário de problema, já com esta mensagem" hidden>Relatar problema</button>
     <dl class="dados historico" id="historicoNotas" hidden>
       <div id="linhaTentativas"><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
       <div id="linhaMelhor"><dt>Melhor</dt><dd id="valorMelhor"></dd></div>
@@ -138,9 +137,6 @@ export function obterHtmlWebview(
       <svg id="graficoEvolucao" role="img"></svg>
       <div class="eixo" aria-hidden="true"><span id="inicioEvolucao"></span><span id="fimEvolucao"></span></div>
     </figure>
-    <dl class="dados sequencia" id="linhaSequencia" hidden>
-      <div title="Dias seguidos em que você verificou o desafio do dia"><dt>Desafio do dia</dt><dd id="valorSequencia"></dd></div>
-    </dl>
     <ol class="lista-historico" id="listaHistorico" aria-label="Os desafios mais recentes, com a melhor nota e o tempo"></ol>
   </section>
 

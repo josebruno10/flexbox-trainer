@@ -6,10 +6,12 @@ As mudanças de cada versão do FlexBox Trainer.
 
 ### Sessão e histórico
 - Ao abrir o VS Code, a sessão guardada aparece na hora: a barra lateral não fica mais em "Validando a sessão…" esperando o servidor. A confirmação continua em segundo plano; se o servidor recusar a sessão, ela é encerrada como antes.
-- Com a Sincronização de Configurações do VS Code ligada, o histórico, o gráfico da evolução, a sequência do desafio do dia e o nível escolhido acompanham o aluno nos outros computadores. Só os do aluno da sessão.
+- Com a Sincronização de Configurações do VS Code ligada, o histórico, o gráfico da evolução e o nível escolhido acompanham o aluno nos outros computadores. Só os do aluno da sessão.
 
 ### Removido
-- **Dar opinião**, o questionário no GitHub e o pedido de opinião depois do terceiro desafio: a equipe vai colher as opiniões de outra forma. **Relatar problema** continua.
+- **Dar opinião**, o questionário no GitHub e o pedido de opinião depois do terceiro desafio: a equipe vai colher as opiniões de outra forma.
+- **Relatar problema**, o formulário no GitHub e o botão que aparecia abaixo dos erros do servidor.
+- A contagem de dias seguidos do desafio do dia, no Histórico. O **Desafio do dia** continua.
 
 ### Para quem desenvolve
 - Os arquivos grandes foram divididos por assunto: as telas (`webview/telas/`), o script da barra lateral (`webview/barra/`), a medição das formas (`webview/formas/`), o login (`auth/`), as rotas do servidor (`services/servidor/`), o gerador (`services/gerador/`), a verificação do provedor (`provider/barra-lateral/verificacao.ts`) e os testes (`test/suite/auth/`, `test/suite/barraLateral/`).

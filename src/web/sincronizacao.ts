@@ -1,8 +1,8 @@
 import { chavesDoAluno } from "./services/historico";
 
-// Com a Sincronização de Configurações do VS Code ligada, o histórico, o
-// gráfico da evolução e a sequência do aluno vão com ele para os outros
-// computadores, junto com o nível escolhido.
+// Com a Sincronização de Configurações do VS Code ligada, o histórico e o
+// gráfico da evolução do aluno vão com ele para os outros computadores,
+// junto com o nível escolhido.
 // Só os do aluno da sessão: num laboratório, os dos outros ficam onde estão.
 // O guia de primeiros passos não vai: num computador novo, ele faria a
 // instalação parecer uma atualização.

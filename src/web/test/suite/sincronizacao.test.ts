@@ -25,7 +25,6 @@ suite("Sincronização entre computadores", () => {
       CHAVE_NIVEL,
       "flexboxTrainer.historico2|aluno@example.com",
       "flexboxTrainer.evolucao|aluno@example.com",
-      "flexboxTrainer.sequenciaDoDia|aluno@example.com",
     ]);
     // Sem sessão, nada de aluno nenhum.
     assert.deepStrictEqual(chavesSincronizadas(undefined), [CHAVE_NIVEL]);
@@ -44,7 +43,6 @@ suite("Sincronização entre computadores", () => {
       tempoMs: 600_000,
       instante: Date.now(),
     });
-    await historico.registrarDesafioDoDia(aluno, "2026-10-14");
 
     const sincronizadas = new Set(chavesSincronizadas(aluno));
     assert.ok(armazenamento.keys().length > 0);

@@ -20,24 +20,6 @@ import {
 suite("Barra lateral: mensagens e comandos", () => {
   restaurarAoFim();
 
-  test("o botão Relatar problema de um erro leva a mensagem ao formulário", async () => {
-    const chamadas: unknown[][] = [];
-    vscode.commands.executeCommand = (async (...argumentos: unknown[]) => {
-      chamadas.push(argumentos);
-      return undefined;
-    }) as typeof vscode.commands.executeCommand;
-    const provedor = criarProvedorParaTeste([]);
-    const barra = criarBarraFalsa();
-    provedor.resolveWebviewView(barra.vista);
-
-    barra.receber({ type: "relatarProblema", mensagem: "Erro: o servidor respondeu 500." });
-
-    assert.deepStrictEqual(
-      chamadas.filter(([comando]) => comando === "flexbox-trainer.relatarProblema"),
-      [["flexbox-trainer.relatarProblema", "Erro: o servidor respondeu 500."]],
-    );
-  });
-
   test("gera os desafios novos no nível escolhido e guarda a escolha", async () => {
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste([], { registro });

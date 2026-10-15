@@ -42,7 +42,6 @@ export type HistoricoDesafiosRecebido = {
   registros: RegistroHistoricoRecebido[];
   total: number;
   recorde: number | null;
-  sequencia: { dias: number; feitoHoje: boolean } | null;
   evolucao: NotaDoDiaRecebida[];
 };
 

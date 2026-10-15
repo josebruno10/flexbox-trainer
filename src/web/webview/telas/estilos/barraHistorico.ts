@@ -32,14 +32,6 @@ export const ESTILOS_BARRA_HISTORICO = `
       padding: 0;
     }
 
-    .sequencia {
-      margin-bottom: 6px;
-    }
-
-    button.relatar {
-      margin-top: 6px;
-    }
-
     /* A melhor nota de cada dia, de 0 a 100%: a linha sobe com o treino. */
     .evolucao {
       margin: 0 0 12px;

@@ -12,14 +12,12 @@ import {
   botaoNovoDesafio,
   botaoPorCodigo,
   botaoRefazer,
-  botaoRelatarErro,
   botaoSair,
   botaoVerExtensoesIa,
   botaoVerHistorico,
   botaoVerificar,
   botoesNivel,
   botoesVista,
-  caixaResultado,
 } from "./elementos";
 import { estado } from "./estado";
 import { definirVista, marcarNivel } from "./quadro";
@@ -75,13 +73,6 @@ export function ligarAcoes(): void {
 
   botaoVerificar?.addEventListener("click", () => {
     void solicitarVerificacao();
-  });
-
-  botaoRelatarErro.addEventListener("click", () => {
-    vscode.postMessage({
-      type: "relatarProblema",
-      mensagem: caixaResultado.textContent ?? "",
-    });
   });
 
   botaoVerExtensoesIa?.addEventListener("click", () => {

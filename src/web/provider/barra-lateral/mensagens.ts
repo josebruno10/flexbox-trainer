@@ -23,7 +23,6 @@ export type ControladorDaBarra = {
   desafioDoDia(): void;
   definirNivel(nivel: Nivel): void;
   copiarResultado(): void;
-  relatarProblema(mensagem?: string): void;
   abrirPorCodigo(): void;
   refazer(codigo?: string): void;
   verHistorico(): void;
@@ -90,11 +89,6 @@ export function rotearMensagem(
       return;
     case "copiarResultado":
       barra.copiarResultado();
-      return;
-    case "relatarProblema":
-      barra.relatarProblema(
-        typeof mensagem.mensagem === "string" ? mensagem.mensagem : undefined,
-      );
       return;
     case "abrirPorCodigo":
       barra.abrirPorCodigo();

@@ -88,11 +88,6 @@
         "title": "FlexBox Trainer: Histórico de Desafios"
       },
       {
-        "command": "flexbox-trainer.relatarProblema",
-        "title": "FlexBox Trainer: Relatar Problema",
-        "icon": "$(report)"
-      },
-      {
         "command": "flexbox-trainer.abrirGuia",
         "title": "FlexBox Trainer: Guia de Primeiros Passos"
       },
@@ -189,11 +184,6 @@
           "command": "flexbox-trainer.testarServidor",
           "when": "view == flexbox-trainer.sidebar",
           "group": "2_ajuda@2"
-        },
-        {
-          "command": "flexbox-trainer.relatarProblema",
-          "when": "view == flexbox-trainer.sidebar",
-          "group": "2_ajuda@3"
         }
       ]
     },
@@ -378,7 +368,7 @@
           {
             "id": "codigo",
             "title": "Treine com a turma",
-            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio, mostra a sua evolução e conta os dias seguidos no desafio do dia; dá para refazer um desafio para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
+            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
             "media": {
               "image": {
                 "dark": "media/guia/codigo-escuro.png",

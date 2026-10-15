@@ -6,13 +6,11 @@ import {
   historicoNotas,
   linhaMelhor,
   linhaRecorde,
-  linhaSequencia,
   linhaTentativas,
   listaHistorico,
   secaoHistorico,
   valorMelhor,
   valorRecorde,
-  valorSequencia,
   valorTentativas,
 } from "./elementos";
 import { estado } from "./estado";
@@ -71,13 +69,6 @@ export function renderizarHistoricoDesafios(
 
   secaoHistorico.hidden = historico.registros.length === 0;
   renderizarEvolucao(historico.evolucao ?? []);
-  const sequencia = historico.sequencia;
-  linhaSequencia.hidden = !sequencia;
-  if (sequencia) {
-    valorSequencia.textContent =
-      (sequencia.dias === 1 ? "1 dia" : `${sequencia.dias} dias seguidos`) +
-      (sequencia.feitoHoje ? "" : " · falta o de hoje");
-  }
   botaoVerHistorico.hidden = historico.total <= historico.registros.length;
   botaoVerHistorico.textContent = `Ver todos (${historico.total})`;
   listaHistorico.replaceChildren(

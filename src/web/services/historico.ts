@@ -32,25 +32,12 @@ export type NotaDoDesafio = {
   instante: number;
 };
 
-// Quantos dias seguidos o aluno verificou o desafio do dia. Vale até o dia
-// seguinte ao último: quem fez o de ontem ainda pode fazer o de hoje.
-export type SequenciaDoDia = {
-  dias: number;
-  feitoHoje: boolean;
-};
-
 // A melhor nota de um dia de treino num nível, para o gráfico da evolução.
 export type NotaDoDia = {
   // "2026-10-14"
   dia: string;
   nivel: Nivel;
   melhor: number;
-};
-
-type RegistroSequencia = {
-  // "2026-10-14"
-  ultimoDia: string;
-  dias: number;
 };
 
 // Cabe o treino de um semestre sem pesar nas configurações do VS Code.
@@ -132,42 +119,6 @@ export class HistoricoDesafios {
     );
   }
 
-  /** Conta na sequência o desafio do dia de `dia` ("2026-10-14"), uma vez. */
-  public async registrarDesafioDoDia(
-    dono: string | undefined,
-    dia: string,
-  ): Promise<void> {
-    if (!dono) {
-      return;
-    }
-
-    const atual = this.lerSequencia(dono);
-    // O dia já contou, ou contou um depois dele.
-    if (atual && atual.ultimoDia >= dia) {
-      return;
-    }
-    const sequencia: RegistroSequencia = {
-      ultimoDia: dia,
-      dias: atual?.ultimoDia === diaAnterior(dia) ? atual.dias + 1 : 1,
-    };
-    await this.armazenamento.update(chave(dono, "sequenciaDoDia"), sequencia);
-  }
-
-  /** A sequência que ainda vale em `hoje`; sem ela, não há o que mostrar. */
-  public sequenciaDoDia(
-    dono: string | undefined,
-    hoje: string,
-  ): SequenciaDoDia | undefined {
-    const atual = dono ? this.lerSequencia(dono) : undefined;
-    if (atual?.ultimoDia === hoje) {
-      return { dias: atual.dias, feitoHoje: true };
-    }
-    if (atual?.ultimoDia === diaAnterior(hoje)) {
-      return { dias: atual.dias, feitoHoje: false };
-    }
-    return undefined;
-  }
-
   // Guarda os últimos LIMITE_DIAS dias de cada nível.
   private async registrarNoDia(dono: string, nota: NotaDoDia): Promise<void> {
     const dias = this.evolucao(dono);
@@ -187,19 +138,13 @@ export class HistoricoDesafios {
       atualizados.filter((item) => !antigos.has(item)),
     );
   }
-
-  private lerSequencia(dono: string): RegistroSequencia | undefined {
-    const valor = this.armazenamento.get<unknown>(chave(dono, "sequenciaDoDia"));
-    return ehSequencia(valor) ? valor : undefined;
-  }
 }
 
-/** Onde fica tudo o que é do aluno: histórico, evolução e sequência. */
+/** Onde fica tudo o que é do aluno: o histórico e a evolução. */
 export function chavesDoAluno(dono: string): string[] {
   return [
     chave(dono, "historico2"),
     chave(dono, "evolucao"),
-    chave(dono, "sequenciaDoDia"),
   ];
 }
 
@@ -208,12 +153,6 @@ export function chavesDoAluno(dono: string): string[] {
 // diferentes no mesmo código.
 function chave(dono: string, nome: string): string {
   return `flexboxTrainer.${nome}|${dono.trim().toLowerCase()}`;
-}
-
-// "2026-10-01" vira "2026-09-30", pelo calendário do computador.
-function diaAnterior(dia: string): string {
-  const [ano, mes, data] = dia.split("-").map(Number);
-  return diaLocal(new Date(ano, mes - 1, data - 1));
 }
 
 function ehNotaDoDia(valor: unknown): valor is NotaDoDia {
@@ -225,19 +164,6 @@ function ehNotaDoDia(valor: unknown): valor is NotaDoDia {
     /^\d{4}-\d{2}-\d{2}$/.test(nota.dia) &&
     ehNivel(nota.nivel) &&
     typeof nota.melhor === "number"
-  );
-}
-
-function ehSequencia(valor: unknown): valor is RegistroSequencia {
-  const sequencia = valor as Partial<RegistroSequencia> | null;
-  return (
-    typeof sequencia === "object" &&
-    sequencia !== null &&
-    typeof sequencia.ultimoDia === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(sequencia.ultimoDia) &&
-    typeof sequencia.dias === "number" &&
-    Number.isInteger(sequencia.dias) &&
-    sequencia.dias > 0
   );
 }
 

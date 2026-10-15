@@ -18,12 +18,11 @@ function historicoEnviado(mensagens: MensagemWebview[]) {
     registros: { codigo: string; melhor: number }[];
     total: number;
     recorde: number | null;
-    sequencia: { dias: number; feitoHoje: boolean } | null;
     evolucao: { dia: string; nivel: string; melhor: number }[];
   };
 }
 
-// O histórico do aluno: notas, recorde, sequência, gráfico e o resultado copiado.
+// O histórico do aluno: notas, recorde, gráfico e o resultado copiado.
 suite("Barra lateral: histórico", () => {
   restaurarAoFim();
 
@@ -100,39 +99,6 @@ suite("Barra lateral: histórico", () => {
       provedor.textoDoResultado(dia),
       "Desafio do dia 14/10 (071 881): 42,50% em 12:34",
     );
-  });
-
-  test("conta o desafio do dia na sequência e a mostra no histórico", async () => {
-    mockarConfiguracaoServidorValida();
-    mockarServidor({
-      "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 64 }),
-    });
-    const mensagens: MensagemWebview[] = [];
-    const registro = criarRegistroFalso();
-    const provedor = criarProvedorParaTeste(mensagens, { registro });
-    const verificar = async (codigo: string, instante: Date) => {
-      const interno = await prepararCodigo(provedor, registro, codigo);
-      Date.now = () => instante.getTime();
-      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
-    };
-
-    // Outro desafio não conta.
-    await verificar("482917", new Date(2026, 9, 13, 22, 0));
-    assert.strictEqual(historicoEnviado(mensagens).sequencia, null);
-
-    // O de ontem, terminado depois da meia-noite, conta para ontem...
-    await verificar(codigoDoDia(new Date(2026, 9, 13)), new Date(2026, 9, 14, 0, 10));
-    assert.deepStrictEqual(historicoEnviado(mensagens).sequencia, {
-      dias: 1,
-      feitoHoje: false,
-    });
-
-    // ...e o de hoje continua a sequência.
-    await verificar(codigoDoDia(new Date(2026, 9, 14)), new Date(2026, 9, 14, 9, 0));
-    assert.deepStrictEqual(historicoEnviado(mensagens).sequencia, {
-      dias: 2,
-      feitoHoje: true,
-    });
   });
 
   test("manda ao histórico a melhor nota de cada dia, para o gráfico", async () => {

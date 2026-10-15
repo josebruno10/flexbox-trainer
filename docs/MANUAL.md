@@ -24,7 +24,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Marca o tempo de cada tentativa.
 - Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
-- Mostra a sua evolução, com a melhor nota de cada dia num gráfico, e conta os dias seguidos em que você fez o desafio do dia.
+- Mostra a sua evolução, com a melhor nota de cada dia num gráfico.
 - Avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
 
 ## Requisitos
@@ -91,7 +91,7 @@ Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio 
 
 O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
 
-No topo do Histórico, com dois dias de treino ou mais, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Pare o mouse sobre um ponto para ver o dia e a nota. Abaixo dele, **Desafio do dia** mostra quantos dias seguidos você verificou o desafio do dia. Enquanto o de hoje não foi feito, aparece "falta o de hoje"; um dia inteiro sem ele recomeça a contagem. O desafio de ontem verificado depois da meia-noite ainda conta para ontem.
+No topo do Histórico, com dois dias de treino ou mais, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Pare o mouse sobre um ponto para ver o dia e a nota.
 
 O histórico fica separado por e-mail: num laboratório, cada aluno vê os próprios desafios. Com a **Sincronização de Configurações** do VS Code ligada (ícone da conta, embaixo à esquerda), o histórico, o gráfico e a sequência vão com você para os outros computadores em que você usar o VS Code, junto com o nível escolhido. Só os seus: os de outros alunos que usaram o mesmo computador não vão.
 
@@ -140,7 +140,7 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos**, o **Testar Servidor** e **Relatar Problema**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -181,7 +181,6 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Criar Dinâmica de Treino | Cria a sua dinâmica de treino, se você não a criou no primeiro Verificar |
 | FlexBox Trainer: Testar Servidor | Confere se a sua sessão está valendo no servidor |
 | FlexBox Trainer: Escolher Cores | Troca as cores de destaque da extensão |
-| FlexBox Trainer: Relatar Problema | Abre o formulário de problema no GitHub, já com a versão e o sistema, ou copia essas informações |
 
 ## Atalhos
 
@@ -205,12 +204,6 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 | `flexboxTrainer.apiBaseUrl`, `flexboxTrainer.authApiBaseUrl` | Endereço da API do torneio. Não precisa mudar |
 | `flexboxTrainer.authSiteUrl`, `flexboxTrainer.googleClientId` | Site e cliente do login pelo Google. Não precisa mudar |
 | `flexboxTrainer.apiToken` | Token manual, só para desenvolvimento |
-
-## Problemas
-
-**Relatar problema**, no menu **⋯** da barra lateral, abre um formulário já com a versão da extensão, a do VS Code, o sistema e o código do desafio; conte o que aconteceu e, se puder, anexe um print. Sem conta no GitHub, escolha **Copiar as informações** e mande para a equipe, junto com o que aconteceu. Quando uma verificação falha por um erro do servidor, aparece **Relatar problema** logo abaixo da mensagem, e o formulário já vem com ela.
-
-O formulário fica no GitHub e precisa de uma conta lá. As respostas são públicas: não escreva dados pessoais.
 
 ## Problemas comuns
 

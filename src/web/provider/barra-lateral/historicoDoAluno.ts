@@ -1,15 +1,10 @@
 import * as vscode from "vscode";
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
-import {
-  codigoDoDia,
-  diaLocal,
-  formatarCodigo,
-} from "../../services/codigoDesafio";
+import { formatarCodigo } from "../../services/codigoDesafio";
 import {
   HistoricoDesafios,
   NotaDoDia,
   RegistroHistorico,
-  SequenciaDoDia,
 } from "../../services/historico";
 import { Desafio, Nivel } from "../../types";
 import { formatarTempo } from "../barra-de-status";
@@ -26,13 +21,12 @@ export type HistoricoNaBarra = {
   registros: RegistroHistorico[];
   total: number;
   recorde: number | null;
-  sequencia: SequenciaDoDia | null;
   evolucao: NotaDoDia[];
 };
 
 /**
- * O histórico de quem está na sessão: os desafios verificados, a evolução e
- * a sequência do desafio do dia. Sem sessão, fica vazio.
+ * O histórico de quem está na sessão: os desafios verificados e a evolução.
+ * Sem sessão, fica vazio.
  */
 export class HistoricoDoAluno {
   private readonly historico: HistoricoDesafios;
@@ -59,8 +53,7 @@ export class HistoricoDoAluno {
     }
 
     const instante = Date.now();
-    const email = this.emailDaSessao();
-    await this.historico.registrarNota(email, {
+    await this.historico.registrarNota(this.emailDaSessao(), {
       codigo: desafio.codigo,
       nivel: desafio.nivel ?? nivelDoCodigo(desafio.codigo),
       tentativa: desafio.challengeId,
@@ -68,20 +61,6 @@ export class HistoricoDoAluno {
       tempoMs: tempoMs(instante),
       instante,
     });
-
-    // O desafio do dia de hoje, ou o de ontem terminado depois da meia-noite.
-    const agora = new Date(instante);
-    const ontem = new Date(
-      agora.getFullYear(),
-      agora.getMonth(),
-      agora.getDate() - 1,
-    );
-    const dia = [agora, ontem].find(
-      (data) => codigoDoDia(data) === desafio.codigo,
-    );
-    if (dia) {
-      await this.historico.registrarDesafioDoDia(email, diaLocal(dia));
-    }
   }
 
   /** O gráfico mostra o nível escolhido: misturar níveis esconderia o progresso. */
@@ -92,10 +71,6 @@ export class HistoricoDoAluno {
       registros: registros.slice(0, HISTORICO_NA_BARRA),
       total: registros.length,
       recorde: recordeDoDesafio(registros, desafio) ?? null,
-      sequencia:
-        (email
-          ? this.historico.sequenciaDoDia(email, diaLocal(new Date(Date.now())))
-          : undefined) ?? null,
       evolucao: email
         ? this.historico.evolucao(email, nivel).slice(-DIAS_NO_GRAFICO)
         : [],

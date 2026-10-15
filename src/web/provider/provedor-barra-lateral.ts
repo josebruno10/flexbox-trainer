@@ -451,14 +451,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  /** O código e o nível do desafio em andamento, para os relatos de problema. */
-  public desafioEmAndamento(): { codigo: string; nivel?: Nivel } | undefined {
-    const desafio = this.desafioAtual;
-    return desafio?.codigo
-      ? { codigo: desafio.codigo, nivel: desafio.nivel }
-      : undefined;
-  }
-
   public async copiarCodigo(): Promise<void> {
     const codigo = this.desafioAtual?.codigo;
     if (!codigo) {
@@ -751,8 +743,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       desafioDoDia: () => void this.abrirDesafioDoDia(),
       definirNivel: (nivel) => void this.definirNivel(nivel),
       copiarResultado: () => void this.copiarResultado(),
-      relatarProblema: (mensagem) =>
-        void vscode.commands.executeCommand("flexbox-trainer.relatarProblema", mensagem),
       abrirPorCodigo: () => void this.abrirDesafioPorCodigo(),
       refazer: (codigo) => void this.refazerDesafio(codigo),
       verHistorico: () => void this.verHistorico(),

@@ -1,6 +1,5 @@
 import {
   barraNota,
-  botaoRelatarErro,
   botaoVerificar,
   caixaResultado,
   notaResultado,
@@ -35,12 +34,7 @@ export function renderizarResultado(
     resultado.source === "gabarito-error" ||
     resultado.source === "servidor-sem-nota"
   ) {
-    // Só os erros do servidor viram relato: os outros dependem do aluno.
-    mostrarMensagem(
-      resultado.error || "Não foi possível verificar.",
-      resultado.source === "gabarito-error" ||
-        resultado.source === "servidor-sem-nota",
-    );
+    mostrarMensagem(resultado.error || "Não foi possível verificar.");
     return;
   }
 
@@ -53,10 +47,7 @@ export function renderizarResultado(
     resultado.source === "api-error" ||
     resultado.source === "authentication-error"
   ) {
-    mostrarMensagem(
-      "Erro: " + (resultado.error || "desconhecido."),
-      resultado.source === "api-error",
-    );
+    mostrarMensagem("Erro: " + (resultado.error || "desconhecido."));
     return;
   }
 
@@ -70,15 +61,12 @@ export function renderizarResultado(
   );
 }
 
-// Com relatavel, o erro ganha o botão Relatar problema.
-export function mostrarMensagem(texto: string, relatavel = false): void {
+export function mostrarMensagem(texto: string): void {
   notaResultado.hidden = true;
   caixaResultado.textContent = texto;
-  botaoRelatarErro.hidden = !relatavel;
 }
 
 function mostrarPrecisao(precisao: number, repetida: boolean): void {
-  botaoRelatarErro.hidden = true;
   const valor = Math.round(Math.min(100, Math.max(0, precisao)) * 100) / 100;
   const inicio = notaResultado.hidden ? 0 : notaExibida;
   if (notaResultado.hidden) {

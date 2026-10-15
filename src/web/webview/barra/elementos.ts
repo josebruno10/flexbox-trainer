@@ -118,9 +118,6 @@ export const notaResultado = document.getElementById(
 ) as HTMLDivElement;
 export const valorNota = document.getElementById("valorNota") as HTMLElement;
 export const barraNota = document.getElementById("barraNota") as HTMLSpanElement;
-export const botaoRelatarErro = document.getElementById(
-  "botaoRelatarErro",
-) as HTMLButtonElement;
 export const botaoCopiarResultado = document.getElementById(
   "botaoCopiarResultado",
 ) as HTMLButtonElement;
@@ -148,12 +145,6 @@ export const secaoHistorico = document.getElementById(
 ) as HTMLElement;
 export const listaHistorico = document.getElementById(
   "listaHistorico",
-) as HTMLElement;
-export const linhaSequencia = document.getElementById(
-  "linhaSequencia",
-) as HTMLElement;
-export const valorSequencia = document.getElementById(
-  "valorSequencia",
 ) as HTMLElement;
 export const botaoVerHistorico = document.getElementById(
   "botaoVerHistorico",
