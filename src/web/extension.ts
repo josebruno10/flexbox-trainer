@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
-import { BarraDeStatus } from "./provider/barra-de-status";
+import {
+  BarraDeStatus,
+  COMANDO_ABRIR_BARRA,
+} from "./provider/barra-de-status";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
@@ -44,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
           await authService.processarCallback(uri);
           // A barra lateral aberta já mostra quem entrou.
           await vscode.commands.executeCommand(
-            "workbench.view.extension.flexboxTrainer",
+            COMANDO_ABRIR_BARRA,
           );
         } catch (error) {
           const mensagem =
@@ -103,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   const abrirBarraLateral = () =>
-    vscode.commands.executeCommand("workbench.view.extension.flexboxTrainer");
+    vscode.commands.executeCommand(COMANDO_ABRIR_BARRA);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.novoDesafio", async () => {
@@ -293,14 +296,14 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!authService.isAutenticado()) {
         await authService.abrirLoginGoogle();
         await vscode.commands.executeCommand(
-          "workbench.view.extension.flexboxTrainer",
+          COMANDO_ABRIR_BARRA,
         );
         return;
       }
 
       await provedor.atualizarPreviewWorkspace();
       await vscode.commands.executeCommand(
-        "workbench.view.extension.flexboxTrainer",
+        COMANDO_ABRIR_BARRA,
       );
     }),
   );

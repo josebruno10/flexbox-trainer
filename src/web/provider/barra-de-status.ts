@@ -15,7 +15,10 @@ export type ConteudoBarraDeStatus = {
   aviso: boolean;
 };
 
-const COMANDO_ABRIR_BARRA = "workbench.view.extension.flexboxTrainer";
+// Focar a vista a mostra onde ela estiver, mesmo que o aluno a tenha
+// arrastado para outro lugar; abrir o contêiner original mostraria um painel
+// vazio.
+export const COMANDO_ABRIR_BARRA = "flexbox-trainer.sidebar.focus";
 
 export function conteudoBarraDeStatus(
   estado: EstadoBarraDeStatus,

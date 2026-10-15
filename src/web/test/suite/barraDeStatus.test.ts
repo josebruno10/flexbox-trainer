@@ -47,7 +47,7 @@ suite("Barra de status", () => {
 
     barra.atualizar({ inicioMs: Date.now(), invalidado: false });
     assert.strictEqual(item.visivel, true);
-    assert.strictEqual(item.command, "workbench.view.extension.flexboxTrainer");
+    assert.strictEqual(item.command, "flexbox-trainer.sidebar.focus");
     assert.match(item.text, /^\$\(watch\) 00:0\d$/);
 
     barra.atualizar(undefined);
