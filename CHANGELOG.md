@@ -2,6 +2,15 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Opinião e problemas
+- **Dar opinião** abre um questionário de usabilidade no GitHub: as dez perguntas do SUS e duas abertas.
+- **Relatar problema** abre um formulário no GitHub já com a versão, o VS Code, o sistema e o código do desafio. Quem não tem conta no GitHub pode copiar essas informações e mandar à equipe.
+
+### Para quem desenvolve
+- `node scripts/opinioes.mjs` junta as respostas do questionário e calcula a nota SUS de cada uma e a média.
+
 ## [0.5.0] - 2026-10-15
 
 ### Desafios

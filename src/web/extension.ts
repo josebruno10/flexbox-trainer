@@ -10,6 +10,11 @@ import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
 import {
+  darOpiniao,
+  relatarProblema,
+  sistemaOperacional,
+} from "./services/suporte";
+import {
   avisarAtualizacao,
   avisarVersaoNova,
   pastaDeDownload,
@@ -141,6 +146,17 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("flexbox-trainer.verHistorico", () =>
       provedor.verHistorico(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.relatarProblema", () =>
+      relatarProblema({
+        versao: String(context.extension.packageJSON.version),
+        vscode: vscode.version,
+        sistema: sistemaOperacional(),
+        desafio: provedor.desafioEmAndamento(),
+      }),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.darOpiniao", () =>
+      darOpiniao(String(context.extension.packageJSON.version)),
     ),
     vscode.commands.registerCommand("flexbox-trainer.abrirGuia", () =>
       vscode.commands.executeCommand(

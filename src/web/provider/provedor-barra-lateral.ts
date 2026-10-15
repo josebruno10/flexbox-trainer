@@ -814,6 +814,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
+  /** O código e o nível do desafio em andamento, para os relatos de problema. */
+  public desafioEmAndamento(): { codigo: string; nivel?: Nivel } | undefined {
+    const desafio = this.desafioAtual;
+    return desafio?.codigo
+      ? { codigo: desafio.codigo, nivel: desafio.nivel }
+      : undefined;
+  }
+
   public async copiarCodigo(): Promise<void> {
     const codigo = this.desafioAtual?.codigo;
     if (!codigo) {
