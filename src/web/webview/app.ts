@@ -6,6 +6,8 @@ import {
   formatarMedida,
   normalizarHex,
 } from "./desenhoGabarito";
+import { NOME_DO_NIVEL, ehNivel, nivelDoCodigo } from "../niveis";
+import type { Nivel } from "../types";
 import { medirFormas } from "./formas";
 import { montarPaginaAluno } from "./paginaAluno";
 
@@ -32,6 +34,7 @@ type DesafioRecebido = {
   tempoAtualMs?: number;
   encerrado?: boolean;
   codigo?: string;
+  nivel?: Nivel;
   doDia?: boolean;
 };
 
@@ -100,6 +103,7 @@ type MensagemDaExtensao =
   | { type: "historicoNotas"; payload: number[] }
   | { type: "historicoDesafios"; payload: HistoricoDesafiosRecebido }
   | { type: "verificar" }
+  | { type: "nivel"; payload: Nivel }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
   | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };
 
@@ -150,6 +154,10 @@ const vistas = document.getElementById("vistas") as HTMLDivElement;
 const botoesVista = Array.from(
   vistas.querySelectorAll<HTMLButtonElement>("[data-vista]"),
 );
+const botoesNivel = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("#niveis [data-nivel]"),
+);
+const tituloEvolucao = document.getElementById("tituloEvolucao") as HTMLElement;
 const historicoNotas = document.getElementById("historicoNotas") as HTMLElement;
 const valorTentativas = document.getElementById("valorTentativas") as HTMLElement;
 const valorMelhor = document.getElementById("valorMelhor") as HTMLElement;
@@ -354,6 +362,24 @@ for (const botao of botoesVista) {
   );
 }
 
+// O nível vale para os desafios novos; a extensão guarda a escolha.
+for (const botao of botoesNivel) {
+  botao.addEventListener("click", () => {
+    if (ehNivel(botao.dataset.nivel)) {
+      marcarNivel(botao.dataset.nivel);
+      vscode.postMessage({ type: "definirNivel", nivel: botao.dataset.nivel });
+    }
+  });
+}
+
+function marcarNivel(nivel: Nivel): void {
+  for (const botao of botoesNivel) {
+    botao.setAttribute("aria-pressed", String(botao.dataset.nivel === nivel));
+  }
+  // O gráfico da evolução é o do nível escolhido.
+  tituloEvolucao.textContent = `Melhor nota · ${NOME_DO_NIVEL[nivel]}`;
+}
+
 function definirVista(vista: "gabarito" | "pagina"): void {
   quadroDesafio.dataset.vista = vista;
   for (const botao of botoesVista) {
@@ -424,7 +450,9 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
   desenharDestaques();
   renderizarDetalheComponente();
-  tituloDesafio.textContent = desafio.doDia ? "Desafio do dia" : "Desafio";
+  tituloDesafio.textContent =
+    (desafio.doDia ? "Desafio do dia" : "Desafio") +
+    (desafio.nivel ? ` · ${NOME_DO_NIVEL[desafio.nivel]}` : "");
   botaoCodigo.textContent = desafio.codigo ? formatarCodigo(desafio.codigo) : "--";
   botaoCodigo.disabled = !desafio.codigo;
   valorFundo.replaceChildren(
@@ -794,8 +822,12 @@ function renderizarHistoricoDesafios(historico: HistoricoDesafiosRecebido): void
     ...historico.registros.map((registro) => {
       const item = document.createElement("li");
       item.classList.toggle("atual", registro.codigo === desafioAtual?.codigo);
+      const nomeDoNivel = NOME_DO_NIVEL[nivelDoCodigo(registro.codigo)];
       const codigo = document.createElement("span");
-      codigo.textContent = formatarCodigo(registro.codigo);
+      const nivel = document.createElement("span");
+      nivel.className = "nivel";
+      nivel.textContent = nomeDoNivel;
+      codigo.append(formatarCodigo(registro.codigo), " ", nivel);
       const nota = document.createElement("span");
       nota.textContent = `${formatarPorcentagem(registro.melhor)}%`;
       const tempo = document.createElement("span");
@@ -805,7 +837,7 @@ function renderizarHistoricoDesafios(historico: HistoricoDesafiosRecebido): void
       refazer.type = "button";
       refazer.className = "discreto";
       refazer.textContent = "↻";
-      refazer.title = `Refazer o desafio ${formatarCodigo(registro.codigo)}`;
+      refazer.title = `Refazer o desafio ${formatarCodigo(registro.codigo)} (${nomeDoNivel})`;
       refazer.setAttribute("aria-label", refazer.title);
       refazer.addEventListener("click", () => {
         vscode.postMessage({ type: "refazer", codigo: registro.codigo });
@@ -1241,6 +1273,10 @@ window.addEventListener(
     // O atalho de Verificar (Ctrl+Alt+V), vindo da extensão.
     if (mensagem.type === "verificar") {
       void solicitarVerificacao();
+    }
+
+    if (mensagem.type === "nivel") {
+      marcarNivel(mensagem.payload);
     }
 
     if (mensagem.type === "historicoDesafios") {

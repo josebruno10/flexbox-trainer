@@ -636,7 +636,7 @@ suite("Provedor da barra lateral", () => {
         total: number;
         recorde: number | null;
         sequencia: { dias: number; feitoHoje: boolean } | null;
-        evolucao: { dia: string; melhor: number }[];
+        evolucao: { dia: string; nivel: string; melhor: number }[];
       };
     }
 
@@ -749,7 +749,7 @@ suite("Provedor da barra lateral", () => {
 
       assert.strictEqual(
         provedor.textoDoResultado(outroDia),
-        "Desafio 482 917: 42,50% em 12:34",
+        "Desafio médio 482 917: 42,50% em 12:34",
       );
 
       // O desafio do dia diz a data, para o grupo da turma saber qual é.
@@ -816,10 +816,44 @@ suite("Provedor da barra lateral", () => {
         await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
       }
 
+      // O gráfico é o do nível escolhido (o médio); o 305 114 é difícil.
       assert.deepStrictEqual(historicoEnviado(mensagens).evolucao, [
-        { dia: "2026-10-13", melhor: 40 },
-        { dia: "2026-10-14", melhor: 64 },
+        { dia: "2026-10-13", nivel: "medio", melhor: 40 },
+        { dia: "2026-10-14", nivel: "medio", melhor: 52 },
       ]);
+      await provedor.definirNivel("dificil");
+      assert.deepStrictEqual(historicoEnviado(mensagens).evolucao, [
+        { dia: "2026-10-14", nivel: "dificil", melhor: 64 },
+      ]);
+    });
+
+    test("gera os desafios novos no nível escolhido e guarda a escolha", async () => {
+      const registro = criarRegistroFalso();
+      const provedor = criarProvedorParaTeste([], { registro });
+      const interno = provedor as unknown as ProvedorInterno;
+      interno.testarConexaoServidor = async () => undefined;
+      const barra = criarBarraFalsa();
+      provedor.resolveWebviewView(barra.vista);
+      barra.receber({ type: "pronto" });
+
+      // Sem escolha, o médio.
+      assert.strictEqual(provedor.nivelEscolhido(), "medio");
+      assert.strictEqual(ultimaMensagem(barra.enviadas, "nivel")?.payload, "medio");
+
+      barra.receber({ type: "definirNivel", nivel: "facil" });
+      await new Promise((pronto) => setTimeout(pronto, 0));
+      assert.strictEqual(provedor.nivelEscolhido(), "facil");
+      assert.strictEqual(registro.get("flexboxTrainer.nivel"), "facil");
+      assert.strictEqual(ultimaMensagem(barra.enviadas, "nivel")?.payload, "facil");
+
+      await provedor.iniciarNovoDesafio();
+      assert.strictEqual(interno.desafioAtual!.nivel, "facil");
+      assert.strictEqual(Number(interno.desafioAtual!.codigo) % 3, 0);
+
+      // Um nível que não existe é ignorado.
+      barra.receber({ type: "definirNivel", nivel: "impossivel" });
+      await new Promise((pronto) => setTimeout(pronto, 0));
+      assert.strictEqual(provedor.nivelEscolhido(), "facil");
     });
 
     test("o atalho de Verificar abre a barra e pede a verificação quando ela carrega", async () => {

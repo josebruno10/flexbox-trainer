@@ -7,6 +7,7 @@ import {
   sortearCodigo,
 } from "../../services/codigoDesafio";
 import { criarDesafioPorCodigo } from "../../services/desafio";
+import { NIVEIS, nivelDoCodigo } from "../../niveis";
 
 suite("Código do desafio", () => {
   test("aceita o código com ou sem espaço e recusa o resto", () => {
@@ -22,13 +23,29 @@ suite("Código do desafio", () => {
     assert.strictEqual(formatarCodigo("482917"), "482 917");
   });
 
-  test("sorteia sempre 6 dígitos, inclusive com zeros à esquerda", () => {
-    assert.strictEqual(sortearCodigo(() => 0), "000000");
-    assert.strictEqual(sortearCodigo(() => 0.000123), "000123");
-    assert.strictEqual(sortearCodigo(() => 0.9999999), "999999");
-    for (let vez = 0; vez < 50; vez++) {
-      assert.match(sortearCodigo(), /^\d{6}$/);
+  test("sorteia sempre 6 dígitos, inclusive com zeros à esquerda, no nível pedido", () => {
+    assert.strictEqual(sortearCodigo("facil", () => 0), "000000");
+    assert.strictEqual(sortearCodigo("medio", () => 0), "000001");
+    assert.strictEqual(sortearCodigo("dificil", () => 0), "000002");
+    assert.strictEqual(sortearCodigo("facil", () => 0.9999999), "999999");
+    assert.strictEqual(sortearCodigo("medio", () => 0.9999999), "999997");
+    assert.strictEqual(sortearCodigo("dificil", () => 0.9999999), "999998");
+    for (const nivel of NIVEIS) {
+      for (let vez = 0; vez < 50; vez++) {
+        const codigo = sortearCodigo(nivel);
+        assert.match(codigo, /^\d{6}$/);
+        assert.strictEqual(nivelDoCodigo(codigo), nivel);
+      }
     }
+  });
+
+  test("o nível vem do código, pelo resto da divisão por 3", () => {
+    assert.strictEqual(nivelDoCodigo("000000"), "facil");
+    assert.strictEqual(nivelDoCodigo("482917"), "medio");
+    assert.strictEqual(nivelDoCodigo("000002"), "dificil");
+    assert.strictEqual(criarDesafioPorCodigo("482917").nivel, "medio");
+    // Quem abre o código de um colega treina o mesmo nível dele.
+    assert.strictEqual(criarDesafioPorCodigo("482919").nivel, "facil");
   });
 
   test("o mesmo código dá a mesma sequência; códigos vizinhos, outras", () => {
@@ -75,6 +92,10 @@ suite("Código do desafio", () => {
     // Alunos com versões diferentes da extensão precisam ter o mesmo desafio
     // do dia: se este valor mudar, a conta do código do dia mudou.
     assert.strictEqual(manha, "071881");
+    // O desafio do dia é sempre médio.
+    for (let dia = 1; dia <= 60; dia++) {
+      assert.strictEqual(nivelDoCodigo(codigoDoDia(new Date(2026, 9, dia))), "medio");
+    }
   });
 
   // Códigos já passados à turma precisam continuar gerando os mesmos
@@ -91,19 +112,19 @@ suite("Código do desafio", () => {
   });
 });
 
-// Tirada do gerador da versão 0.4.0.
+// Tirada do gerador da versão 0.5.0 (commit 6cbe24e do gerador do Vitor).
 const ASSINATURA_482917 = {
   fundo: "#15fa54",
-  componentes: 77,
+  componentes: 23,
   primeiro: {
     id: 1,
     parentId: undefined,
-    x: 0,
-    y: 0,
-    width: 300,
-    height: 121,
-    color: "#29e151",
-    borderRadius: 0,
-    shape: "rectangle",
+    x: 76,
+    y: 17,
+    width: 63,
+    height: 63,
+    color: "#bf8bbf",
+    borderRadius: 31.5,
+    shape: "circle",
   },
 };

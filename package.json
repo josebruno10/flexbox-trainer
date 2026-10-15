@@ -334,7 +334,7 @@
           {
             "id": "gerar",
             "title": "Gere um desafio",
-            "description": "Como no torneio, desabilite antes as extensões de IA, como o Copilot: com elas, o desafio não começa.\n[Gerar novo desafio](command:flexbox-trainer.novoDesafio)\n[Ver extensões de IA](command:flexbox-trainer.verExtensoesIa)",
+            "description": "Escolha o nível (fácil, médio ou difícil) logo acima do botão. Como no torneio, desabilite antes as extensões de IA, como o Copilot: com elas, o desafio não começa.\n[Gerar novo desafio](command:flexbox-trainer.novoDesafio)\n[Ver extensões de IA](command:flexbox-trainer.verExtensoesIa)",
             "media": {
               "image": {
                 "dark": "media/guia/gerar-escuro.png",

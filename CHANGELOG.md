@@ -5,7 +5,10 @@ As mudanças de cada versão do FlexBox Trainer.
 ## [Não lançado]
 
 ### Desafios
-- No Histórico, o gráfico **Melhor nota por dia** mostra a evolução do aluno, de 0 a 100%.
+- Gerador atualizado com a versão nova do Vitor: os cortes do layout não aparecem mais (o fundo fica à vista entre os elementos), cada elemento fica a 15 px da borda da sua região, nenhuma parte fica menor que 70 px e toda fileira tem ao menos um círculo. Os códigos passaram a gerar outras imagens, e o histórico recomeça.
+- Três níveis: fácil, médio e difícil, escolhidos logo acima de **Gerar novo desafio**. Nos mais fáceis saem os componentes menores (cerca de 15 no fácil e 9 no médio), sempre um padrão inteiro por vez. O nível vem do código, e o desafio do dia é sempre médio.
+- O título do desafio, o texto copiado, o histórico, a aba do gabarito e o gráfico da evolução mostram o nível.
+- No Histórico, o gráfico **Melhor nota** mostra a evolução do aluno: a melhor nota de cada dia, de 0 a 100%.
 
 ### Atualizações
 - No VS Code desktop, **Atualizar** baixa e instala sozinho a versão nova e oferece recarregar a janela. No navegador, **Baixar** continua abrindo a página da versão.

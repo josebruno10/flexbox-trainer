@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { ehNivel } from "../niveis";
+import { Nivel } from "../types";
 import { diaLocal } from "./codigoDesafio";
 
 // Os desafios que o aluno já verificou, com a melhor nota de cada um. Ficam
@@ -20,6 +22,7 @@ export type RegistroHistorico = {
 
 export type NotaDoDesafio = {
   codigo: string;
+  nivel: Nivel;
   // O challengeId: muda a cada vez que o desafio é feito.
   tentativa: string;
   precisao: number;
@@ -34,10 +37,11 @@ export type SequenciaDoDia = {
   feitoHoje: boolean;
 };
 
-// A melhor nota de um dia de treino, para o gráfico da evolução.
+// A melhor nota de um dia de treino num nível, para o gráfico da evolução.
 export type NotaDoDia = {
   // "2026-10-14"
   dia: string;
+  nivel: Nivel;
   melhor: number;
 };
 
@@ -59,7 +63,9 @@ export class HistoricoDesafios {
     if (!dono) {
       return [];
     }
-    const registros = this.armazenamento.get<unknown>(chave(dono));
+    const registros = this.armazenamento.get<unknown>(
+      chave(dono, "historico2"),
+    );
     return Array.isArray(registros) ? registros.filter(ehRegistro) : [];
   }
 
@@ -97,26 +103,31 @@ export class HistoricoDesafios {
     };
 
     await this.armazenamento.update(
-      chave(dono),
+      chave(dono, "historico2"),
       [atualizado, ...registros.filter((registro) => registro !== anterior)].slice(
         0,
         LIMITE_REGISTROS,
       ),
     );
-    await this.registrarNoDia(
-      dono,
-      diaLocal(new Date(nota.instante)),
-      nota.precisao,
-    );
+    await this.registrarNoDia(dono, {
+      dia: diaLocal(new Date(nota.instante)),
+      nivel: nota.nivel,
+      melhor: nota.precisao,
+    });
   }
 
-  /** A melhor nota de cada dia de treino, do mais antigo ao mais recente. */
-  public evolucao(dono: string | undefined): NotaDoDia[] {
+  /**
+   * A melhor nota de cada dia de treino, do mais antigo ao mais recente; com
+   * o nível, só os dias em que ele foi treinado.
+   */
+  public evolucao(dono: string | undefined, nivel?: Nivel): NotaDoDia[] {
     if (!dono) {
       return [];
     }
     const dias = this.armazenamento.get<unknown>(chave(dono, "evolucao"));
-    return Array.isArray(dias) ? dias.filter(ehNotaDoDia) : [];
+    return (Array.isArray(dias) ? dias.filter(ehNotaDoDia) : []).filter(
+      (dia) => !nivel || dia.nivel === nivel,
+    );
   }
 
   /** Conta na sequência o desafio do dia de `dia` ("2026-10-14"), uma vez. */
@@ -155,23 +166,24 @@ export class HistoricoDesafios {
     return undefined;
   }
 
-  private async registrarNoDia(
-    dono: string,
-    dia: string,
-    precisao: number,
-  ): Promise<void> {
+  // Guarda os últimos LIMITE_DIAS dias de cada nível.
+  private async registrarNoDia(dono: string, nota: NotaDoDia): Promise<void> {
     const dias = this.evolucao(dono);
-    const doDia = dias.find((item) => item.dia === dia);
-    if (doDia && doDia.melhor >= precisao) {
+    const doDia = dias.find(
+      (item) => item.dia === nota.dia && item.nivel === nota.nivel,
+    );
+    if (doDia && doDia.melhor >= nota.melhor) {
       return;
     }
-    const atualizados = [
-      ...dias.filter((item) => item !== doDia),
-      { dia, melhor: precisao },
-    ]
-      .sort((a, b) => a.dia.localeCompare(b.dia))
-      .slice(-LIMITE_DIAS);
-    await this.armazenamento.update(chave(dono, "evolucao"), atualizados);
+    const atualizados = [...dias.filter((item) => item !== doDia), nota].sort(
+      (a, b) => a.dia.localeCompare(b.dia),
+    );
+    const doNivel = atualizados.filter((item) => item.nivel === nota.nivel);
+    const antigos = new Set(doNivel.slice(0, -LIMITE_DIAS));
+    await this.armazenamento.update(
+      chave(dono, "evolucao"),
+      atualizados.filter((item) => !antigos.has(item)),
+    );
   }
 
   private lerSequencia(dono: string): RegistroSequencia | undefined {
@@ -180,7 +192,10 @@ export class HistoricoDesafios {
   }
 }
 
-function chave(dono: string, nome = "historico"): string {
+// "historico2": a 0.5.0 trocou o gerador, e os códigos antigos passaram a dar
+// outras imagens; o histórico recomeça, sem misturar notas de imagens
+// diferentes no mesmo código.
+function chave(dono: string, nome: string): string {
   return `flexboxTrainer.${nome}|${dono.trim().toLowerCase()}`;
 }
 
@@ -197,6 +212,7 @@ function ehNotaDoDia(valor: unknown): valor is NotaDoDia {
     nota !== null &&
     typeof nota.dia === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(nota.dia) &&
+    ehNivel(nota.nivel) &&
     typeof nota.melhor === "number"
   );
 }

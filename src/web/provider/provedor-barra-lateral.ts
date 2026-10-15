@@ -9,6 +9,7 @@ import {
   FormaMedida,
   GabaritoGerado,
   MensagemRecebidaBarraLateral,
+  Nivel,
   ResumoWorkspace,
   ResultadoAvaliacao,
   StatusConexaoServidor,
@@ -18,7 +19,9 @@ import {
   diaLocal,
   formatarCodigo,
   normalizarCodigo,
+  sortearCodigo,
 } from "../services/codigoDesafio";
+import { ehNivel, NOME_DO_NIVEL, nivelDoCodigo } from "../niveis";
 import { criarDesafioPorCodigo } from "../services/desafio";
 import {
   HistoricoDesafios,
@@ -65,6 +68,8 @@ const LIMPAR_E_GERAR = "Limpar e gerar";
 const HISTORICO_NA_BARRA = 5;
 // O gráfico da evolução mostra os últimos 30 dias em que o aluno treinou.
 const DIAS_NO_GRAFICO = 30;
+// O nível dos desafios novos, escolhido na barra lateral.
+const CHAVE_NIVEL = "flexboxTrainer.nivel";
 
 /** O que o guia de primeiros passos precisa saber para marcar cada passo. */
 export type ProgressoGuia = {
@@ -285,6 +290,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           return;
         }
 
+        if (mensagem.type === "definirNivel") {
+          if (ehNivel(mensagem.nivel)) {
+            void this.definirNivel(mensagem.nivel);
+          }
+          return;
+        }
+
         if (mensagem.type === "copiarResultado") {
           void this.copiarResultado();
           return;
@@ -402,7 +414,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      this.desafioAtual = criarDesafioPorCodigo(codigo);
+      this.desafioAtual = criarDesafioPorCodigo(
+        codigo ?? sortearCodigo(this.nivelEscolhido()),
+      );
       log.info(
         `Novo desafio: código ${this.desafioAtual.codigo} (${this.desafioAtual.challengeId}).`,
       );
@@ -662,6 +676,17 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.painelGabarito?.aplicarCores();
   }
 
+  /** O nível dos desafios novos; o médio, se o aluno ainda não escolheu. */
+  public nivelEscolhido(): Nivel {
+    const nivel = this.registroGabaritos.get<unknown>(CHAVE_NIVEL);
+    return ehNivel(nivel) ? nivel : "medio";
+  }
+
+  public async definirNivel(nivel: Nivel): Promise<void> {
+    await this.registroGabaritos.update(CHAVE_NIVEL, nivel);
+    this.enviarEstado();
+  }
+
   /** O desafio do dia: o mesmo para todos na mesma data. */
   public async abrirDesafioDoDia(): Promise<void> {
     if (!this.authService.isAutenticado()) {
@@ -702,7 +727,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     const nome =
       desafio.codigo === codigoDoDia(agora)
         ? `Desafio do dia ${agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} (${codigo})`
-        : `Desafio ${codigo}`;
+        : `Desafio ${NOME_DO_NIVEL[nivelDoCodigo(desafio.codigo)]} ${codigo}`;
     return `${nome}: ${formatarPorcentagem(melhor.precisao)}% em ${formatarTempo(melhor.tempoMs)}`;
   }
 
@@ -763,7 +788,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
     const escolhido = await vscode.window.showQuickPick(
       registros.map((registro) => ({
-        label: formatarCodigo(registro.codigo),
+        label:
+          `${formatarCodigo(registro.codigo)} · ` +
+          NOME_DO_NIVEL[nivelDoCodigo(registro.codigo)],
         description: `${formatarPorcentagem(registro.melhor)}% em ${formatarTempo(registro.tempoMelhorMs)}`,
         detail:
           `${registro.verificacoes} ${registro.verificacoes === 1 ? "verificação" : "verificações"}` +
@@ -1130,6 +1157,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       payload: this.detectarExtensoesIa(),
     });
 
+    this.visualizacaoWebview.webview.postMessage({
+      type: "nivel",
+      payload: this.nivelEscolhido(),
+    });
+
     if (this.desafioAtual) {
       this.visualizacaoWebview.webview.postMessage({
         type: "dadosDesafio",
@@ -1210,6 +1242,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     const email = this.authService.getSessaoAtual()?.email;
     await this.historico.registrarNota(email, {
       codigo: desafio.codigo,
+      nivel: desafio.nivel ?? nivelDoCodigo(desafio.codigo),
       tentativa: desafio.challengeId,
       precisao,
       tempoMs: (this.fimTentativaMs ?? instante) - this.inicioTentativaMs,
@@ -1237,10 +1270,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       : [];
   }
 
+  // O gráfico mostra o nível escolhido: misturar níveis esconderia o
+  // progresso.
   private evolucaoDoAluno(): NotaDoDia[] {
     return this.authService.isAutenticado()
       ? this.historico
-          .evolucao(this.authService.getSessaoAtual()?.email)
+          .evolucao(
+            this.authService.getSessaoAtual()?.email,
+            this.nivelEscolhido(),
+          )
           .slice(-DIAS_NO_GRAFICO)
       : [];
   }

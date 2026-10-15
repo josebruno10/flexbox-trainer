@@ -36,6 +36,20 @@ suite("Interface do desafio", () => {
     );
   });
 
+  test("oferece os três níveis logo acima de Gerar novo desafio", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlWebview(webview, vscode.Uri.parse("file:///extensao"), "Aluno");
+
+    assert.deepStrictEqual(
+      [...html.matchAll(/data-nivel="(\w+)"/g)].map((achado) => achado[1]),
+      ["facil", "medio", "dificil"],
+    );
+    assert.ok(html.indexOf('id="niveis"') < html.indexOf('id="botaoNovoDesafio"'));
+  });
+
   test("oferece a ação para encerrar o desafio", () => {
     const webview = {
       cspSource: "vscode-webview://teste",

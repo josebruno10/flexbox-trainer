@@ -1,3 +1,4 @@
+import { NOME_DO_NIVEL } from "../niveis";
 import type { Bloco, Desafio } from "../types";
 import {
   blocoNoPonto,
@@ -12,7 +13,13 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 
 type GabaritoRecebido = Pick<
   Desafio,
-  "challengeId" | "codigo" | "width" | "height" | "backgroundColor" | "blocks"
+  | "challengeId"
+  | "codigo"
+  | "nivel"
+  | "width"
+  | "height"
+  | "backgroundColor"
+  | "blocks"
 >;
 
 type Modo = "gabarito" | "sobreposto" | "lado";
@@ -230,7 +237,8 @@ function renderizarResumo(atual: GabaritoRecebido): void {
   rotulo.className = "rotulo";
   // O código identifica o desafio, para conferir que é o mesmo da turma.
   rotulo.textContent = atual.codigo
-    ? `Desafio ${atual.codigo.slice(0, 3)} ${atual.codigo.slice(3)}`
+    ? `Desafio ${atual.codigo.slice(0, 3)} ${atual.codigo.slice(3)}` +
+      (atual.nivel ? ` · ${NOME_DO_NIVEL[atual.nivel]}` : "")
     : "Gabarito";
   const titulo = document.createElement("strong");
   titulo.className = "titulo-tela";

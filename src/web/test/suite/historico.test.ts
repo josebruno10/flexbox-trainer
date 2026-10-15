@@ -17,6 +17,7 @@ function armazenamentoFalso(inicial: Record<string, unknown> = {}): vscode.Memen
 function nota(sobrescritas: Partial<NotaDoDesafio> = {}): NotaDoDesafio {
   return {
     codigo: "482917",
+    nivel: "medio",
     tentativa: "challenge-482917-a",
     precisao: 50,
     tempoMs: 600_000,
@@ -107,7 +108,7 @@ suite("Histórico de desafios", () => {
   test("ignora registros incompletos de outra versão", () => {
     const historico = new HistoricoDesafios(
       armazenamentoFalso({
-        [`flexboxTrainer.historico|${ALUNO}`]: [
+        [`flexboxTrainer.historico2|${ALUNO}`]: [
           { codigo: "482917" },
           null,
           {
@@ -141,18 +142,40 @@ suite("Histórico de desafios", () => {
     await historico.registrarNota(ALUNO, nota({ precisao: 30, instante: em(12) }));
 
     assert.deepStrictEqual(historico.evolucao(ALUNO), [
-      { dia: "2026-10-12", melhor: 30 },
-      { dia: "2026-10-13", melhor: 60 },
-      { dia: "2026-10-14", melhor: 70 },
+      { dia: "2026-10-12", nivel: "medio", melhor: 30 },
+      { dia: "2026-10-13", nivel: "medio", melhor: 60 },
+      { dia: "2026-10-14", nivel: "medio", melhor: 70 },
     ]);
     assert.deepStrictEqual(historico.evolucao("bruno@example.com"), []);
     assert.deepStrictEqual(historico.evolucao(undefined), []);
   });
 
+  test("a evolução separa os níveis", async () => {
+    const historico = new HistoricoDesafios(armazenamentoFalso());
+    const em = new Date(2026, 9, 14, 10).getTime();
+
+    await historico.registrarNota(ALUNO, nota({ precisao: 90, instante: em, nivel: "facil" }));
+    await historico.registrarNota(ALUNO, nota({ precisao: 55, instante: em, nivel: "dificil" }));
+
+    assert.deepStrictEqual(historico.evolucao(ALUNO, "facil"), [
+      { dia: "2026-10-14", nivel: "facil", melhor: 90 },
+    ]);
+    assert.deepStrictEqual(historico.evolucao(ALUNO, "dificil"), [
+      { dia: "2026-10-14", nivel: "dificil", melhor: 55 },
+    ]);
+    assert.deepStrictEqual(historico.evolucao(ALUNO, "medio"), []);
+    assert.strictEqual(historico.evolucao(ALUNO).length, 2);
+  });
+
   test("a evolução guarda os 60 dias mais recentes e ignora dados de outra versão", async () => {
     const historico = new HistoricoDesafios(
       armazenamentoFalso({
-        [`flexboxTrainer.evolucao|${ALUNO}`]: [{ dia: "ontem", melhor: 10 }, null],
+        [`flexboxTrainer.evolucao|${ALUNO}`]: [
+          { dia: "ontem", nivel: "medio", melhor: 10 },
+          // Da versão sem níveis.
+          { dia: "2026-01-01", melhor: 10 },
+          null,
+        ],
       }),
     );
     assert.deepStrictEqual(historico.evolucao(ALUNO), []);
@@ -164,10 +187,17 @@ suite("Histórico de desafios", () => {
       );
     }
 
-    const evolucao = historico.evolucao(ALUNO);
+    // Os 60 dias valem para cada nível: um dia de outro nível não tira lugar.
+    await historico.registrarNota(
+      ALUNO,
+      nota({ precisao: 80, instante: new Date(2025, 11, 1, 10).getTime(), nivel: "facil" }),
+    );
+
+    const evolucao = historico.evolucao(ALUNO, "medio");
     assert.strictEqual(evolucao.length, 60);
-    assert.deepStrictEqual(evolucao[0], { dia: "2026-01-06", melhor: 6 });
-    assert.deepStrictEqual(evolucao[59], { dia: "2026-03-06", melhor: 65 });
+    assert.deepStrictEqual(evolucao[0], { dia: "2026-01-06", nivel: "medio", melhor: 6 });
+    assert.deepStrictEqual(evolucao[59], { dia: "2026-03-06", nivel: "medio", melhor: 65 });
+    assert.strictEqual(historico.evolucao(ALUNO, "facil").length, 1);
   });
 
   test("conta os dias seguidos do desafio do dia", async () => {

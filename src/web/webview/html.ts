@@ -521,8 +521,13 @@ export function obterHtmlWebview(
       display: flex;
     }
 
-    .vistas .modo {
+    .vistas .modo,
+    .niveis .modo {
       flex: 1 1 0;
+    }
+
+    .niveis {
+      display: flex;
     }
 
     /* A página já atualiza enquanto o aluno digita; o botão é para quando
@@ -761,6 +766,7 @@ export function obterHtmlWebview(
     }
 
     .evolucao figcaption .valor {
+      white-space: nowrap;
       font-size: 12px;
       letter-spacing: 0;
       text-transform: none;
@@ -811,8 +817,13 @@ export function obterHtmlWebview(
       border-left-color: var(--acento);
     }
 
-    .lista-historico .tempo {
+    .lista-historico .tempo,
+    .lista-historico .nivel {
       color: var(--texto-suave);
+    }
+
+    .lista-historico .nivel {
+      font-size: 10.5px;
     }
 
     .lista-historico button {
@@ -877,6 +888,11 @@ export function obterHtmlWebview(
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
     </dl>
     <div class="acoes">
+      <div class="modos niveis largo" id="niveis" role="group" aria-label="Nível dos desafios novos">
+        <button type="button" class="modo" data-nivel="facil" aria-pressed="false" title="Desafios novos com menos componentes">Fácil</button>
+        <button type="button" class="modo" data-nivel="medio" aria-pressed="true" title="Desafios novos no nível do meio">Médio</button>
+        <button type="button" class="modo" data-nivel="dificil" aria-pressed="false" title="Desafios novos com todos os componentes">Difícil</button>
+      </div>
       <button id="botaoNovoDesafio" class="largo principal" title="Gerar novo desafio (Ctrl+Alt+D)"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
       <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">Desafio do dia</button>
       <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 6 dígitos, como o que o professor passar">Abrir por código</button>
@@ -923,7 +939,7 @@ export function obterHtmlWebview(
       <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>Ver todos</button>
     </div>
     <figure class="evolucao" id="evolucao" hidden>
-      <figcaption><span>Melhor nota por dia</span><span class="valor" id="resumoEvolucao"></span></figcaption>
+      <figcaption><span id="tituloEvolucao">Melhor nota</span><span class="valor" id="resumoEvolucao"></span></figcaption>
       <svg id="graficoEvolucao" role="img"></svg>
       <div class="eixo" aria-hidden="true"><span id="inicioEvolucao"></span><span id="fimEvolucao"></span></div>
     </figure>

@@ -12,11 +12,16 @@ export type Bloco = {
   shape?: "rectangle" | "circle";
 };
 
+// Nos níveis mais fáceis, saem os componentes menores, que dão mais trabalho.
+export type Nivel = "facil" | "medio" | "dificil";
+
 export type Desafio = {
   challengeId: string;
   // Reproduz a mesma imagem (veja services/codigoDesafio.ts). Os desafios
   // criados pela extensão sempre têm um; os dos testes podem não ter.
   codigo?: string;
+  // Vem do código; os desafios dos testes, sem código, podem não ter.
+  nivel?: Nivel;
   width: number;
   height: number;
   backgroundColor: string;
@@ -132,6 +137,7 @@ export type MensagemRecebidaBarraLateral =
   | { type: "criarArquivos" }
   | { type: "abrirPorCodigo" }
   | { type: "desafioDoDia" }
+  | { type: "definirNivel"; nivel?: unknown }
   | { type: "copiarResultado" }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }

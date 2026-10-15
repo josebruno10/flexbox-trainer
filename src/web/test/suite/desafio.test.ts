@@ -19,11 +19,8 @@ suite("Gerador de desafios", () => {
     assert.strictEqual(primeiro.height, ALTURA_GABARITO);
     assert.match(primeiro.challengeId, /^challenge-[a-z0-9]+-[a-z0-9]+$/);
     assert.match(primeiro.backgroundColor, /^#[0-9a-f]{6}$/i);
-    assert.strictEqual(
-      "dificuldade" in primeiro,
-      false,
-      "O desafio não deve possuir nível de dificuldade.",
-    );
+    // Sem nível, o gerador entrega a imagem inteira.
+    assert.strictEqual(primeiro.nivel, "dificil");
     assert.strictEqual(
       "titulo" in primeiro,
       false,
@@ -72,7 +69,7 @@ suite("Gerador de desafios", () => {
     assert.ok(encontrouCirculo, "Nenhum círculo foi gerado.");
   });
 
-  test("o layout primário cobre todo o gabarito sem sobreposição", () => {
+  test("os cortes não aparecem: o fundo fica à vista entre os elementos", () => {
     for (let caso = 0; caso < 100; caso++) {
       const desafio = criarDesafioGerado({
         aleatorio: criarAleatorioTeste(caso),
@@ -83,20 +80,96 @@ suite("Gerador de desafios", () => {
         0,
       );
 
-      assert.strictEqual(
-        areaTotal,
-        desafio.width * desafio.height,
-        `Caso ${caso}: as regiões principais não cobrem o gabarito.`,
+      assert.ok(
+        areaTotal < desafio.width * desafio.height * 0.9,
+        `Caso ${caso}: os blocos de fora cobrem quase todo o gabarito.`,
       );
-      raiz.forEach((bloco, indice) =>
-        raiz.slice(indice + 1).forEach((outro) =>
-          assert.ok(
-            !retangulosSobrepoem(bloco, outro),
-            `Caso ${caso}: regiões ${bloco.id} e ${outro.id} se sobrepõem.`,
-          ),
-        ),
-      );
+      // Cada elemento fica a 15 px da borda da região: nada encosta na borda
+      // do gabarito.
+      for (const bloco of raiz.filter((bloco) => bloco.shape === "rectangle")) {
+        assert.ok(
+          bloco.x >= 15 && bloco.y >= 15,
+          `Caso ${caso}: o bloco ${bloco.id} encosta na borda do gabarito.`,
+        );
+      }
     }
+  });
+
+  test("nos níveis mais fáceis saem os menores componentes, sem desfazer padrões", () => {
+    const tamanho = (bloco: Bloco) => (bloco.width + bloco.height) / 2;
+    // Os números mudam entre os níveis; a posição, o tamanho e a cor, não.
+    const chave = (bloco: Bloco) =>
+      [bloco.x, bloco.y, bloco.width, bloco.height, bloco.color, bloco.shape].join(",");
+    // Para cada bloco, a chave dele e a do pai (vazia na raiz).
+    const indexar = (blocos: Bloco[]) => {
+      const porId = new Map(blocos.map((bloco) => [bloco.id, bloco]));
+      return new Map(
+        blocos.map((bloco) => {
+          const pai = bloco.parentId === undefined ? undefined : porId.get(bloco.parentId);
+          return [chave(bloco), { bloco, pai: pai ? chave(pai) : "", orfao: bloco.parentId !== undefined && !pai }];
+        }),
+      );
+    };
+    // Os blocos criados juntos têm o mesmo pai, a mesma cor e o mesmo tamanho.
+    const padrao = (bloco: Bloco, pai: string) =>
+      [pai, bloco.color, bloco.width, bloco.height].join("|");
+    let tirouOsQuinze = 0;
+
+    for (let caso = 0; caso < 100; caso++) {
+      const [dificil, medio, facil] = (["dificil", "medio", "facil"] as const).map(
+        (nivel) => criarDesafioGerado({ aleatorio: criarAleatorioTeste(caso), nivel }),
+      );
+      assert.strictEqual(medio.backgroundColor, dificil.backgroundColor);
+      assert.strictEqual(facil.nivel, "facil");
+
+      for (const [maior, menor] of [
+        [dificil, medio],
+        [medio, facil],
+      ]) {
+        const doMaior = indexar(maior.blocks);
+        const doMenor = indexar(menor.blocks);
+        // Numerados de #1 a #N, sem buracos.
+        assert.deepStrictEqual(
+          menor.blocks.map((bloco) => bloco.id),
+          menor.blocks.map((_, indice) => indice + 1),
+        );
+        // Os que ficam são os mesmos blocos, com o mesmo pai.
+        for (const [chaveBloco, { bloco, pai, orfao }] of doMenor) {
+          const original = doMaior.get(chaveBloco);
+          assert.ok(original, `Caso ${caso}: o bloco ${bloco.id} não existe no nível acima.`);
+          assert.ok(!orfao, `Caso ${caso}: o bloco ${bloco.id} ficou sem o pai.`);
+          assert.strictEqual(pai, original.pai, `Caso ${caso}: o bloco ${bloco.id} trocou de pai.`);
+        }
+        const sairam = [...doMaior.entries()].filter(([chaveBloco]) => !doMenor.has(chaveBloco));
+        // Saem os menores.
+        const menorQueFicou = Math.min(...menor.blocks.map(tamanho));
+        // Um padrão sai inteiro ou fica inteiro.
+        const padroesQueFicaram = new Set(
+          [...doMenor.values()].map(({ bloco, pai }) => padrao(bloco, pai)),
+        );
+        for (const [, { bloco, pai }] of sairam) {
+          assert.ok(
+            tamanho(bloco) <= menorQueFicou + 1,
+            `Caso ${caso}: saiu o bloco ${bloco.id}, maior que um que ficou.`,
+          );
+          assert.ok(
+            !padroesQueFicaram.has(padrao(bloco, pai)),
+            `Caso ${caso}: o padrão do bloco ${bloco.id} ficou pela metade.`,
+          );
+        }
+      }
+
+      assert.ok(
+        facil.blocks.length >= Math.min(8, dificil.blocks.length),
+        `Caso ${caso}: o fácil ficou com poucos componentes.`,
+      );
+      if (dificil.blocks.length - facil.blocks.length >= 15) {
+        tirouOsQuinze++;
+      }
+    }
+
+    // Quase sempre o fácil tira os 15 menores.
+    assert.ok(tirouOsQuinze >= 90, `Só ${tirouOsQuinze} de 100 tiraram 15.`);
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {
@@ -137,7 +210,6 @@ suite("Gerador de desafios", () => {
             bloco.height,
             `Círculo ${bloco.id} deformado no caso ${caso}.`,
           );
-          assert.ok(bloco.parentId !== undefined, `Círculo sem pai no caso ${caso}.`);
         } else {
           assert.strictEqual(bloco.shape, "rectangle");
           assert.strictEqual(bloco.borderRadius, 0);

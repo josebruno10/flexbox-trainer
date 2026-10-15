@@ -1,19 +1,27 @@
 // Cada desafio tem um código de 6 dígitos, fácil de ditar em sala: o mesmo
-// código gera sempre a mesma imagem. Assim a turma treina o mesmo layout, e o
-// aluno pode refazer um desafio para bater a própria nota.
+// código gera sempre a mesma imagem, no mesmo nível. Assim a turma treina o
+// mesmo layout, e o aluno pode refazer um desafio para bater a própria nota.
 //
 // O código vira a semente do sorteio do gerador. Se o gerador mudar, os
 // códigos já compartilhados passam a gerar outros desafios; os testes do
 // gerador avisam quando isso acontece.
 
+import type { Nivel } from "../types";
+import { NIVEIS } from "../niveis";
+
 const DIGITOS = 6;
 const TOTAL_CODIGOS = 10 ** DIGITOS;
 
-export function sortearCodigo(aleatorio: () => number = Math.random): string {
-  return String(Math.floor(aleatorio() * TOTAL_CODIGOS) % TOTAL_CODIGOS).padStart(
-    DIGITOS,
-    "0",
-  );
+/** Um código ao acaso, entre os do nível pedido (veja nivelDoCodigo). */
+export function sortearCodigo(
+  nivel: Nivel = "medio",
+  aleatorio: () => number = Math.random,
+): string {
+  const resto = NIVEIS.indexOf(nivel);
+  // Quantos códigos de 000000 a 999999 deixam esse resto na divisão por 3.
+  const quantidade = Math.floor((TOTAL_CODIGOS - 1 - resto) / 3) + 1;
+  const indice = Math.min(quantidade - 1, Math.floor(aleatorio() * quantidade));
+  return String(indice * 3 + resto).padStart(DIGITOS, "0");
 }
 
 /** Aceita "482917", "482 917" ou "482-917"; qualquer outra coisa é inválida. */
@@ -29,12 +37,18 @@ export function formatarCodigo(codigo: string): string {
 
 /**
  * O desafio do dia: o mesmo código para todos na mesma data, a do
- * computador. Assim a turma treina o mesmo layout sem o professor passar um.
+ * computador, sempre no nível médio. Assim a turma treina o mesmo layout sem
+ * o professor passar um.
  */
 export function codigoDoDia(data: Date = new Date()): string {
-  return String(
-    semente(`flexbox-trainer:dia:${diaLocal(data)}`) % TOTAL_CODIGOS,
-  ).padStart(DIGITOS, "0");
+  const sorteado =
+    semente(`flexbox-trainer:dia:${diaLocal(data)}`) % TOTAL_CODIGOS;
+  // O código médio mais próximo (resto 1 na divisão por 3).
+  let codigo = sorteado - (sorteado % 3) + 1;
+  if (codigo >= TOTAL_CODIGOS) {
+    codigo -= 3;
+  }
+  return String(codigo).padStart(DIGITOS, "0");
 }
 
 /** A data do computador, como "2026-10-14". */
