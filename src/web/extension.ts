@@ -5,6 +5,7 @@ import {
   COMANDO_ABRIR_BARRA,
 } from "./provider/barra-de-status";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedor-barra-lateral";
+import { sincronizarComOutrosComputadores } from "./sincronizacao";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
@@ -347,6 +348,15 @@ export async function activate(context: vscode.ExtensionContext) {
   // armazenamento seguro ou a API de autenticação estiverem lentos/offline.
   // A inicialização da sessão atualiza a webview assim que for concluída.
   void authService.inicializar();
+
+  // O histórico do aluno da sessão vai junto na sincronização do VS Code.
+  const sincronizar = () =>
+    sincronizarComOutrosComputadores(
+      context.globalState,
+      authService.getSessaoAtual()?.email,
+    );
+  sincronizar();
+  context.subscriptions.push(authService.onDidChangeEstado(sincronizar));
 
   // Os testes não consultam o GitHub.
   if (context.extensionMode !== vscode.ExtensionMode.Test) {

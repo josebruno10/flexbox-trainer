@@ -4,8 +4,10 @@ import { Nivel } from "../types";
 import { diaLocal } from "./codigoDesafio";
 
 // Os desafios que o aluno já verificou, com a melhor nota de cada um. Ficam
-// só neste computador, separados por e-mail: num laboratório, cada aluno vê
-// os próprios. Um desafio refeito (pelo código) continua na mesma linha.
+// separados por e-mail: num laboratório, cada aluno vê os próprios. Com a
+// Sincronização de Configurações ligada, vão junto para os outros
+// computadores (ver sincronizacao.ts). Um desafio refeito (pelo código)
+// continua na mesma linha.
 export type RegistroHistorico = {
   codigo: string;
   // Melhor precisão em todas as vezes que o desafio foi feito.
@@ -190,6 +192,15 @@ export class HistoricoDesafios {
     const valor = this.armazenamento.get<unknown>(chave(dono, "sequenciaDoDia"));
     return ehSequencia(valor) ? valor : undefined;
   }
+}
+
+/** Onde fica tudo o que é do aluno: histórico, evolução e sequência. */
+export function chavesDoAluno(dono: string): string[] {
+  return [
+    chave(dono, "historico2"),
+    chave(dono, "evolucao"),
+    chave(dono, "sequenciaDoDia"),
+  ];
 }
 
 // "historico2": a 0.5.0 trocou o gerador, e os códigos antigos passaram a dar

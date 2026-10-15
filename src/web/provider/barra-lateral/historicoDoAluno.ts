@@ -12,6 +12,7 @@ import {
   SequenciaDoDia,
 } from "../../services/historico";
 import { Desafio, Nivel } from "../../types";
+import { CHAVE_OPINIAO_PEDIDA } from "../../sincronizacao";
 import { formatarTempo } from "../barra-de-status";
 import { formatarPorcentagem } from "./resultado";
 
@@ -21,7 +22,6 @@ const HISTORICO_NA_BARRA = 5;
 // O gráfico da evolução mostra os últimos 30 dias em que o aluno treinou.
 const DIAS_NO_GRAFICO = 30;
 // O pedido de opinião aparece uma vez, depois deste tanto de desafios.
-const CHAVE_OPINIAO_PEDIDA = "flexboxTrainer.opiniaoPedida";
 const DESAFIOS_ANTES_DA_OPINIAO = 3;
 const RESPONDER = "Responder";
 const AGORA_NAO = "Agora não";

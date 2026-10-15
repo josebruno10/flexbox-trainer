@@ -51,6 +51,7 @@ import { sessaoRecusada, testarConexao } from "./barra-lateral/conexao";
 import { Corretor } from "./barra-lateral/corretor";
 import { mensagensDaBarra, ProgressoGuia } from "./barra-lateral/estado";
 import { HistoricoDoAluno } from "./barra-lateral/historicoDoAluno";
+import { CHAVE_NIVEL } from "../sincronizacao";
 import { PaginaDoAluno } from "./barra-lateral/paginaDoAluno";
 import { ControladorDaBarra, rotearMensagem } from "./barra-lateral/mensagens";
 import {
@@ -67,8 +68,6 @@ import {
 
 export type { ProgressoGuia } from "./barra-lateral/estado";
 
-// O nível dos desafios novos, escolhido na barra lateral.
-const CHAVE_NIVEL = "flexboxTrainer.nivel";
 // Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
 const LARGURA_PADRAO = 800;
 const ALTURA_PADRAO = 800;
