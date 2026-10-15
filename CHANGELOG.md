@@ -7,6 +7,8 @@ As mudanças de cada versão do FlexBox Trainer.
 ### Opinião e problemas
 - **Dar opinião** abre um questionário de usabilidade no GitHub: as dez perguntas do SUS e duas abertas.
 - **Relatar problema** abre um formulário no GitHub já com a versão, o VS Code, o sistema e o código do desafio. Quem não tem conta no GitHub pode copiar essas informações e mandar à equipe.
+- Quando uma verificação falha por um erro do servidor, **Relatar problema** aparece logo abaixo da mensagem, e o formulário já vem com ela.
+- Depois do terceiro desafio verificado, a extensão pergunta uma única vez se o aluno pode responder ao questionário.
 
 ### Para quem desenvolve
 - `node scripts/opinioes.mjs` junta as respostas do questionário e calcula a nota SUS de cada uma e a média.

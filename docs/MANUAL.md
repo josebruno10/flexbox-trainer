@@ -209,9 +209,9 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 
 ## Opinião e problemas
 
-**Dar opinião**, no menu **⋯** da barra lateral, abre um questionário de dez perguntas sobre usar a extensão (o SUS, um questionário padrão de usabilidade), mais duas abertas. Leva uns dois minutos.
+**Dar opinião**, no menu **⋯** da barra lateral, abre um questionário de dez perguntas sobre usar a extensão (o SUS, um questionário padrão de usabilidade), mais duas abertas. Leva uns dois minutos. Depois do terceiro desafio verificado, a extensão pergunta uma única vez se você pode responder.
 
-**Relatar problema** abre um formulário já com a versão da extensão, a do VS Code, o sistema e o código do desafio; conte o que aconteceu e, se puder, anexe um print. Sem conta no GitHub, escolha **Copiar as informações** e mande para a equipe, junto com o que aconteceu.
+**Relatar problema** abre um formulário já com a versão da extensão, a do VS Code, o sistema e o código do desafio; conte o que aconteceu e, se puder, anexe um print. Sem conta no GitHub, escolha **Copiar as informações** e mande para a equipe, junto com o que aconteceu. Quando uma verificação falha por um erro do servidor, aparece **Relatar problema** logo abaixo da mensagem, e o formulário já vem com ela.
 
 Os dois formulários ficam no GitHub e precisam de uma conta lá. As respostas são públicas: não escreva dados pessoais.
 

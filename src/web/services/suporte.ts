@@ -13,7 +13,12 @@ export type Ambiente = {
   vscode: string;
   sistema: string;
   desafio?: { codigo: string; nivel?: Nivel };
+  // A mensagem do erro, quando o relato sai dele.
+  mensagem?: string;
 };
+
+// Um erro longo do servidor não cabe bem num endereço; o começo basta.
+const TAMANHO_MAXIMO_MENSAGEM = 1000;
 
 /** O formulário de problema, já com a versão, o sistema e o desafio. */
 export function enderecoDoProblema(ambiente: Ambiente): string {
@@ -23,6 +28,9 @@ export function enderecoDoProblema(ambiente: Ambiente): string {
     vscode: ambiente.vscode,
     sistema: ambiente.sistema,
     ...(ambiente.desafio ? { codigo: descreverDesafio(ambiente.desafio) } : {}),
+    ...(ambiente.mensagem
+      ? { mensagem: ambiente.mensagem.slice(0, TAMANHO_MAXIMO_MENSAGEM) }
+      : {}),
   });
 }
 
@@ -38,7 +46,7 @@ export function textoDoAmbiente(ambiente: Ambiente): string {
     `VS Code ${ambiente.vscode}`,
     ambiente.sistema,
     ...(ambiente.desafio ? [`desafio ${descreverDesafio(ambiente.desafio)}`] : []),
-  ].join(" · ");
+  ].join(" · ") + (ambiente.mensagem ? `\n${comoErro(ambiente.mensagem)}` : "");
 }
 
 /**
@@ -94,6 +102,11 @@ export function nomeDoSistema(plataforma: string | undefined): string {
     darwin: "macOS",
   };
   return (plataforma && nomes[plataforma]) || plataforma || "navegador";
+}
+
+// A mensagem da barra lateral já pode começar com "Erro:".
+function comoErro(mensagem: string): string {
+  return /^erro\b/i.test(mensagem) ? mensagem : `Erro: ${mensagem}`;
 }
 
 // Espaços viram %20, e não "+", que nem todo leitor de endereço desfaz.

@@ -744,6 +744,10 @@ export function obterHtmlWebview(
       margin-bottom: 6px;
     }
 
+    button.relatar {
+      margin-top: 6px;
+    }
+
     /* A melhor nota de cada dia, de 0 a 100%: a linha sobe com o treino. */
     .evolucao {
       margin: 0 0 12px;
@@ -926,6 +930,7 @@ export function obterHtmlWebview(
       <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
     </div>
     <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
+    <button type="button" id="botaoRelatarErro" class="discreto relatar" title="Abre o formulário de problema, já com esta mensagem" hidden>Relatar problema</button>
     <dl class="dados historico" id="historicoNotas" hidden>
       <div id="linhaTentativas"><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
       <div id="linhaMelhor"><dt>Melhor</dt><dd id="valorMelhor"></dd></div>

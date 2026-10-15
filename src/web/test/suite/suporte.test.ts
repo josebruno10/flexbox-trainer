@@ -34,6 +34,31 @@ suite("Relatos de problema e opiniões", () => {
     assert.ok(enderecoDoProblema(AMBIENTE).includes("codigo=482%20917%20(m%C3%A9dio)"));
   });
 
+  test("vindo de um erro, a mensagem dele vai junto, sem passar de 1000 caracteres", () => {
+    const comErro = new URL(
+      enderecoDoProblema({ ...AMBIENTE, mensagem: "Erro: o servidor respondeu 500." }),
+    );
+    assert.strictEqual(
+      comErro.searchParams.get("mensagem"),
+      "Erro: o servidor respondeu 500.",
+    );
+
+    const longo = new URL(enderecoDoProblema({ ...AMBIENTE, mensagem: "x".repeat(5000) }));
+    assert.strictEqual(longo.searchParams.get("mensagem")?.length, 1000);
+
+    assert.strictEqual(
+      textoDoAmbiente({ ...AMBIENTE, mensagem: "Erro: o servidor respondeu 500." }),
+      "FlexBox Trainer 0.5.0 · VS Code 1.142.0 · Linux · desafio 482 917 (médio)\n" +
+        "Erro: o servidor respondeu 500.",
+    );
+    // Sem "Erro:" no começo, o texto ganha um.
+    assert.ok(
+      textoDoAmbiente({ ...AMBIENTE, mensagem: "O servidor não devolveu a nota." }).endsWith(
+        "\nErro: O servidor não devolveu a nota.",
+      ),
+    );
+  });
+
   test("sem desafio, o código fica em branco", () => {
     const endereco = new URL(enderecoDoProblema({ ...AMBIENTE, desafio: undefined }));
 

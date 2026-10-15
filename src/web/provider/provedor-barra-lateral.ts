@@ -70,6 +70,11 @@ const HISTORICO_NA_BARRA = 5;
 const DIAS_NO_GRAFICO = 30;
 // O nível dos desafios novos, escolhido na barra lateral.
 const CHAVE_NIVEL = "flexboxTrainer.nivel";
+// O pedido de opinião aparece uma vez, depois deste tanto de desafios.
+const CHAVE_OPINIAO_PEDIDA = "flexboxTrainer.opiniaoPedida";
+const DESAFIOS_ANTES_DA_OPINIAO = 3;
+const RESPONDER = "Responder";
+const AGORA_NAO = "Agora não";
 
 /** O que o guia de primeiros passos precisa saber para marcar cada passo. */
 export type ProgressoGuia = {
@@ -299,6 +304,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
         if (mensagem.type === "copiarResultado") {
           void this.copiarResultado();
+          return;
+        }
+
+        if (mensagem.type === "relatarProblema") {
+          void vscode.commands.executeCommand(
+            "flexbox-trainer.relatarProblema",
+            typeof mensagem.mensagem === "string" ? mensagem.mensagem : undefined,
+          );
           return;
         }
 
@@ -814,6 +827,27 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
+  // Uma vez só, depois do terceiro desafio verificado: a opinião de quem já
+  // usou a extensão de verdade.
+  private async pedirOpiniaoSeForAHora(): Promise<void> {
+    if (
+      this.registroGabaritos.get<boolean>(CHAVE_OPINIAO_PEDIDA) ||
+      this.registrosDoAluno().length < DESAFIOS_ANTES_DA_OPINIAO
+    ) {
+      return;
+    }
+    await this.registroGabaritos.update(CHAVE_OPINIAO_PEDIDA, true);
+    const escolha = await vscode.window.showInformationMessage(
+      "Pode responder 10 perguntas rápidas sobre o FlexBox Trainer? " +
+        "A sua opinião ajuda no nosso TCC.",
+      RESPONDER,
+      AGORA_NAO,
+    );
+    if (escolha === RESPONDER) {
+      await vscode.commands.executeCommand("flexbox-trainer.darOpiniao");
+    }
+  }
+
   /** O código e o nível do desafio em andamento, para os relatos de problema. */
   public desafioEmAndamento(): { codigo: string; nivel?: Nivel } | undefined {
     const desafio = this.desafioAtual;
@@ -1044,6 +1078,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         ];
         this.registrarMelhorDaTentativa(resultadoServidor.precision);
         await this.registrarNoHistorico(resultadoServidor.precision);
+        void this.pedirOpiniaoSeForAHora();
       }
 
       this.enviarEstado();

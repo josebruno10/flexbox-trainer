@@ -185,6 +185,9 @@ let recordeAtual: number | undefined;
 let notasAtuais: number[] = [];
 // No histórico cabem as três últimas tentativas na largura da barra.
 const TENTATIVAS_NO_HISTORICO = 3;
+const botaoRelatarErro = document.getElementById(
+  "botaoRelatarErro",
+) as HTMLButtonElement;
 const caixaResultado = document.getElementById(
   "caixaResultado",
 ) as HTMLDivElement;
@@ -1096,7 +1099,12 @@ function renderizarResultado(
     resultado.source === "gabarito-error" ||
     resultado.source === "servidor-sem-nota"
   ) {
-    mostrarMensagem(resultado.error || "Não foi possível verificar.");
+    // Só os erros do servidor viram relato: os outros dependem do aluno.
+    mostrarMensagem(
+      resultado.error || "Não foi possível verificar.",
+      resultado.source === "gabarito-error" ||
+        resultado.source === "servidor-sem-nota",
+    );
     return;
   }
 
@@ -1109,7 +1117,10 @@ function renderizarResultado(
     resultado.source === "api-error" ||
     resultado.source === "authentication-error"
   ) {
-    mostrarMensagem("Erro: " + (resultado.error || "desconhecido."));
+    mostrarMensagem(
+      "Erro: " + (resultado.error || "desconhecido."),
+      resultado.source === "api-error",
+    );
     return;
   }
 
@@ -1123,12 +1134,22 @@ function renderizarResultado(
   );
 }
 
-function mostrarMensagem(texto: string): void {
+// Com relatavel, o erro ganha o botão Relatar problema.
+function mostrarMensagem(texto: string, relatavel = false): void {
   notaResultado.hidden = true;
   caixaResultado.textContent = texto;
+  botaoRelatarErro.hidden = !relatavel;
 }
 
+botaoRelatarErro.addEventListener("click", () => {
+  vscode.postMessage({
+    type: "relatarProblema",
+    mensagem: caixaResultado.textContent ?? "",
+  });
+});
+
 function mostrarPrecisao(precisao: number, repetida: boolean): void {
+  botaoRelatarErro.hidden = true;
   const valor = Math.round(Math.min(100, Math.max(0, precisao)) * 100) / 100;
   const inicio = notaResultado.hidden ? 0 : notaExibida;
   if (notaResultado.hidden) {

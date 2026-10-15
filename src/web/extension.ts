@@ -147,13 +147,17 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.verHistorico", () =>
       provedor.verHistorico(),
     ),
-    vscode.commands.registerCommand("flexbox-trainer.relatarProblema", () =>
-      relatarProblema({
-        versao: String(context.extension.packageJSON.version),
-        vscode: vscode.version,
-        sistema: sistemaOperacional(),
-        desafio: provedor.desafioEmAndamento(),
-      }),
+    // Vindo de um erro da barra lateral, recebe a mensagem dele.
+    vscode.commands.registerCommand(
+      "flexbox-trainer.relatarProblema",
+      (mensagem?: unknown) =>
+        relatarProblema({
+          versao: String(context.extension.packageJSON.version),
+          vscode: vscode.version,
+          sistema: sistemaOperacional(),
+          desafio: provedor.desafioEmAndamento(),
+          mensagem: typeof mensagem === "string" ? mensagem : undefined,
+        }),
     ),
     vscode.commands.registerCommand("flexbox-trainer.darOpiniao", () =>
       darOpiniao(String(context.extension.packageJSON.version)),

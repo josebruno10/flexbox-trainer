@@ -139,6 +139,7 @@ export type MensagemRecebidaBarraLateral =
   | { type: "desafioDoDia" }
   | { type: "definirNivel"; nivel?: unknown }
   | { type: "copiarResultado" }
+  | { type: "relatarProblema"; mensagem?: unknown }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }
   | { type: "copiarCodigo" }

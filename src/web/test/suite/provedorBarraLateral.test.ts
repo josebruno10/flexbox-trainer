@@ -827,6 +827,57 @@ suite("Provedor da barra lateral", () => {
       ]);
     });
 
+    test("pede a opinião uma vez só, depois do terceiro desafio verificado", async () => {
+      mockarConfiguracaoServidorValida();
+      mockarServidor({
+        "POST /tipo-dinamica/treino/corrigir-formas": () => json({ pontuacao: 70 }),
+      });
+      const perguntas: string[] = [];
+      vscode.window.showInformationMessage = (async (pergunta: string) => {
+        perguntas.push(pergunta);
+        return "Responder";
+      }) as unknown as typeof vscode.window.showInformationMessage;
+      const comandos: string[] = [];
+      vscode.commands.executeCommand = (async (comando: string) => {
+        comandos.push(comando);
+        return undefined;
+      }) as typeof vscode.commands.executeCommand;
+      const registro = criarRegistroFalso();
+      const provedor = criarProvedorParaTeste([], { registro });
+      const pedidos = () =>
+        perguntas.filter((pergunta) => pergunta.includes("10 perguntas rápidas")).length;
+
+      for (const [indice, codigo] of ["482917", "305114", "771208", "000123"].entries()) {
+        const interno = await prepararCodigo(provedor, registro, codigo);
+        await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+        await new Promise((pronto) => setTimeout(pronto, 0));
+        // Só depois do terceiro desafio, e nunca de novo.
+        assert.strictEqual(pedidos(), indice < 2 ? 0 : 1, `depois do ${indice + 1}º`);
+      }
+      assert.deepStrictEqual(
+        comandos.filter((comando) => comando === "flexbox-trainer.darOpiniao"),
+        ["flexbox-trainer.darOpiniao"],
+      );
+    });
+
+    test("o botão Relatar problema de um erro leva a mensagem ao formulário", async () => {
+      const chamadas: unknown[][] = [];
+      vscode.commands.executeCommand = (async (...argumentos: unknown[]) => {
+        chamadas.push(argumentos);
+        return undefined;
+      }) as typeof vscode.commands.executeCommand;
+      const provedor = criarProvedorParaTeste([]);
+      const barra = criarBarraFalsa();
+      provedor.resolveWebviewView(barra.vista);
+
+      barra.receber({ type: "relatarProblema", mensagem: "Erro: o servidor respondeu 500." });
+
+      assert.deepStrictEqual(
+        chamadas.filter(([comando]) => comando === "flexbox-trainer.relatarProblema"),
+        [["flexbox-trainer.relatarProblema", "Erro: o servidor respondeu 500."]],
+      );
+    });
+
     test("gera os desafios novos no nível escolhido e guarda a escolha", async () => {
       const registro = criarRegistroFalso();
       const provedor = criarProvedorParaTeste([], { registro });
