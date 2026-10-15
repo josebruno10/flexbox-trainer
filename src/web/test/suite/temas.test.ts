@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { obterHtmlWebview } from "../../webview/html";
+import { obterHtmlWebview } from "../../webview/telas/barraLateral";
 import { lerTemaCores, NomeTema, TEMAS } from "../../webview/temas";
 
 function luminancia(hex: string): number {

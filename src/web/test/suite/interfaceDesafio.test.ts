@@ -1,10 +1,8 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import {
-  obterHtmlAutenticacao,
-  obterHtmlPainelGabarito,
-  obterHtmlWebview,
-} from "../../webview/html";
+import { obterHtmlWebview } from "../../webview/telas/barraLateral";
+import { obterHtmlAutenticacao } from "../../webview/telas/entrada";
+import { obterHtmlPainelGabarito } from "../../webview/telas/painelGabarito";
 
 suite("Interface do desafio", () => {
   test("mantém uma camada transparente para clicar no gabarito limpo", () => {
