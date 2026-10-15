@@ -1,7 +1,7 @@
 import { Bloco, Desafio } from "../types";
 import { aleatorioDoCodigo, sortearCodigo } from "./codigoDesafio";
 
-// Porta do gerador de Vitor Maia (Gerador-de-imagens-para-torneio-de-CSS,
+// Porta do gerador de Vitor Costa (Gerador-de-imagens-para-torneio-de-CSS,
 // commit 05ac618). As decisões aleatórias seguem o script original; muda a
 // saída, que vira uma lista de blocos com hierarquia em vez de desenho direto
 // no canvas, e o gerador de números, que pode ser injetado nos testes.

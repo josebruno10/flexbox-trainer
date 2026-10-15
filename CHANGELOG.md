@@ -12,7 +12,7 @@ As mudanças de cada versão do FlexBox Trainer.
 - Na primeira vez que uma versão nova abre, um aviso curto leva ao que mudou.
 
 ### Telas
-- Créditos discretos no pé da barra lateral e da tela de entrada.
+- Créditos discretos no pé da barra lateral, da tela de entrada e da página de entrada no navegador.
 - A aba do gabarito não repete mais as frases de ajuda nos modos Sobrepor e Lado a lado.
 - O `index.html` base não traz mais o comentário no `<body>`.
 
@@ -86,7 +86,7 @@ As mudanças de cada versão do FlexBox Trainer.
 Primeira versão para instalar pelo arquivo `.vsix`.
 
 ### Desafios
-- Gera desafios aleatórios de 800 × 800 px (porta do gerador de Vitor Maia), com retângulos, círculos, colunas e grades.
+- Gera desafios aleatórios de 800 × 800 px (porta do gerador de Vitor Costa), com retângulos, círculos, colunas e grades.
 - Mostra o tamanho e a cor de cada componente na barra lateral e numa aba do gabarito, que compara o gabarito com a sua página (sobrepostos ou lado a lado).
 - Cria `index.html` e `style.css` quando a pasta ainda não os tem e marca o tempo de cada tentativa.
 
