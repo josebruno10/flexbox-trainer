@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.5.0] - 2026-10-15
 
 ### Desafios
 - Gerador atualizado com a versão nova do Vitor: os cortes do layout não aparecem mais (o fundo fica à vista entre os elementos), cada elemento fica a 15 px da borda da sua região, nenhuma parte fica menor que 70 px e toda fileira tem ao menos um círculo. Os códigos passaram a gerar outras imagens, e o histórico recomeça.
