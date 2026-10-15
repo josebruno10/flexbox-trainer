@@ -1,7 +1,7 @@
 import html2canvas from "html2canvas";
 import { medirFormas } from "../formas";
 import { montarPaginaAluno } from "../paginaAluno";
-import { vscode } from "./api";
+import { vscode } from "../api";
 import {
   avisoArquivos,
   botaoVistaPagina,

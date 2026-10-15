@@ -1,7 +1,7 @@
 // O script da barra lateral. Cada parte dela fica num módulo de ./barra; aqui
 // só chegam as mensagens da extensão e cada uma vai para a sua parte.
+import { vscode } from "./api";
 import { ligarAcoes } from "./barra/acoes";
-import { vscode } from "./barra/api";
 import { ligarComponentes } from "./barra/componentes";
 import { renderizarEstadoAutenticacao, renderizarExtensoesIa } from "./barra/conta";
 import { ligarEvolucao } from "./barra/evolucao";

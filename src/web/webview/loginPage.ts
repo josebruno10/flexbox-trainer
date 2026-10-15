@@ -1,4 +1,4 @@
-declare function acquireVsCodeApi(): { postMessage(message: unknown): void; };
+import { vscode } from "./api";
 
 type EstadoAutenticacaoRecebido = {
   status: "checking" | "authenticated" | "unauthenticated" | "error";
@@ -7,7 +7,6 @@ type EstadoAutenticacaoRecebido = {
   email?: string;
 };
 
-const vscode = acquireVsCodeApi();
 const statusAutenticacao = document.getElementById("statusAutenticacao") as HTMLDivElement;
 const botaoSair = document.getElementById("botaoSair") as HTMLButtonElement;
 

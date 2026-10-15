@@ -1,4 +1,4 @@
-import { vscode } from "./api";
+import { vscode } from "../api";
 import { botaoVerificar } from "./elementos";
 import { estado } from "./estado";
 import { renderizarHistorico, renderizarHistoricoDesafios } from "./historico";

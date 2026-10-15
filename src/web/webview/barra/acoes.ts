@@ -1,5 +1,5 @@
 import { ehNivel } from "../../niveis";
-import { vscode } from "./api";
+import { vscode } from "../api";
 import {
   botaoAbrirAba,
   botaoAtualizarPreview,

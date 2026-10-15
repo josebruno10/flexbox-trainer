@@ -1,7 +1,7 @@
 import { desenharGabarito, normalizarHex } from "../desenhoGabarito";
 import { NOME_DO_NIVEL } from "../../niveis";
 import type { Nivel } from "../../types";
-import { vscode } from "./api";
+import { vscode } from "../api";
 import {
   criarAmostra,
   desenharDestaques,

@@ -1,5 +1,5 @@
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
-import { vscode } from "./api";
+import { vscode } from "../api";
 import {
   botaoCopiarResultado,
   botaoVerHistorico,
