@@ -1,13 +1,13 @@
 import * as vscode from "vscode";
 import { AuthService } from "../auth/authService";
 import { log } from "./logger";
+import { lerConfiguracaoServidor } from "./servidor/configuracao";
 import {
   abrirDinamica,
   buscarDinamica,
   consultarStatusDinamica,
   criarDinamicaDeTreino,
-  lerConfiguracaoServidor,
-} from "./servidor";
+} from "./servidor/dinamica";
 
 // O banco guarda o código em character varying(4), e o nome do gabarito
 // (gab_<evento>_tam_...) é lido pela extensão oficial só com letras e números.

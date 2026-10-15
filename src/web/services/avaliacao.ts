@@ -4,11 +4,9 @@ import {
   ResultadoAvaliacao,
   TentativaPayload,
 } from "../types";
-import {
-  corrigirFormas,
-  enviarGabaritoDeTreino,
-  ErroHttpServidor,
-} from "./servidor";
+import { corrigirFormas } from "./servidor/correcao";
+import { enviarGabaritoDeTreino } from "./servidor/gabaritos";
+import { ErroHttpServidor } from "./servidor/requisicao";
 
 // Gabarito que esta instalação criou no evento de treino e o desafio que ele
 // representa agora.

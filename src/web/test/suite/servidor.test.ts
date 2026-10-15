@@ -2,12 +2,12 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { ConfiguracaoServidor } from "../../types";
 import {
-  extrairCodGabarito,
-  extrairPercentualCorrecao,
   lerConfiguracaoServidor,
-  resumirCabecalhosParaLog,
   verificarConexaoServidor,
-} from "../../services/servidor";
+} from "../../services/servidor/configuracao";
+import { extrairPercentualCorrecao } from "../../services/servidor/correcao";
+import { extrairCodGabarito } from "../../services/servidor/gabaritos";
+import { resumirCabecalhosParaLog } from "../../services/servidor/requisicao";
 
 function criarConfiguracao(
   overrides: Partial<ConfiguracaoServidor> = {},

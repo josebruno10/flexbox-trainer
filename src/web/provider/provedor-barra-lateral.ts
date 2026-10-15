@@ -33,7 +33,8 @@ import {
   encontrarExtensoesIa,
   ExtensaoIa,
 } from "../services/extensoesIa";
-import { ErroHttpServidor, lerConfiguracaoServidor } from "../services/servidor";
+import { lerConfiguracaoServidor } from "../services/servidor/configuracao";
+import { ErroHttpServidor } from "../services/servidor/requisicao";
 import { obterHtmlWebview } from "../webview/telas/barraLateral";
 import { obterHtmlAutenticacao } from "../webview/telas/entrada";
 import {

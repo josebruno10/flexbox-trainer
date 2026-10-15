@@ -1,7 +1,5 @@
-import {
-  ErroHttpServidor,
-  verificarConexaoServidor,
-} from "../../services/servidor";
+import { verificarConexaoServidor } from "../../services/servidor/configuracao";
+import { ErroHttpServidor } from "../../services/servidor/requisicao";
 import { ConfiguracaoServidor, StatusConexaoServidor } from "../../types";
 
 /** Se a sessão está valendo no servidor; com erro HTTP, o código dele. */
