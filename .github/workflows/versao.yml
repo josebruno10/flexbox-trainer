@@ -16,6 +16,10 @@ jobs:
     # essa troca não deve quebrar os testes de surpresa.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # A extensão fica em extensao/; os comandos rodam lá.
+    defaults:
+      run:
+        working-directory: extensao
     env:
       ETIQUETA: ${{ github.event.release.tag_name }}
     steps:
@@ -27,6 +31,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: extensao/package-lock.json
 
       - name: Conferir a versão
         run: |
@@ -51,7 +56,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          npx --yes @vscode/vsce@3 package
+          npm run vsix
           gh release upload "$ETIQUETA" flexbox-trainer-*.vsix --clobber
 
   ponta-a-ponta:
@@ -62,6 +67,10 @@ jobs:
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # A extensão fica em extensao/; os comandos rodam lá.
+    defaults:
+      run:
+        working-directory: extensao
     env:
       ETIQUETA: ${{ github.event.release.tag_name }}
       GH_TOKEN: ${{ github.token }}
@@ -75,6 +84,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: extensao/package-lock.json
 
       - name: Instalar dependências
         run: npm ci

@@ -16,6 +16,10 @@ jobs:
     # essa troca não deve quebrar os testes de surpresa.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # A extensão fica em extensao/; os comandos rodam lá.
+    defaults:
+      run:
+        working-directory: extensao
     steps:
       - uses: actions/checkout@v7
 
@@ -23,6 +27,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: extensao/package-lock.json
 
       - name: Instalar dependências
         run: npm ci
@@ -42,12 +47,12 @@ jobs:
         run: xvfb-run -a npm run test:desktop
 
       - name: Gerar o .vsix
-        run: npx --yes @vscode/vsce@3 package
+        run: npm run vsix
 
       # Para testar uma mudança antes da versão: baixe em Actions → esta
       # execução → Artifacts.
       - uses: actions/upload-artifact@v7
         with:
           name: flexbox-trainer-vsix
-          path: "*.vsix"
+          path: extensao/*.vsix
           retention-days: 30
