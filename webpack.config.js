@@ -50,6 +50,16 @@ const webExtensionConfig = {
           },
         ],
       },
+      {
+        // O mocha 12 se declara módulo ES, mas o mocha.js dos navegadores é
+        // UMD. Lido como ES, ele grava no module.exports da suíte e o VS Code
+        // chama o run do mocha no lugar do nosso.
+        test: /[\\/]node_modules[\\/]mocha[\\/]mocha\.js$/,
+        type: "javascript/auto",
+        // O require.resolve(nome) dele só carrega relatores de fora, que a
+        // suíte não usa; sem isto, o webpack avisa a cada build.
+        parser: { exprContextCritical: false },
+      },
     ],
   },
   plugins: [

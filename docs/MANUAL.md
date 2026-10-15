@@ -22,8 +22,8 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Como a extensão oficial do torneio, não aceita IA durante o desafio: não deixa começar nem corrigir com extensões de IA habilitadas (Copilot, Claude Code, Codex, Continue, Cline e outras) e invalida o desafio se uma delas for habilitada ou se o código for alterado fora do editor (veja [As regras do desafio](#as-regras-do-desafio)).
 - Cria o `index.html` e o `style.css` quando a pasta ainda não os tem.
 - Marca o tempo de cada tentativa.
-- Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio.
-- Guarda um histórico com a melhor nota e o tempo de cada desafio.
+- Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
+- Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
 
 ## Requisitos
 
@@ -69,26 +69,34 @@ Na primeira vez que a extensão roda, ela abre o **guia de primeiros passos**, q
 
 ## Como treinar
 
-1. **Gerar novo desafio** cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite os 6 dígitos.
+1. **Gerar novo desafio** (`Ctrl+Alt+D`) cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite os 6 dígitos; **Desafio do dia** abre o de hoje, o mesmo para todos.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela.
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
 4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
-5. Clique em **Verificar**. A barra lateral mostra as etapas e, no fim, a **precisão oficial do servidor**.
+5. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`, mesmo com a barra lateral fechada). A barra lateral mostra as etapas e, no fim, a precisão medida pelo servidor do torneio.
 6. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
-7. **Encerrar desafio** congela o cronômetro quando você terminar. Depois, **Refazer este desafio** começa o mesmo desafio de novo, do zero.
+7. **Encerrar desafio** congela o cronômetro quando você terminar. Depois, **↻ Refazer** começa o mesmo desafio de novo, do zero.
 
 Só contam elementos com cor de fundo sólida (`background` ou `background-color`). Texto, imagens, gradientes e sombras não são comparados.
 
-### Código do desafio e histórico
+### Código do desafio, desafio do dia e histórico
 
 Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio (clique nele para copiar) e no topo da aba do gabarito. O mesmo código gera sempre a mesma imagem:
 
 - **Em sala:** o professor passa um código, e cada aluno abre o desafio com **Abrir por código**. Todos treinam o mesmo layout, cada um na própria dinâmica de treino.
+- **Desafio do dia:** sem ninguém passar um código, **Desafio do dia** abre o desafio da data, o mesmo para todos que o abrirem no mesmo dia (vale a data do computador). Enquanto ele está aberto, a seção se chama **Desafio do dia**.
 - **Sozinho:** refaça um desafio para tentar uma nota maior ou um tempo menor.
 
 O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
 
 O histórico fica só neste computador, separado por e-mail: num laboratório, cada aluno vê os próprios desafios.
+
+Depois da primeira nota, **Copiar resultado**, no topo do Resultado, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
+
+```text
+Desafio 482 917: 87,42% em 12:34
+Desafio do dia 14/10 (071 881): 87,42% em 12:34
+```
 
 ## As regras do desafio
 
@@ -109,23 +117,25 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 | Botão | O que faz |
 |---|---|
 | Gabarito, Sua página | Alternam o que o quadro mostra: o gabarito ou a sua página |
-| Gerar novo desafio | Cria um desafio novo e reinicia o cronômetro |
+| Gerar novo desafio | Cria um desafio novo e reinicia o cronômetro (`Ctrl+Alt+D`) |
+| Desafio do dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
 | Abrir por código | Abre o desafio de um código de 6 dígitos, como o que o professor passar |
 | O código, nos dados do desafio | Copia o código, para outra pessoa abrir o mesmo desafio |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
-| Refazer este desafio | Aparece depois de encerrar; começa o mesmo desafio de novo, do zero |
+| ↻ Refazer | Aparece depois de encerrar, no lugar de Encerrar desafio; começa o mesmo desafio de novo, do zero |
 | Abrir em uma aba | Abre o gabarito, as medidas e a comparação em uma aba do editor |
 | ↻ (ao lado de Sua página) | Atualiza a sua página na hora. Ela já atualiza sozinha enquanto você digita; use se demorar |
 | Criar index.html e style.css | Aparece quando falta algum dos dois; cria só o que falta, sem sobrescrever nada |
 | Ver extensões | Aparece no aviso de extensões de IA; abre a página delas para você desabilitar |
-| Verificar | Mede a sua página e envia para a correção |
+| Verificar | Mede a sua página e envia para a correção (`Ctrl+Alt+V`) |
+| Copiar resultado | Aparece depois da primeira nota; copia o código, a melhor nota e o tempo dela |
 | ↻, no Histórico | Refaz aquele desafio |
 | Ver todos, no Histórico | Lista todos os desafios do histórico; escolher um o refaz |
 | Sair | Encerra a sua sessão |
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, o **Guia de Primeiros Passos** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -153,7 +163,10 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Sair | Encerra a sessão |
 | FlexBox Trainer: Iniciar | Abre a barra lateral (e o login, se precisar) |
 | FlexBox Trainer: Gerar Novo Desafio | Sorteia um desafio novo |
+| FlexBox Trainer: Desafio do Dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
 | FlexBox Trainer: Abrir Desafio por Código | Abre o desafio de um código de 6 dígitos |
+| FlexBox Trainer: Verificar | Verifica a sua página, como o botão da barra lateral |
+| FlexBox Trainer: Copiar Resultado | Copia o código, a melhor nota e o tempo do desafio atual |
 | FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
 | FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
 | FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
@@ -163,6 +176,15 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Criar Dinâmica de Treino | Cria a sua dinâmica de treino, se você não a criou no primeiro Verificar |
 | FlexBox Trainer: Testar Servidor | Confere se a sua sessão está valendo no servidor |
 | FlexBox Trainer: Escolher Cores | Troca as cores de destaque da extensão |
+
+## Atalhos
+
+| Atalho | O que faz | Quando funciona |
+|---|---|---|
+| `Ctrl+Alt+D` | Gera um novo desafio | Com a sessão aberta |
+| `Ctrl+Alt+V` | Verifica a sua página; abre a barra lateral, se estiver fechada | Com um desafio |
+
+No Mac, use Control e Option no lugar de Ctrl e Alt. Para trocar um atalho, abra **Arquivo → Preferências → Atalhos de Teclado** e busque por "FlexBox Trainer".
 
 ## Configurações
 
@@ -236,7 +258,7 @@ Os testes simulam as respostas do servidor e não criam dados reais. O `npm test
 
 ### No GitHub
 
-- **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
+- **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. O selo no topo do README mostra se a última execução no `main` passou. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
 - **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.4.0` e `0.4.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído.
 
 Os códigos de desafio dependem do gerador: se ele mudar, os códigos já passados à turma geram outros desafios. Um teste em `codigoDesafio.test.ts` avisa quando isso acontece.

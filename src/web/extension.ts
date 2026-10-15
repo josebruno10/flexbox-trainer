@@ -124,6 +124,16 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.refazerDesafio", () =>
       provedor.refazerDesafio(),
     ),
+    vscode.commands.registerCommand("flexbox-trainer.desafioDoDia", async () => {
+      await abrirBarraLateral();
+      await provedor.abrirDesafioDoDia();
+    }),
+    vscode.commands.registerCommand("flexbox-trainer.verificar", () =>
+      provedor.pedirVerificacao(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.copiarResultado", () =>
+      provedor.copiarResultado(),
+    ),
     vscode.commands.registerCommand("flexbox-trainer.verHistorico", () =>
       provedor.verHistorico(),
     ),

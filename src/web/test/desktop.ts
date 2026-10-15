@@ -3,7 +3,8 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const Mocha = require("mocha");
+// O mocha 12 é um módulo ES: o require devolve o módulo, com a classe em Mocha.
+const { Mocha } = require("mocha");
 
 // O comando `code` não repassa a saída nem o resultado dos testes; o roteiro
 // scripts/testes-desktop.mjs lê este arquivo.

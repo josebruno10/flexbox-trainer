@@ -14,6 +14,7 @@ import {
   StatusConexaoServidor,
 } from "../types";
 import {
+  codigoDoDia,
   formatarCodigo,
   normalizarCodigo,
 } from "../services/codigoDesafio";
@@ -42,6 +43,7 @@ import {
 import { obterHtmlAutenticacao, obterHtmlWebview } from "../webview/html";
 import {
   BarraDeStatus,
+  COMANDO_ABRIR_BARRA,
   EstadoBarraDeStatus,
   formatarTempo,
 } from "./barra-de-status";
@@ -114,6 +116,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   // Precisões das correções do desafio atual, da primeira à última.
   private historicoNotas: number[] = [];
 
+  // A melhor nota desta vez que o desafio é feito, para Copiar resultado.
+  private melhorDaTentativa?: { precisao: number; tempoMs: number };
+
+  // A verificação mede a página dentro da barra lateral: o atalho só a pede
+  // quando o script da barra já carregou.
+  private barraPronta = false;
+  private verificarQuandoPronta = false;
+
   // Os desafios já verificados, com a melhor nota de cada um.
   private readonly historico: HistoricoDesafios;
 
@@ -162,6 +172,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         this.painelGabarito?.atualizarPagina(undefined);
         this.ultimaCorrecao = undefined;
         this.historicoNotas = [];
+        this.melhorDaTentativa = undefined;
+        this.verificarQuandoPronta = false;
       }
 
       this.enviarEstado();
@@ -174,15 +186,26 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.visualizacaoWebview = visualizacaoWebview;
     visualizacaoWebview.webview.options = { enableScripts: true };
     this.renderizarWebviewAtual();
+    visualizacaoWebview.onDidDispose(() => {
+      this.barraPronta = false;
+      this.visualizacaoWebview = undefined;
+    });
+    visualizacaoWebview.onDidChangeVisibility(() =>
+      this.enviarVerificacaoPendente(),
+    );
 
     visualizacaoWebview.webview.onDidReceiveMessage(
       (mensagem: MensagemRecebidaBarraLateral) => {
         if (mensagem.type === "pronto") {
+          this.barraPronta = true;
           this.enviarEstado();
 
           if (this.authService.isAutenticado()) {
             void this.atualizarPreviewWorkspace();
           }
+
+          // O atalho de Verificar abriu a barra: agora ela já pode medir.
+          this.enviarVerificacaoPendente();
 
           return;
         }
@@ -246,6 +269,16 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         if (mensagem.type === "novoDesafio") {
           void this.iniciarNovoDesafio();
           void this.atualizarPreviewWorkspace();
+          return;
+        }
+
+        if (mensagem.type === "desafioDoDia") {
+          void this.abrirDesafioDoDia();
+          return;
+        }
+
+        if (mensagem.type === "copiarResultado") {
+          void this.copiarResultado();
           return;
         }
 
@@ -370,6 +403,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.gabaritoAtual = undefined;
       this.avaliacaoAtual = undefined;
       this.historicoNotas = [];
+      this.melhorDaTentativa = undefined;
+      this.verificarQuandoPronta = false;
 
       if (temTrabalho) {
         try {
@@ -617,6 +652,62 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public aplicarCores(): void {
     this.renderizarWebviewAtual();
     this.painelGabarito?.aplicarCores();
+  }
+
+  /** O desafio do dia: o mesmo para todos na mesma data. */
+  public async abrirDesafioDoDia(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      void vscode.window.showWarningMessage("Entre antes de abrir um desafio.");
+      return;
+    }
+    await this.iniciarNovoDesafio(codigoDoDia());
+  }
+
+  /**
+   * O atalho de Verificar: abre a barra lateral, que mede a página, e pede a
+   * verificação a ela assim que ela carregar e estiver à vista.
+   */
+  public async pedirVerificacao(): Promise<void> {
+    if (!this.authService.isAutenticado()) {
+      void vscode.window.showInformationMessage("Entre antes de verificar.");
+      return;
+    }
+    if (!this.desafioAtual) {
+      void vscode.window.showInformationMessage("Gere um desafio antes de verificar.");
+      return;
+    }
+
+    this.verificarQuandoPronta = true;
+    await vscode.commands.executeCommand(COMANDO_ABRIR_BARRA);
+    this.enviarVerificacaoPendente();
+  }
+
+  /** "Desafio 482 917: 87,42% em 12:34", para colar no grupo da turma. */
+  public textoDoResultado(agora = new Date()): string | undefined {
+    const desafio = this.desafioAtual;
+    const melhor = this.melhorDaTentativa;
+    if (!desafio?.codigo || !melhor) {
+      return undefined;
+    }
+
+    const codigo = formatarCodigo(desafio.codigo);
+    const nome =
+      desafio.codigo === codigoDoDia(agora)
+        ? `Desafio do dia ${agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} (${codigo})`
+        : `Desafio ${codigo}`;
+    return `${nome}: ${formatarPorcentagem(melhor.precisao)}% em ${formatarTempo(melhor.tempoMs)}`;
+  }
+
+  public async copiarResultado(): Promise<void> {
+    const texto = this.textoDoResultado();
+    if (!texto) {
+      void vscode.window.showInformationMessage(
+        "Verifique o desafio antes de copiar o resultado.",
+      );
+      return;
+    }
+    await vscode.env.clipboard.writeText(texto);
+    vscode.window.setStatusBarMessage(`Copiado: ${texto}`, 3000);
   }
 
   /** Pede um código (o que o professor ou um colega passou) e abre o desafio. */
@@ -908,6 +999,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           ...this.historicoNotas,
           resultadoServidor.precision,
         ];
+        this.registrarMelhorDaTentativa(resultadoServidor.precision);
         await this.registrarNoHistorico(resultadoServidor.precision);
       }
 
@@ -1038,6 +1130,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
           tempoAtualMs:
             (this.fimTentativaMs ?? Date.now()) - this.inicioTentativaMs,
           encerrado: this.fimTentativaMs !== undefined,
+          doDia: this.desafioAtual.codigo === codigoDoDia(),
         },
       });
     }
@@ -1067,6 +1160,32 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         type: "resultadoAvaliacao",
         payload: this.avaliacaoAtual,
       });
+    }
+  }
+
+  // Escondida, a barra não mede a página: o pedido espera ela aparecer.
+  private enviarVerificacaoPendente(): void {
+    if (
+      !this.verificarQuandoPronta ||
+      !this.barraPronta ||
+      !this.visualizacaoWebview?.visible
+    ) {
+      return;
+    }
+    this.verificarQuandoPronta = false;
+    void this.visualizacaoWebview.webview.postMessage({ type: "verificar" });
+  }
+
+  // Com a mesma nota, vale a que saiu mais rápido.
+  private registrarMelhorDaTentativa(precisao: number): void {
+    const tempoMs = (this.fimTentativaMs ?? Date.now()) - this.inicioTentativaMs;
+    const melhor = this.melhorDaTentativa;
+    if (
+      !melhor ||
+      precisao > melhor.precisao ||
+      (precisao === melhor.precisao && tempoMs < melhor.tempoMs)
+    ) {
+      this.melhorDaTentativa = { precisao, tempoMs };
     }
   }
 
@@ -1137,6 +1256,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     if (!this.visualizacaoWebview) {
       return;
     }
+
+    // HTML novo recarrega o script da barra; ele avisa de novo quando carregar.
+    this.barraPronta = false;
 
     if (this.authService.isAutenticado()) {
       this.visualizacaoWebview.webview.html = obterHtmlWebview(

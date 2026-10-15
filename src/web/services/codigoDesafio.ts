@@ -27,6 +27,22 @@ export function formatarCodigo(codigo: string): string {
   return `${codigo.slice(0, 3)} ${codigo.slice(3)}`;
 }
 
+/**
+ * O desafio do dia: o mesmo código para todos na mesma data, a do
+ * computador. Assim a turma treina o mesmo layout sem o professor passar um.
+ */
+export function codigoDoDia(data: Date = new Date()): string {
+  const dia = [
+    data.getFullYear(),
+    String(data.getMonth() + 1).padStart(2, "0"),
+    String(data.getDate()).padStart(2, "0"),
+  ].join("-");
+  return String(semente(`flexbox-trainer:dia:${dia}`) % TOTAL_CODIGOS).padStart(
+    DIGITOS,
+    "0",
+  );
+}
+
 /** O sorteio do gerador para um código: sempre a mesma sequência. */
 export function aleatorioDoCodigo(codigo: string): () => number {
   let estado = semente(`flexbox-trainer:${codigo}`);

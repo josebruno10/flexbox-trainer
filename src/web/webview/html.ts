@@ -783,7 +783,7 @@ export function obterHtmlWebview(
 
   <section class="bloco surge" style="--ordem: 1" aria-label="Desafio">
     <div class="cabecalho">
-      <h2 class="rotulo"><span class="numero">01</span> / Desafio</h2>
+      <h2 class="rotulo"><span class="numero">01</span> / <span id="tituloDesafio">Desafio</span></h2>
       <span class="selo" id="seloDesafio" data-estado="vazio">Sem desafio</span>
     </div>
     <div class="vistas" id="vistas" hidden>
@@ -807,17 +807,19 @@ export function obterHtmlWebview(
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
     </dl>
     <div class="acoes">
-      <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
+      <button id="botaoNovoDesafio" class="largo principal" title="Gerar novo desafio (Ctrl+Alt+D)"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
+      <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">Desafio do dia</button>
       <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 6 dígitos, como o que o professor passar">Abrir por código</button>
       <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>Abrir em uma aba</button>
-      <button id="botaoEncerrarDesafio" class="encerrar largo" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
-      <button id="botaoRefazer" class="encerrar largo" title="Começa este mesmo desafio de novo, do zero" hidden>↻ Refazer este desafio</button>
+      <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
+      <button id="botaoRefazer" class="encerrar" title="Começa este mesmo desafio de novo, do zero" hidden>↻ Refazer</button>
     </div>
   </section>
 
   <section class="bloco surge" style="--ordem: 2" aria-label="Resultado">
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">02</span> / Resultado</h2>
+      <button id="botaoCopiarResultado" class="discreto" title="Copia a melhor nota deste desafio, para colar no grupo da turma" hidden>Copiar resultado</button>
     </div>
     <div id="avisoArquivos" hidden>
       <p class="falta" id="textoArquivos"></p>
@@ -831,7 +833,7 @@ export function obterHtmlWebview(
       aria-hidden="true"
     ></div>
     <div class="acoes">
-      <button id="botaoVerificar" class="largo principal" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
+      <button id="botaoVerificar" class="largo principal" title="Verificar (Ctrl+Alt+V)" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
     </div>
     <div class="nota resultado" id="notaResultado" hidden>
       <strong class="valor-nota" id="valorNota"></strong>

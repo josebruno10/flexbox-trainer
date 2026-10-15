@@ -131,6 +131,8 @@ export type MensagemRecebidaBarraLateral =
   | { type: "verExtensoesIa" }
   | { type: "criarArquivos" }
   | { type: "abrirPorCodigo" }
+  | { type: "desafioDoDia" }
+  | { type: "copiarResultado" }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }
   | { type: "copiarCodigo" }

@@ -68,6 +68,18 @@
         "title": "FlexBox Trainer: Abrir Desafio por Código"
       },
       {
+        "command": "flexbox-trainer.desafioDoDia",
+        "title": "FlexBox Trainer: Desafio do Dia"
+      },
+      {
+        "command": "flexbox-trainer.verificar",
+        "title": "FlexBox Trainer: Verificar"
+      },
+      {
+        "command": "flexbox-trainer.copiarResultado",
+        "title": "FlexBox Trainer: Copiar Resultado"
+      },
+      {
         "command": "flexbox-trainer.refazerDesafio",
         "title": "FlexBox Trainer: Refazer o Desafio Atual"
       },
@@ -122,6 +134,14 @@
         {
           "command": "flexbox-trainer.refazerDesafio",
           "when": "flexboxTrainer.temDesafio"
+        },
+        {
+          "command": "flexbox-trainer.verificar",
+          "when": "flexboxTrainer.temDesafio"
+        },
+        {
+          "command": "flexbox-trainer.copiarResultado",
+          "when": "flexboxTrainer.temDesafio"
         }
       ],
       "view/title": [
@@ -129,6 +149,11 @@
           "command": "flexbox-trainer.escolherCores",
           "when": "view == flexbox-trainer.sidebar",
           "group": "navigation"
+        },
+        {
+          "command": "flexbox-trainer.desafioDoDia",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_desafio@0"
         },
         {
           "command": "flexbox-trainer.abrirPorCodigo",
@@ -146,6 +171,11 @@
           "group": "1_desafio@3"
         },
         {
+          "command": "flexbox-trainer.copiarResultado",
+          "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
+          "group": "1_desafio@4"
+        },
+        {
           "command": "flexbox-trainer.abrirGuia",
           "when": "view == flexbox-trainer.sidebar",
           "group": "2_ajuda@1"
@@ -157,6 +187,18 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "flexbox-trainer.verificar",
+        "key": "ctrl+alt+v",
+        "when": "flexboxTrainer.temDesafio"
+      },
+      {
+        "command": "flexbox-trainer.novoDesafio",
+        "key": "ctrl+alt+d",
+        "when": "flexboxTrainer.autenticado"
+      }
+    ],
     "configuration": {
       "title": "FlexBox Trainer",
       "properties": {
@@ -309,7 +351,7 @@
           {
             "id": "verificar",
             "title": "Recrie e verifique",
-            "description": "Recrie a imagem em index.html e style.css, com flexbox, grid ou position. Clique num componente do gabarito para ver as medidas e a cor. Depois, clique em Verificar: o servidor do torneio devolve a precisão.",
+            "description": "Recrie a imagem em index.html e style.css, com flexbox, grid ou position. Clique num componente do gabarito para ver as medidas e a cor. Depois, clique em Verificar (ou aperte Ctrl+Alt+V): o servidor do torneio devolve a precisão.",
             "media": {
               "image": {
                 "dark": "media/guia/verificar-escuro.png",
@@ -326,7 +368,7 @@
           {
             "id": "codigo",
             "title": "Treine com a turma",
-            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O histórico guarda a sua melhor nota em cada desafio, e dá para refazer um para bater o recorde.\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
+            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio, e dá para refazer um para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
             "media": {
               "image": {
                 "dark": "media/guia/codigo-escuro.png",
@@ -382,7 +424,7 @@
     "@vscode/test-web": "^0.0.80",
     "assert": "^2.1.0",
     "eslint": "^9.39.3",
-    "mocha": "^11.7.5",
+    "mocha": "^12.0.3",
     "process": "^0.11.10",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",

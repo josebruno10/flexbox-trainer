@@ -14,6 +14,7 @@ import {
   criarDesafioPorCodigo,
 } from "../../services/desafio";
 import { modeloCss, modeloHtml } from "../../services/workspace";
+import { codigoDoDia } from "../../services/codigoDesafio";
 import {
   ConfiguracaoServidor,
   Desafio,
@@ -707,6 +708,97 @@ suite("Provedor da barra lateral", () => {
       assert.strictEqual(depois.total, 1);
     });
 
+    test("abre o desafio do dia e avisa a barra lateral que ele é o do dia", async () => {
+      const mensagens: MensagemWebview[] = [];
+      const provedor = criarProvedorParaTeste(mensagens);
+      const interno = provedor as unknown as ProvedorInterno;
+      interno.testarConexaoServidor = async () => undefined;
+
+      await provedor.abrirDesafioDoDia();
+
+      assert.strictEqual(interno.desafioAtual!.codigo, codigoDoDia());
+      const dados = ultimaMensagem(mensagens, "dadosDesafio")?.payload as { doDia: boolean };
+      assert.strictEqual(dados.doDia, true);
+    });
+
+    test("monta o resultado para copiar com a melhor nota e o tempo dela", async () => {
+      mockarConfiguracaoServidorValida();
+      const notas = [42.5, 30];
+      mockarServidor({
+        "POST /tipo-dinamica/treino/corrigir-formas": () =>
+          json({ pontuacao: notas.shift() }),
+      });
+      const registro = criarRegistroFalso();
+      const provedor = criarProvedorParaTeste([], { registro });
+      const interno = await prepararCodigo(provedor, registro, "482917");
+      interno.inicioTentativaMs = 0;
+      const outroDia = new Date(2026, 0, 1);
+
+      assert.strictEqual(provedor.textoDoResultado(outroDia), undefined);
+
+      Date.now = () => 754_000;
+      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+      // Uma nota pior depois não muda o resultado.
+      Date.now = () => 900_000;
+      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+        { ...FORMAS[0], cor: "#123456" },
+        FORMAS[1],
+      ]);
+
+      assert.strictEqual(
+        provedor.textoDoResultado(outroDia),
+        "Desafio 482 917: 42,50% em 12:34",
+      );
+
+      // O desafio do dia diz a data, para o grupo da turma saber qual é.
+      const dia = new Date(2026, 9, 14, 10, 0);
+      interno.desafioAtual = { ...interno.desafioAtual!, codigo: codigoDoDia(dia) };
+      assert.strictEqual(
+        provedor.textoDoResultado(dia),
+        "Desafio do dia 14/10 (071 881): 42,50% em 12:34",
+      );
+    });
+
+    test("o atalho de Verificar abre a barra e pede a verificação quando ela carrega", async () => {
+      const comandos: string[] = [];
+      vscode.commands.executeCommand = (async (comando: string) => {
+        comandos.push(comando);
+        return undefined;
+      }) as typeof vscode.commands.executeCommand;
+      const provedor = criarProvedorParaTeste([]);
+      const interno = provedor as unknown as ProvedorInterno;
+      interno.testarConexaoServidor = async () => undefined;
+      interno.desafioAtual = criarDesafioPorCodigo("482917");
+      const barra = criarBarraFalsa();
+      provedor.resolveWebviewView(barra.vista);
+
+      await provedor.pedirVerificacao();
+
+      assert.deepStrictEqual(comandos, ["flexbox-trainer.sidebar.focus"]);
+      assert.ok(!barra.enviadas.some((mensagem) => mensagem.type === "verificar"));
+
+      barra.receber({ type: "pronto" });
+      assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 1);
+
+      // Com a barra já carregada, o pedido vai na hora.
+      await provedor.pedirVerificacao();
+      assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 2);
+
+      // Carregada mas escondida, ela recebe o pedido quando aparecer.
+      barra.mudarVisibilidade(false);
+      await provedor.pedirVerificacao();
+      assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 2);
+      barra.mudarVisibilidade(true);
+      assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 3);
+
+      // Um desafio novo descarta o pedido que ainda esperava.
+      barra.mudarVisibilidade(false);
+      await provedor.pedirVerificacao();
+      await provedor.iniciarNovoDesafio("482917");
+      barra.mudarVisibilidade(true);
+      assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 3);
+    });
+
     test("avisa o guia do que o aluno já fez", async () => {
       mockarConfiguracaoServidorValida();
       mockarServidor({
@@ -1381,4 +1473,46 @@ function criarRegistroFalso(): vscode.Memento {
       valores.set(chave, valor);
     },
   } as vscode.Memento;
+}
+
+// Uma vista da barra lateral de mentira: guarda o que a extensão envia e deixa
+// o teste mandar mensagens como se fossem do script da barra.
+function criarBarraFalsa() {
+  let aoReceber: (mensagem: unknown) => void = () => undefined;
+  let aoMudarVisibilidade: () => void = () => undefined;
+  let visivel = true;
+  const enviadas: MensagemWebview[] = [];
+  const vista = {
+    get visible() {
+      return visivel;
+    },
+    webview: {
+      options: {},
+      html: "",
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+      onDidReceiveMessage: (ouvinte: (mensagem: unknown) => void) => {
+        aoReceber = ouvinte;
+        return { dispose: () => undefined };
+      },
+      postMessage: async (mensagem: MensagemWebview) => {
+        enviadas.push(mensagem);
+        return true;
+      },
+    },
+    onDidDispose: () => ({ dispose: () => undefined }),
+    onDidChangeVisibility: (ouvinte: () => void) => {
+      aoMudarVisibilidade = ouvinte;
+      return { dispose: () => undefined };
+    },
+  } as unknown as vscode.WebviewView;
+  return {
+    vista,
+    enviadas,
+    receber: (mensagem: unknown) => aoReceber(mensagem),
+    mudarVisibilidade: (valor: boolean) => {
+      visivel = valor;
+      aoMudarVisibilidade();
+    },
+  };
 }

@@ -32,6 +32,7 @@ type DesafioRecebido = {
   tempoAtualMs?: number;
   encerrado?: boolean;
   codigo?: string;
+  doDia?: boolean;
 };
 
 type RegistroHistoricoRecebido = {
@@ -91,6 +92,7 @@ type MensagemDaExtensao =
   | { type: "extensoesIa"; payload: Array<{ id: string; nome: string }> }
   | { type: "historicoNotas"; payload: number[] }
   | { type: "historicoDesafios"; payload: HistoricoDesafiosRecebido }
+  | { type: "verificar" }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
   | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };
 
@@ -190,6 +192,13 @@ const botaoRefazer = document.getElementById("botaoRefazer") as HTMLButtonElemen
 const botaoPorCodigo = document.getElementById(
   "botaoPorCodigo",
 ) as HTMLButtonElement;
+const botaoDesafioDia = document.getElementById(
+  "botaoDesafioDia",
+) as HTMLButtonElement;
+const botaoCopiarResultado = document.getElementById(
+  "botaoCopiarResultado",
+) as HTMLButtonElement;
+const tituloDesafio = document.getElementById("tituloDesafio") as HTMLElement;
 const botaoAtualizarPreview = document.getElementById("botaoAtualizarPreview");
 const botaoVerificar = document.getElementById(
   "botaoVerificar",
@@ -254,6 +263,18 @@ botaoNovoDesafio?.addEventListener("click", () => {
 
 botaoPorCodigo.addEventListener("click", () => {
   vscode.postMessage({ type: "abrirPorCodigo" });
+});
+
+botaoDesafioDia.addEventListener("click", () => {
+  vscode.postMessage({ type: "desafioDoDia" });
+});
+
+botaoCopiarResultado.addEventListener("click", () => {
+  vscode.postMessage({ type: "copiarResultado" });
+  botaoCopiarResultado.textContent = "Copiado";
+  window.setTimeout(() => {
+    botaoCopiarResultado.textContent = "Copiar resultado";
+  }, 1500);
 });
 
 botaoRefazer.addEventListener("click", () => {
@@ -384,6 +405,7 @@ function desenharDesafio(desafio: DesafioRecebido): void {
   botaoEncerrarDesafio.disabled = Boolean(desafio.encerrado);
   desenharDestaques();
   renderizarDetalheComponente();
+  tituloDesafio.textContent = desafio.doDia ? "Desafio do dia" : "Desafio";
   botaoCodigo.textContent = desafio.codigo ? formatarCodigo(desafio.codigo) : "--";
   botaoCodigo.disabled = !desafio.codigo;
   valorFundo.replaceChildren(
@@ -440,6 +462,7 @@ function desenharEstadoInicial(): void {
   desenharGrade(contexto, LARGURA_PADRAO, ALTURA_PADRAO);
   seloDesafio.dataset.estado = "vazio";
   seloDesafio.textContent = "Sem desafio";
+  tituloDesafio.textContent = "Desafio";
   mostrarItensDoDesafio(false);
   canvasAnotacoes.width = LARGURA_PADRAO;
   canvasAnotacoes.height = ALTURA_PADRAO;
@@ -467,8 +490,6 @@ function mostrarItensDoDesafio(visiveis: boolean): void {
     botaoRefazer.hidden = true;
   }
   quadroVazio.hidden = visiveis;
-  // Sem desafio, abrir por código ocupa a linha toda, logo abaixo de gerar.
-  botaoPorCodigo.classList.toggle("largo", !visiveis);
   botaoNovoDesafio.classList.toggle("principal", !visiveis);
   botaoNovoDesafio.classList.toggle("secundario", visiveis);
 }
@@ -706,6 +727,8 @@ function concluirVerificacao(): void {
 // está errado.
 function renderizarHistorico(notas: number[]): void {
   notasAtuais = notas;
+  // Só há o que copiar depois da primeira nota deste desafio.
+  botaoCopiarResultado.hidden = notas.length === 0;
   const comTentativas = notas.length >= 2;
   linhaTentativas.hidden = !comTentativas;
   linhaMelhor.hidden = !comTentativas;
@@ -1098,6 +1121,11 @@ window.addEventListener(
 
     if (mensagem.type === "dadosWorkspace") {
       void renderizarWorkspace(mensagem.payload);
+    }
+
+    // O atalho de Verificar (Ctrl+Alt+V), vindo da extensão.
+    if (mensagem.type === "verificar") {
+      void solicitarVerificacao();
     }
 
     if (mensagem.type === "historicoDesafios") {
