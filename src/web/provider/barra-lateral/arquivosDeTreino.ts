@@ -25,11 +25,9 @@ export async function confirmarLimpeza(): Promise<boolean> {
  * criados e avisa o que aconteceu. Devolve se criou algum.
  */
 export async function criarArquivosComAviso(
-  largura: number,
-  altura: number,
   avisarSeExistirem: boolean,
 ): Promise<boolean> {
-  const resultado = await criarArquivosDeTreino(largura, altura);
+  const resultado = await criarArquivosDeTreino();
 
   if (resultado.status === "sem-pasta") {
     // Não espera a resposta: a notificação pode ficar aberta.

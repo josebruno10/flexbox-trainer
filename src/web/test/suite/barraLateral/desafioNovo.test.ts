@@ -135,7 +135,7 @@ suite("Barra lateral: desafio novo", () => {
       caminhoHtml: "/projeto/index.html",
       caminhoCss: "/projeto/style.css",
       textoHtml: modeloHtml().replace("<body>", "<body><main></main>"),
-      textoCss: `${modeloCss(800, 800)}\nmain { display: flex; }`,
+      textoCss: `${modeloCss()}\nmain { display: flex; }`,
       htmlPreview: "",
       temArquivoHtml: true,
       temArquivoCss: true,
@@ -149,10 +149,10 @@ suite("Barra lateral: desafio novo", () => {
       }) as unknown as typeof vscode.window.showWarningMessage;
       const provedor = criarProvedorParaTeste([]);
       const interno = provedor as unknown as ProvedorInterno;
-      const limpezas: { largura: number; altura: number; instante: number }[] = [];
+      const limpezas: { instante: number }[] = [];
       interno.lerArquivosDoAluno = async () => arquivos;
-      interno.limparArquivosDoAluno = async (largura, altura) => {
-        limpezas.push({ largura, altura, instante: Date.now() });
+      interno.limparArquivosDoAluno = async () => {
+        limpezas.push({ instante: Date.now() });
       };
       interno.testarConexaoServidor = async () => undefined;
       return { provedor, interno, perguntas, limpezas };
@@ -165,10 +165,7 @@ suite("Barra lateral: desafio novo", () => {
 
       assert.strictEqual(perguntas.length, 1);
       assert.match(perguntas[0], /apaga o que você escreveu/);
-      assert.deepStrictEqual(
-        limpezas.map(({ largura, altura }) => [largura, altura]),
-        [[interno.desafioAtual!.width, interno.desafioAtual!.height]],
-      );
+      assert.strictEqual(limpezas.length, 1);
       assert.ok(interno.inicioTentativaMs >= limpezas[0].instante);
     });
 
@@ -187,7 +184,7 @@ suite("Barra lateral: desafio novo", () => {
       const base: ResumoWorkspace = {
         ...comTrabalho,
         textoHtml: modeloHtml(),
-        textoCss: modeloCss(800, 800),
+        textoCss: modeloCss(),
       };
       const { provedor, interno, perguntas, limpezas } = preparar(base, undefined);
 

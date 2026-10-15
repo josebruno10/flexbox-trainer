@@ -18,12 +18,11 @@ function resumo(textoHtml: string, textoCss: string): ResumoWorkspace {
 }
 
 suite("Arquivos de treino", () => {
-  test("a base, de qualquer tamanho de gabarito, não conta como trabalho do aluno", () => {
-    assert.strictEqual(temTrabalhoDoAluno(resumo(modeloHtml(), modeloCss(800, 800))), false);
-    assert.strictEqual(temTrabalhoDoAluno(resumo(modeloHtml(), modeloCss(960, 540))), false);
+  test("a base não conta como trabalho do aluno", () => {
+    assert.strictEqual(temTrabalhoDoAluno(resumo(modeloHtml(), modeloCss())), false);
     // Espaços e comentários a mais também não.
     assert.strictEqual(
-      temTrabalhoDoAluno(resumo(`${modeloHtml()}\n\n<!-- rascunho -->`, `/* oi */\n${modeloCss(800, 800)}`)),
+      temTrabalhoDoAluno(resumo(`${modeloHtml()}\n\n<!-- rascunho -->`, `/* oi */\n${modeloCss()}`)),
       false,
     );
   });
@@ -34,7 +33,12 @@ suite("Arquivos de treino", () => {
       "<body>\n  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->\n",
     );
     assert.notStrictEqual(baseAntiga, modeloHtml());
-    assert.strictEqual(temTrabalhoDoAluno(resumo(baseAntiga, modeloCss(800, 800))), false);
+    assert.strictEqual(temTrabalhoDoAluno(resumo(baseAntiga, modeloCss())), false);
+  });
+
+  test("a base das versões anteriores, com o tamanho no comentário do CSS, também não conta", () => {
+    const cssAntigo = `/* A página tem o tamanho do gabarito: 800 × 800 px. */\n${modeloCss()}`;
+    assert.strictEqual(temTrabalhoDoAluno(resumo(modeloHtml(), cssAntigo)), false);
   });
 
   test("arquivos vazios ou que não existem não contam", () => {
@@ -44,11 +48,11 @@ suite("Arquivos de treino", () => {
 
   test("conta qualquer HTML ou CSS escrito pelo aluno", () => {
     assert.strictEqual(
-      temTrabalhoDoAluno(resumo(modeloHtml().replace("<body>", '<body>\n  <div class="topo"></div>'), modeloCss(800, 800))),
+      temTrabalhoDoAluno(resumo(modeloHtml().replace("<body>", '<body>\n  <div class="topo"></div>'), modeloCss())),
       true,
     );
     assert.strictEqual(
-      temTrabalhoDoAluno(resumo(modeloHtml(), `${modeloCss(800, 800)}\n.topo { height: 100px; }`)),
+      temTrabalhoDoAluno(resumo(modeloHtml(), `${modeloCss()}\n.topo { height: 100px; }`)),
       true,
     );
   });

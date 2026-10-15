@@ -69,10 +69,6 @@ import {
 
 export type { ProgressoGuia } from "./barra-lateral/estado";
 
-// Tamanho dos arquivos criados antes do primeiro desafio (o do gerador).
-const LARGURA_PADRAO = 800;
-const ALTURA_PADRAO = 800;
-
 /**
  * A barra lateral: guarda o desafio em andamento e coordena as partes que
  * ficam em barra-lateral/ (mensagens, correção, histórico, arquivos).
@@ -240,7 +236,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.verificarQuandoPronta = false;
 
       if (temTrabalho) {
-        await this.limparComAviso(this.desafioAtual);
+        await this.limparComAviso();
       }
 
       // O tempo começa com os arquivos já limpos.
@@ -260,13 +256,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     return lerResumoWorkspace();
   }
 
-  private limparArquivosDoAluno(largura: number, altura: number): Promise<void> {
-    return limparArquivosDeTreino(largura, altura);
+  private limparArquivosDoAluno(): Promise<void> {
+    return limparArquivosDeTreino();
   }
 
-  private async limparComAviso(desafio: Desafio): Promise<void> {
+  private async limparComAviso(): Promise<void> {
     try {
-      await this.limparArquivosDoAluno(desafio.width, desafio.height);
+      await this.limparArquivosDoAluno();
     } catch (error) {
       const mensagem = error instanceof Error ? error.message : "Erro desconhecido.";
       log.error("Não foi possível limpar os arquivos de treino", error);
@@ -278,11 +274,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   /** Cria os arquivos de treino que faltarem e avisa o que aconteceu. */
   public async criarArquivosDeTreino(avisarSeExistirem = true): Promise<void> {
-    const criados = await criarArquivosComAviso(
-      this.desafioAtual?.width ?? LARGURA_PADRAO,
-      this.desafioAtual?.height ?? ALTURA_PADRAO,
-      avisarSeExistirem,
-    );
+    const criados = await criarArquivosComAviso(avisarSeExistirem);
     if (criados) {
       await this.atualizarPreviewWorkspace();
     }

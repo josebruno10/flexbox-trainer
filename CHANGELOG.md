@@ -9,6 +9,7 @@ As mudanças de cada versão do FlexBox Trainer.
 - Com a Sincronização de Configurações do VS Code ligada, o histórico, o gráfico da evolução e o nível escolhido acompanham o aluno nos outros computadores. Só os do aluno da sessão.
 
 ### Removido
+- O comentário com o tamanho do gabarito no `style.css` inicial. O manual explica o tamanho da área em **Como treinar**.
 - **Dar opinião**, o questionário no GitHub e o pedido de opinião depois do terceiro desafio: a equipe vai colher as opiniões de outra forma.
 - **Relatar problema**, o formulário no GitHub e o botão que aparecia abaixo dos erros do servidor.
 - A contagem de dias seguidos do desafio do dia, no Histórico. O **Desafio do dia** continua.

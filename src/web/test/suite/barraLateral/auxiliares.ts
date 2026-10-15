@@ -38,7 +38,7 @@ export type ProvedorInterno = {
   ): Promise<void>;
   testarConexaoServidor(): Promise<unknown>;
   lerArquivosDoAluno(): Promise<ResumoWorkspace>;
-  limparArquivosDoAluno(largura: number, altura: number): Promise<void>;
+  limparArquivosDoAluno(): Promise<void>;
   lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
 };
 

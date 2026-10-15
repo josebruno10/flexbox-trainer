@@ -55,9 +55,8 @@ export function modeloHtml(): string {
 `;
 }
 
-export function modeloCss(largura: number, altura: number): string {
-  return `/* A página tem o tamanho do gabarito: ${largura} × ${altura} px. */
-* {
+export function modeloCss(): string {
+  return `* {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -82,26 +81,20 @@ export function temTrabalhoDoAluno(resumo: ResumoWorkspace): boolean {
   const cssMudou =
     resumo.temArquivoCss &&
     semComentarios(resumo.textoCss) !== "" &&
-    semComentarios(resumo.textoCss) !== semComentarios(modeloCss(0, 0));
+    semComentarios(resumo.textoCss) !== semComentarios(modeloCss());
   return htmlMudou || cssMudou;
 }
 
 /** Volta index.html e style.css à base, para o desafio novo começar do zero. */
-export async function limparArquivosDeTreino(
-  largura: number,
-  altura: number,
-): Promise<void> {
-  await escreverArquivosDeTreino(modeloHtml(), modeloCss(largura, altura));
+export async function limparArquivosDeTreino(): Promise<void> {
+  await escreverArquivosDeTreino(modeloHtml(), modeloCss());
 }
 
 /**
  * Cria na raiz da pasta aberta o index.html e o style.css que faltarem, com
  * a base mínima. Nunca sobrescreve um arquivo.
  */
-export async function criarArquivosDeTreino(
-  largura: number,
-  altura: number,
-): Promise<ResultadoCriacao> {
+export async function criarArquivosDeTreino(): Promise<ResultadoCriacao> {
   const raiz = vscode.workspace.workspaceFolders?.[0]?.uri;
 
   if (!raiz) {
@@ -110,7 +103,7 @@ export async function criarArquivosDeTreino(
 
   const arquivos = [
     ["index.html", modeloHtml()],
-    ["style.css", modeloCss(largura, altura)],
+    ["style.css", modeloCss()],
   ] as const;
   const criados: vscode.Uri[] = [];
 
