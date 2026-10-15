@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { PainelGabarito } from "../../provider/painel-gabarito";
 import { criarDesafioGerado } from "../../services/desafio";
-import { obterHtmlPainelGabarito } from "../../webview/telas/painelGabarito";
+import { obterHtmlPainelGabarito } from "../../telas/painelGabarito";
 
 type PainelFalso = {
   html: string;

@@ -34,8 +34,8 @@ import {
   ExtensaoIa,
 } from "../services/extensoesIa";
 import { lerConfiguracaoServidor } from "../services/servidor/configuracao";
-import { obterHtmlWebview } from "../webview/telas/barraLateral";
-import { obterHtmlAutenticacao } from "../webview/telas/entrada";
+import { obterHtmlWebview } from "../telas/barraLateral";
+import { obterHtmlAutenticacao } from "../telas/entrada";
 import {
   BarraDeStatus,
   COMANDO_ABRIR_BARRA,

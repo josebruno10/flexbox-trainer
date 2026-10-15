@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { obterHtmlWebview } from "../../webview/telas/barraLateral";
-import { lerTemaCores, NomeTema, TEMAS } from "../../webview/temas";
+import { obterHtmlWebview } from "../../telas/barraLateral";
+import { lerTemaCores, NomeTema, TEMAS } from "../../telas/temas";
 
 function luminancia(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);

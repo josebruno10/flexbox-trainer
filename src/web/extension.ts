@@ -15,7 +15,7 @@ import {
   avisarVersaoNova,
   pastaDeDownload,
 } from "./services/versaoNova";
-import { escolherTemaCores } from "./webview/temas";
+import { escolherTemaCores } from "./telas/temas";
 import {
   ehDocumentoDeTreino,
   escreverArquivosDeTreino,

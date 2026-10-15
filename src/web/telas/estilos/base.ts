@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { NomeTema, variaveisDoTema } from "../../temas";
+import { NomeTema, variaveisDoTema } from "../temas";
 import { ESTILOS_BOTOES } from "./botoes";
 import { ESTILOS_DADOS } from "./dados";
 import { ESTILOS_ELEMENTOS } from "./elementos";

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { lerTemaCores, NomeTema } from "../temas";
+import { lerTemaCores, NomeTema } from "./temas";
 import { CREDITOS } from "./comum";
 import { ESTILOS_ENTRADA } from "./estilos/entrada";
 import { estilosBase } from "./estilos/base";

@@ -1,4 +1,4 @@
-// Os elementos da barra lateral (webview/telas/barraLateral.ts), por parte.
+// Os elementos da barra lateral (src/web/telas/barraLateral.ts), por parte.
 
 // A conta.
 export const statusAutenticacao = document.getElementById(

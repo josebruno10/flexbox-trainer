@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { lerTemaCores, NomeTema } from "../temas";
+import { lerTemaCores, NomeTema } from "./temas";
 import { CREDITOS, escapeHtml } from "./comum";
 import { ESTILOS_BARRA_CONTA } from "./estilos/barraConta";
 import { ESTILOS_BARRA_DESAFIO } from "./estilos/barraDesafio";

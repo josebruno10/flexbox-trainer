@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { lerTemaCores, NomeTema } from "../temas";
+import { lerTemaCores, NomeTema } from "./temas";
 import { estilosBase } from "./estilos/base";
 import { ESTILOS_PAINEL_COMPONENTES } from "./estilos/painelComponentes";
 import { ESTILOS_PAINEL_GABARITO } from "./estilos/painelGabarito";

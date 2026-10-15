@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Desafio } from "../types";
-import { obterHtmlPainelGabarito } from "../webview/telas/painelGabarito";
+import { obterHtmlPainelGabarito } from "../telas/painelGabarito";
 
 type MensagemDoPainel =
   | { type: "pronto" }
