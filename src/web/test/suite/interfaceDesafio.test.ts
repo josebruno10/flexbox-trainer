@@ -51,6 +51,26 @@ suite("Interface do desafio", () => {
     assert.ok(html.includes("Encerrar desafio"));
   });
 
+  test("traz os créditos no pé da barra lateral e da tela de entrada", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const extensao = vscode.Uri.parse("file:///extensao");
+    const creditos =
+      '<p class="creditos">Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa</p>';
+
+    for (const html of [
+      obterHtmlWebview(webview, extensao, "Aluno"),
+      obterHtmlAutenticacao(webview, extensao),
+    ]) {
+      assert.ok(html.includes(creditos));
+      // Depois de todo o conteúdo, logo antes do script.
+      assert.ok(html.indexOf(creditos) > html.lastIndexOf("</section>"));
+      assert.ok(html.indexOf(creditos) < html.indexOf("<script"));
+    }
+  });
+
   test("mostra o login pelo Google antes do GitHub e da Microsoft", () => {
     const webview = {
       cspSource: "vscode-webview://teste",

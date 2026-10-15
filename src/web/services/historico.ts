@@ -34,6 +34,13 @@ export type SequenciaDoDia = {
   feitoHoje: boolean;
 };
 
+// A melhor nota de um dia de treino, para o gráfico da evolução.
+export type NotaDoDia = {
+  // "2026-10-14"
+  dia: string;
+  melhor: number;
+};
+
 type RegistroSequencia = {
   // "2026-10-14"
   ultimoDia: string;
@@ -42,6 +49,7 @@ type RegistroSequencia = {
 
 // Cabe o treino de um semestre sem pesar nas configurações do VS Code.
 const LIMITE_REGISTROS = 30;
+const LIMITE_DIAS = 60;
 
 export class HistoricoDesafios {
   public constructor(private readonly armazenamento: vscode.Memento) {}
@@ -95,6 +103,20 @@ export class HistoricoDesafios {
         LIMITE_REGISTROS,
       ),
     );
+    await this.registrarNoDia(
+      dono,
+      diaLocal(new Date(nota.instante)),
+      nota.precisao,
+    );
+  }
+
+  /** A melhor nota de cada dia de treino, do mais antigo ao mais recente. */
+  public evolucao(dono: string | undefined): NotaDoDia[] {
+    if (!dono) {
+      return [];
+    }
+    const dias = this.armazenamento.get<unknown>(chave(dono, "evolucao"));
+    return Array.isArray(dias) ? dias.filter(ehNotaDoDia) : [];
   }
 
   /** Conta na sequência o desafio do dia de `dia` ("2026-10-14"), uma vez. */
@@ -133,6 +155,25 @@ export class HistoricoDesafios {
     return undefined;
   }
 
+  private async registrarNoDia(
+    dono: string,
+    dia: string,
+    precisao: number,
+  ): Promise<void> {
+    const dias = this.evolucao(dono);
+    const doDia = dias.find((item) => item.dia === dia);
+    if (doDia && doDia.melhor >= precisao) {
+      return;
+    }
+    const atualizados = [
+      ...dias.filter((item) => item !== doDia),
+      { dia, melhor: precisao },
+    ]
+      .sort((a, b) => a.dia.localeCompare(b.dia))
+      .slice(-LIMITE_DIAS);
+    await this.armazenamento.update(chave(dono, "evolucao"), atualizados);
+  }
+
   private lerSequencia(dono: string): RegistroSequencia | undefined {
     const valor = this.armazenamento.get<unknown>(chave(dono, "sequenciaDoDia"));
     return ehSequencia(valor) ? valor : undefined;
@@ -147,6 +188,17 @@ function chave(dono: string, nome = "historico"): string {
 function diaAnterior(dia: string): string {
   const [ano, mes, data] = dia.split("-").map(Number);
   return diaLocal(new Date(ano, mes - 1, data - 1));
+}
+
+function ehNotaDoDia(valor: unknown): valor is NotaDoDia {
+  const nota = valor as Partial<NotaDoDia> | null;
+  return (
+    typeof nota === "object" &&
+    nota !== null &&
+    typeof nota.dia === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(nota.dia) &&
+    typeof nota.melhor === "number"
+  );
 }
 
 function ehSequencia(valor: unknown): valor is RegistroSequencia {

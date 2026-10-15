@@ -28,6 +28,15 @@ suite("Arquivos de treino", () => {
     );
   });
 
+  test("a base das versões anteriores, com o comentário no body, também não conta", () => {
+    const baseAntiga = modeloHtml().replace(
+      "<body>\n",
+      "<body>\n  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->\n",
+    );
+    assert.notStrictEqual(baseAntiga, modeloHtml());
+    assert.strictEqual(temTrabalhoDoAluno(resumo(baseAntiga, modeloCss(800, 800))), false);
+  });
+
   test("arquivos vazios ou que não existem não contam", () => {
     assert.strictEqual(temTrabalhoDoAluno(criarResumoWorkspaceVazio()), false);
     assert.strictEqual(temTrabalhoDoAluno(resumo("", "  \n")), false);

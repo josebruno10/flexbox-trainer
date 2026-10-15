@@ -50,7 +50,6 @@ export function modeloHtml(): string {
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Recrie aqui o gabarito mostrado na barra lateral do FlexBox Trainer. -->
 </body>
 </html>
 `;

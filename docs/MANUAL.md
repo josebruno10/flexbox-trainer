@@ -24,8 +24,8 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Marca o tempo de cada tentativa.
 - Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
-- Conta os dias seguidos em que você fez o desafio do dia.
-- Avisa quando sai uma versão nova.
+- Mostra a sua evolução, com a melhor nota de cada dia num gráfico, e conta os dias seguidos em que você fez o desafio do dia.
+- Avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
 
 ## Requisitos
 
@@ -41,7 +41,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.4.0.vsix`.
 3. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
 
-Para atualizar, instale o `.vsix` novo do mesmo jeito. Uma vez por dia, a extensão confere no GitHub se saiu uma versão nova e avisa; **Baixar** abre a página dela. A consulta não envia nada seu.
+Para atualizar, instale o `.vsix` novo do mesmo jeito. Uma vez por dia, a extensão confere no GitHub se saiu uma versão nova e avisa. No VS Code desktop, **Atualizar** baixa e instala a versão nova; depois, é só recarregar a janela. No VS Code pelo navegador, **Baixar** abre a página da versão. A consulta não envia nada seu. Na primeira vez que uma versão nova abre, a extensão avisa, com o link do que mudou.
 
 ### Pelo código (para desenvolver)
 
@@ -91,7 +91,7 @@ Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio 
 
 O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
 
-No topo do Histórico, **Desafio do dia** mostra quantos dias seguidos você verificou o desafio do dia. Enquanto o de hoje não foi feito, aparece "falta o de hoje"; um dia inteiro sem ele recomeça a contagem. O desafio de ontem verificado depois da meia-noite ainda conta para ontem.
+No topo do Histórico, com dois dias de treino ou mais, o gráfico **Melhor nota por dia** mostra a sua evolução, de 0 a 100%, com a primeira e a última nota ao lado do título. Pare o mouse sobre um ponto para ver o dia e a nota. Abaixo dele, **Desafio do dia** mostra quantos dias seguidos você verificou o desafio do dia. Enquanto o de hoje não foi feito, aparece "falta o de hoje"; um dia inteiro sem ele recomeça a contagem. O desafio de ontem verificado depois da meia-noite ainda conta para ontem.
 
 O histórico fica só neste computador, separado por e-mail: num laboratório, cada aluno vê os próprios desafios.
 
@@ -270,6 +270,10 @@ Os códigos de desafio dependem do gerador: se ele mudar, os códigos já passad
 Com `flexboxTrainer.modoDesenvolvedor` ligado, o comando **FlexBox Trainer: Gerar Solução Exata do Desafio (teste)** grava em `index.html` e `style.css` uma página que reproduz o desafio pixel a pixel (com flexbox ou com posição absoluta), para testar se a correção chega a 100%. Ele entrega a resposta, então fica escondido para os alunos.
 
 O servidor é o mesmo da competição. Nunca exclua dados nele e evite testar às terças à noite, quando ele está em uso.
+
+## Créditos
+
+Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa.
 
 ## Licença
 

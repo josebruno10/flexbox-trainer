@@ -129,6 +129,47 @@ suite("Histórico de desafios", () => {
     );
   });
 
+  test("guarda a melhor nota de cada dia, do dia mais antigo ao mais recente", async () => {
+    const historico = new HistoricoDesafios(armazenamentoFalso());
+    const em = (dia: number, hora = 10) => new Date(2026, 9, dia, hora).getTime();
+
+    await historico.registrarNota(ALUNO, nota({ precisao: 40, instante: em(13) }));
+    await historico.registrarNota(ALUNO, nota({ precisao: 60, instante: em(13, 11) }));
+    await historico.registrarNota(ALUNO, nota({ precisao: 50, instante: em(13, 12) }));
+    await historico.registrarNota(ALUNO, nota({ precisao: 70, instante: em(14) }));
+    // Uma nota com o relógio atrasado entra no dia certo.
+    await historico.registrarNota(ALUNO, nota({ precisao: 30, instante: em(12) }));
+
+    assert.deepStrictEqual(historico.evolucao(ALUNO), [
+      { dia: "2026-10-12", melhor: 30 },
+      { dia: "2026-10-13", melhor: 60 },
+      { dia: "2026-10-14", melhor: 70 },
+    ]);
+    assert.deepStrictEqual(historico.evolucao("bruno@example.com"), []);
+    assert.deepStrictEqual(historico.evolucao(undefined), []);
+  });
+
+  test("a evolução guarda os 60 dias mais recentes e ignora dados de outra versão", async () => {
+    const historico = new HistoricoDesafios(
+      armazenamentoFalso({
+        [`flexboxTrainer.evolucao|${ALUNO}`]: [{ dia: "ontem", melhor: 10 }, null],
+      }),
+    );
+    assert.deepStrictEqual(historico.evolucao(ALUNO), []);
+
+    for (let dia = 1; dia <= 65; dia++) {
+      await historico.registrarNota(
+        ALUNO,
+        nota({ precisao: dia, instante: new Date(2026, 0, dia, 10).getTime() }),
+      );
+    }
+
+    const evolucao = historico.evolucao(ALUNO);
+    assert.strictEqual(evolucao.length, 60);
+    assert.deepStrictEqual(evolucao[0], { dia: "2026-01-06", melhor: 6 });
+    assert.deepStrictEqual(evolucao[59], { dia: "2026-03-06", melhor: 65 });
+  });
+
   test("conta os dias seguidos do desafio do dia", async () => {
     const historico = new HistoricoDesafios(armazenamentoFalso());
 

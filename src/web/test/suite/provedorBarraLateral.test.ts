@@ -636,6 +636,7 @@ suite("Provedor da barra lateral", () => {
         total: number;
         recorde: number | null;
         sequencia: { dias: number; feitoHoje: boolean } | null;
+        evolucao: { dia: string; melhor: number }[];
       };
     }
 
@@ -791,6 +792,34 @@ suite("Provedor da barra lateral", () => {
         dias: 2,
         feitoHoje: true,
       });
+    });
+
+    test("manda ao histórico a melhor nota de cada dia, para o gráfico", async () => {
+      mockarConfiguracaoServidorValida();
+      const notas = [40, 64, 52];
+      mockarServidor({
+        "POST /tipo-dinamica/treino/corrigir-formas": () =>
+          json({ pontuacao: notas.shift() }),
+      });
+      const mensagens: MensagemWebview[] = [];
+      const registro = criarRegistroFalso();
+      const provedor = criarProvedorParaTeste(mensagens, { registro });
+      const verificacoes: [string, Date][] = [
+        ["482917", new Date(2026, 9, 13, 10)],
+        ["305114", new Date(2026, 9, 14, 9)],
+        ["771208", new Date(2026, 9, 14, 11)],
+      ];
+
+      for (const [codigo, instante] of verificacoes) {
+        const interno = await prepararCodigo(provedor, registro, codigo);
+        Date.now = () => instante.getTime();
+        await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+      }
+
+      assert.deepStrictEqual(historicoEnviado(mensagens).evolucao, [
+        { dia: "2026-10-13", melhor: 40 },
+        { dia: "2026-10-14", melhor: 64 },
+      ]);
     });
 
     test("o atalho de Verificar abre a barra e pede a verificação quando ela carrega", async () => {

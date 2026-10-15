@@ -2,6 +2,20 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Desafios
+- No Histórico, o gráfico **Melhor nota por dia** mostra a evolução do aluno, de 0 a 100%.
+
+### Atualizações
+- No VS Code desktop, **Atualizar** baixa e instala sozinho a versão nova e oferece recarregar a janela. No navegador, **Baixar** continua abrindo a página da versão.
+- Na primeira vez que uma versão nova abre, um aviso curto leva ao que mudou.
+
+### Telas
+- Créditos discretos no pé da barra lateral e da tela de entrada.
+- A aba do gabarito não repete mais as frases de ajuda nos modos Sobrepor e Lado a lado.
+- O `index.html` base não traz mais o comentário no `<body>`.
+
 ## [0.4.0] - 2026-10-14
 
 ### Desafios

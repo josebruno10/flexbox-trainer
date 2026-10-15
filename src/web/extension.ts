@@ -9,7 +9,11 @@ import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
 import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
-import { avisarVersaoNova } from "./services/versaoNova";
+import {
+  avisarAtualizacao,
+  avisarVersaoNova,
+  pastaDeDownload,
+} from "./services/versaoNova";
 import { escolherTemaCores } from "./webview/temas";
 import {
   ehDocumentoDeTreino,
@@ -326,10 +330,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Os testes não consultam o GitHub.
   if (context.extensionMode !== vscode.ExtensionMode.Test) {
-    void avisarVersaoNova(
+    const versaoAtual = String(context.extension.packageJSON.version);
+    // Quem já tinha aberto o guia já usava a extensão: se a versão mudou, é
+    // uma atualização.
+    void avisarAtualizacao(
       context.globalState,
-      String(context.extension.packageJSON.version),
+      versaoAtual,
+      context.globalState.get<boolean>(CHAVE_GUIA_ABERTO) === true,
     );
+    void avisarVersaoNova({
+      armazenamento: context.globalState,
+      versaoAtual,
+      pastaDownload: pastaDeDownload(context.globalStorageUri),
+    });
   }
 
   // Uma única vez, na primeira vez que a extensão roda (inclusive depois de

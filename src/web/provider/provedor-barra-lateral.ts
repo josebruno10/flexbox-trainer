@@ -22,6 +22,7 @@ import {
 import { criarDesafioPorCodigo } from "../services/desafio";
 import {
   HistoricoDesafios,
+  NotaDoDia,
   RegistroHistorico,
   SequenciaDoDia,
 } from "../services/historico";
@@ -62,6 +63,8 @@ const LIMPAR_E_GERAR = "Limpar e gerar";
 // Na barra lateral cabem os desafios mais recentes; o resto fica no comando
 // Histórico de Desafios.
 const HISTORICO_NA_BARRA = 5;
+// O gráfico da evolução mostra os últimos 30 dias em que o aluno treinou.
+const DIAS_NO_GRAFICO = 30;
 
 /** O que o guia de primeiros passos precisa saber para marcar cada passo. */
 export type ProgressoGuia = {
@@ -1158,6 +1161,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         total: registros.length,
         recorde: this.recordeDoDesafio() ?? null,
         sequencia: this.sequenciaDoAluno() ?? null,
+        evolucao: this.evolucaoDoAluno(),
       },
     });
 
@@ -1230,6 +1234,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private registrosDoAluno(): RegistroHistorico[] {
     return this.authService.isAutenticado()
       ? this.historico.listar(this.authService.getSessaoAtual()?.email)
+      : [];
+  }
+
+  private evolucaoDoAluno(): NotaDoDia[] {
+    return this.authService.isAutenticado()
+      ? this.historico
+          .evolucao(this.authService.getSessaoAtual()?.email)
+          .slice(-DIAS_NO_GRAFICO)
       : [];
   }
 

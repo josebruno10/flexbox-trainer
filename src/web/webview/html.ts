@@ -317,8 +317,19 @@ ${variaveisDoTema(tema)}
     .amostra.circulo {
       border-radius: 50%;
     }
+
+    .creditos {
+      margin: 28px 0 0;
+      font-size: 10.5px;
+      text-align: center;
+      color: var(--texto-suave);
+      opacity: 0.75;
+    }
   `;
 }
+
+// Quem fez a extensão, no pé da barra lateral e da tela de entrada.
+const CREDITOS = "Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa";
 
 export function obterHtmlWebview(
   webview: vscode.Webview,
@@ -728,6 +739,61 @@ export function obterHtmlWebview(
       margin-bottom: 6px;
     }
 
+    /* A melhor nota de cada dia, de 0 a 100%: a linha sobe com o treino. */
+    .evolucao {
+      margin: 0 0 12px;
+    }
+
+    .evolucao figcaption,
+    .evolucao .eixo {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: var(--fonte-mono);
+      font-size: 10.5px;
+      color: var(--texto-suave);
+    }
+
+    .evolucao figcaption {
+      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .evolucao figcaption .valor {
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--texto);
+    }
+
+    .evolucao svg {
+      display: block;
+      width: 100%;
+      height: 64px;
+      overflow: visible;
+    }
+
+    .evolucao .guia {
+      stroke: var(--linha-tracejada);
+      stroke-dasharray: 2 3;
+    }
+
+    .evolucao polyline {
+      fill: none;
+      stroke: var(--acento);
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+
+    .evolucao circle {
+      fill: var(--acento);
+    }
+
+    .evolucao .eixo {
+      margin-top: 4px;
+    }
+
     .lista-historico li {
       display: grid;
       grid-template-columns: 1fr auto auto auto;
@@ -856,11 +922,18 @@ export function obterHtmlWebview(
       <h2 class="rotulo"><span class="numero">03</span> / Histórico</h2>
       <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>Ver todos</button>
     </div>
+    <figure class="evolucao" id="evolucao" hidden>
+      <figcaption><span>Melhor nota por dia</span><span class="valor" id="resumoEvolucao"></span></figcaption>
+      <svg id="graficoEvolucao" role="img"></svg>
+      <div class="eixo" aria-hidden="true"><span id="inicioEvolucao"></span><span id="fimEvolucao"></span></div>
+    </figure>
     <dl class="dados sequencia" id="linhaSequencia" hidden>
       <div title="Dias seguidos em que você verificou o desafio do dia"><dt>Desafio do dia</dt><dd id="valorSequencia"></dd></div>
     </dl>
     <ol class="lista-historico" id="listaHistorico" aria-label="Os desafios mais recentes, com a melhor nota e o tempo"></ol>
   </section>
+
+  <p class="creditos">${CREDITOS}</p>
 
   <script src="${scriptUri}"></script>
 </body>
@@ -1358,6 +1431,7 @@ export function obterHtmlAutenticacao(
     </div>
     <p class="meta surge" style="--ordem: 4">Use a conta com o e-mail cadastrado no torneio.</p>
   </main>
+  <p class="creditos">${CREDITOS}</p>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;
