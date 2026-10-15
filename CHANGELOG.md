@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.5.1] - 2026-10-15
 
 ### Opinião e problemas
 - **Dar opinião** abre um questionário de usabilidade no GitHub: as dez perguntas do SUS e duas abertas.
