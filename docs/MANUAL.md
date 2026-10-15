@@ -93,7 +93,7 @@ O **Histórico**, abaixo do Resultado, mostra os desafios que você já verifico
 
 No topo do Histórico, com dois dias de treino ou mais, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Pare o mouse sobre um ponto para ver o dia e a nota. Abaixo dele, **Desafio do dia** mostra quantos dias seguidos você verificou o desafio do dia. Enquanto o de hoje não foi feito, aparece "falta o de hoje"; um dia inteiro sem ele recomeça a contagem. O desafio de ontem verificado depois da meia-noite ainda conta para ontem.
 
-O histórico fica só neste computador, separado por e-mail: num laboratório, cada aluno vê os próprios desafios.
+O histórico fica separado por e-mail: num laboratório, cada aluno vê os próprios desafios. Com a **Sincronização de Configurações** do VS Code ligada (ícone da conta, embaixo à esquerda), o histórico, o gráfico e a sequência vão com você para os outros computadores em que você usar o VS Code, junto com o nível escolhido. Só os seus: os de outros alunos que usaram o mesmo computador não vão.
 
 Depois da primeira nota, **Copiar resultado**, no topo do Resultado, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
 
@@ -247,11 +247,16 @@ O código fica em `src/web` (a extensão roda no extension host web do VS Code):
 
 | Pasta | Conteúdo |
 |---|---|
-| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor |
-| `provider/` | A barra lateral e a aba do gabarito |
+| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado |
+| `provider/` | A barra lateral e a aba do gabarito. `provedor-barra-lateral.ts` guarda o estado e coordena; as partes dele (correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barra-lateral/` |
 | `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos |
-| `webview/` | O que roda dentro da barra lateral e da aba: desenho do gabarito, página do aluno e medição das formas |
-| `test/suite/` | Testes automatizados |
+| `webview/telas/` | O HTML das três telas (barra lateral, aba do gabarito e entrada); o CSS de cada parte fica em `webview/telas/estilos/` |
+| `webview/barra/` | O script da barra lateral, por parte: quadro do desafio, componentes, página do aluno, verificação, resultado, histórico, evolução, conta e botões. `webview/app.ts` só entrega cada mensagem da extensão à sua parte |
+| `webview/` | O resto do que roda dentro das webviews: desenho do gabarito, página do aluno, medição das formas e o script da aba |
+| `test/suite/` | Testes automatizados, com uma pasta por assunto grande (`auth/`, `barraLateral/`) |
+| `scripts/e2e/` | Teste de ponta a ponta da atualização, num VS Code de verdade |
+
+Cada arquivo trata de um assunto e fica pequeno (em geral, até umas 400 linhas). Ao mexer num arquivo que passou disso, divida-o por assunto junto com a mudança, com os testes passando antes e depois.
 
 No desktop, a extensão roda no host Node do VS Code (`dist/node`), o mesmo das outras extensões; é de lá que ela consegue ver as extensões de IA. No VS Code pelo navegador, roda no host web (`dist/web`). O código é o mesmo para os dois.
 
@@ -267,6 +272,7 @@ npm run lint          # verifica o estilo do código
 npm test              # roda os testes em um VS Code no Chromium
 npm run test:desktop  # roda os mesmos testes no VS Code desktop
 npm run typecheck     # confere os tipos e acusa código sem uso
+npm run test:e2e -- <.vsix anterior> <versão nova>  # atualização de ponta a ponta
 ```
 
 As respostas do questionário de opinião viram issues com a etiqueta `opinião`. `node scripts/opinioes.mjs` (com o `gh` autenticado) junta todas e calcula a nota SUS de cada uma e a média; acima de 68 fica acima da média de referência do SUS. Não mude o texto nem a ordem das dez primeiras perguntas de `.github/ISSUE_TEMPLATE/opiniao.yml`: são as do SUS.
@@ -276,7 +282,7 @@ Os testes simulam as respostas do servidor e não criam dados reais. O `npm test
 ### No GitHub
 
 - **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. O selo no topo do README mostra se a última execução no `main` passou. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
-- **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.5.0` e `0.5.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído.
+- **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.5.0` e `0.5.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído. Depois, o teste de ponta a ponta instala a versão anterior num VS Code limpo e confere que ela avisa da nova, se atualiza com um clique e mostra o que mudou; se falhar, as fotos da tela ficam em **Artifacts**. Ele precisa da rede e da versão já publicada, por isso não roda a cada envio.
 
 O gerador, em `services/desafio.ts`, é a porta do script do Vitor (commit `271c492`). Os níveis tiram os componentes menores (50% no fácil, 30% no médio), um padrão inteiro por vez (uma sequência ou uma fileira de círculos nunca fica pela metade), e nunca deixam menos de 8. O nível vem do código: o resto da divisão por 3 (0 é fácil, 1 é médio, 2 é difícil).
 
