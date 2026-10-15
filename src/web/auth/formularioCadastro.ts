@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DadosCadastro, OpcoesCadastro } from "./authService";
+import { DadosCadastro, OpcoesCadastro } from "./cadastroTorneio";
 
 // Os mesmos códigos de período que o torneio usa no cadastro.
 const PERIODOS = [
