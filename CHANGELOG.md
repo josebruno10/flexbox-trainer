@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.4.0] - 2026-10-14
 
 ### Desafios
 - Cada desafio tem um código de 6 dígitos que gera sempre a mesma imagem: **Abrir por código** abre o desafio que o professor passar, e o código aparece nos dados do desafio (clique para copiar) e na aba do gabarito.
