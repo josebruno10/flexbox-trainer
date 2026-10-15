@@ -9,7 +9,7 @@ As mudanças de cada versão do FlexBox Trainer.
 - Com a Sincronização de Configurações do VS Code ligada, o histórico, o gráfico da evolução, a sequência do desafio do dia e o nível escolhido acompanham o aluno nos outros computadores. Só os do aluno da sessão.
 
 ### Para quem desenvolve
-- Os arquivos grandes foram divididos por assunto: as telas (`webview/telas/`), o script da barra lateral (`webview/barra/`), o login (`auth/`) e os testes (`test/suite/auth/`, `test/suite/barraLateral/`).
+- Os arquivos grandes foram divididos por assunto: as telas (`webview/telas/`), o script da barra lateral (`webview/barra/`), a medição das formas (`webview/formas/`), o login (`auth/`), as rotas do servidor (`services/servidor/`), o gerador (`services/gerador/`), a verificação do provedor (`provider/barra-lateral/verificacao.ts`) e os testes (`test/suite/auth/`, `test/suite/barraLateral/`).
 - Ao publicar uma versão, um teste de ponta a ponta confere num VS Code de verdade que a versão anterior se atualiza para ela com um clique e mostra o que mudou (`npm run test:e2e`).
 
 ## [0.5.1] - 2026-10-15

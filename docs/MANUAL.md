@@ -248,15 +248,15 @@ O código fica em `src/web` (a extensão roda no extension host web do VS Code):
 | Pasta | Conteúdo |
 |---|---|
 | `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado |
-| `provider/` | A barra lateral e a aba do gabarito. `provedor-barra-lateral.ts` guarda o estado e coordena; as partes dele (correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barra-lateral/` |
-| `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos |
+| `provider/` | A barra lateral e a aba do gabarito. `provedor-barra-lateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barra-lateral/` |
+| `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
 | `webview/telas/` | O HTML das três telas (barra lateral, aba do gabarito e entrada); o CSS de cada parte fica em `webview/telas/estilos/` |
 | `webview/barra/` | O script da barra lateral, por parte: quadro do desafio, componentes, página do aluno, verificação, resultado, histórico, evolução, conta e botões. `webview/app.ts` só entrega cada mensagem da extensão à sua parte |
-| `webview/` | O resto do que roda dentro das webviews: desenho do gabarito, página do aluno, medição das formas e o script da aba |
+| `webview/` | O resto do que roda dentro das webviews: desenho do gabarito, página do aluno, medição das formas (com as partes em `webview/formas/`) e o script da aba |
 | `test/suite/` | Testes automatizados, com uma pasta por assunto grande (`auth/`, `barraLateral/`) |
 | `scripts/e2e/` | Teste de ponta a ponta da atualização, num VS Code de verdade |
 
-Cada arquivo trata de um assunto e fica pequeno (em geral, até umas 400 linhas). Ao mexer num arquivo que passou disso, divida-o por assunto junto com a mudança, com os testes passando antes e depois.
+Cada arquivo trata de um assunto e fica pequeno (em geral, até umas 400 linhas). Os coordenadores, como `provedor-barra-lateral.ts` e `authService.ts`, são maiores, mas só guardam o estado e ligam as partes. Ao mexer num arquivo que passou disso, divida-o por assunto junto com a mudança, com os testes passando antes e depois.
 
 No desktop, a extensão roda no host Node do VS Code (`dist/node`), o mesmo das outras extensões; é de lá que ela consegue ver as extensões de IA. No VS Code pelo navegador, roda no host web (`dist/web`). O código é o mesmo para os dois.
 
