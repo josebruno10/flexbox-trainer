@@ -140,7 +140,7 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos**, o **Testar Servidor**, **Dar Opinião** e **Relatar Problema**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos**, o **Testar Servidor** e **Relatar Problema**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -181,7 +181,6 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Criar Dinâmica de Treino | Cria a sua dinâmica de treino, se você não a criou no primeiro Verificar |
 | FlexBox Trainer: Testar Servidor | Confere se a sua sessão está valendo no servidor |
 | FlexBox Trainer: Escolher Cores | Troca as cores de destaque da extensão |
-| FlexBox Trainer: Dar Opinião | Abre o questionário de opinião, no GitHub |
 | FlexBox Trainer: Relatar Problema | Abre o formulário de problema no GitHub, já com a versão e o sistema, ou copia essas informações |
 
 ## Atalhos
@@ -207,13 +206,11 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 | `flexboxTrainer.authSiteUrl`, `flexboxTrainer.googleClientId` | Site e cliente do login pelo Google. Não precisa mudar |
 | `flexboxTrainer.apiToken` | Token manual, só para desenvolvimento |
 
-## Opinião e problemas
+## Problemas
 
-**Dar opinião**, no menu **⋯** da barra lateral, abre um questionário de dez perguntas sobre usar a extensão (o SUS, um questionário padrão de usabilidade), mais duas abertas. Leva uns dois minutos. Depois do terceiro desafio verificado, a extensão pergunta uma única vez se você pode responder.
+**Relatar problema**, no menu **⋯** da barra lateral, abre um formulário já com a versão da extensão, a do VS Code, o sistema e o código do desafio; conte o que aconteceu e, se puder, anexe um print. Sem conta no GitHub, escolha **Copiar as informações** e mande para a equipe, junto com o que aconteceu. Quando uma verificação falha por um erro do servidor, aparece **Relatar problema** logo abaixo da mensagem, e o formulário já vem com ela.
 
-**Relatar problema** abre um formulário já com a versão da extensão, a do VS Code, o sistema e o código do desafio; conte o que aconteceu e, se puder, anexe um print. Sem conta no GitHub, escolha **Copiar as informações** e mande para a equipe, junto com o que aconteceu. Quando uma verificação falha por um erro do servidor, aparece **Relatar problema** logo abaixo da mensagem, e o formulário já vem com ela.
-
-Os dois formulários ficam no GitHub e precisam de uma conta lá. As respostas são públicas: não escreva dados pessoais.
+O formulário fica no GitHub e precisa de uma conta lá. As respostas são públicas: não escreva dados pessoais.
 
 ## Problemas comuns
 
@@ -274,8 +271,6 @@ npm run test:desktop  # roda os mesmos testes no VS Code desktop
 npm run typecheck     # confere os tipos e acusa código sem uso
 npm run test:e2e -- <.vsix anterior> <versão nova>  # atualização de ponta a ponta
 ```
-
-As respostas do questionário de opinião viram issues com a etiqueta `opinião`. `node scripts/opinioes.mjs` (com o `gh` autenticado) junta todas e calcula a nota SUS de cada uma e a média; acima de 68 fica acima da média de referência do SUS. Não mude o texto nem a ordem das dez primeiras perguntas de `.github/ISSUE_TEMPLATE/opiniao.yml`: são as do SUS.
 
 Os testes simulam as respostas do servidor e não criam dados reais. O `npm test` só passa se o resumo dos testes aparecer na saída: sem rede para baixar o VS Code, o `vscode-test-web` sai com sucesso sem rodar nada. O `npm run test:desktop` usa o `code` instalado; com `VSCODE_TESTE_BAIXAR=1` (e no GitHub), baixa um VS Code na pasta `.vscode-test`, que fica fora do Git e do `.vsix`.
 

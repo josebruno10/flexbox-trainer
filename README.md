@@ -33,7 +33,7 @@ O guia de primeiros passos, que abre na primeira vez, mostra cada passo. O hist�
 ## Mais
 
 - [Manual completo](docs/MANUAL.md): a barra lateral, a aba do gabarito, os comandos, as configurações e os problemas comuns.
-- Achou um problema ou quer dar a sua opinião? Use **Relatar problema** ou **Dar opinião**, no menu **⋯** da barra lateral.
+- Achou um problema? Use **Relatar problema**, no menu **⋯** da barra lateral.
 - [Versões para instalar](https://github.com/josebruno10/flexbox-trainer/releases/latest) e [o que mudou em cada uma](CHANGELOG.md). A extensão avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
 
 Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa. Licença MIT.

@@ -570,7 +570,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       tempoMs: tempoAte(Date.now()),
     });
     await this.historico.registrarNota(desafio, precisao, tempoAte);
-    void this.historico.pedirOpiniaoSeForAHora();
   }
 
   /** O comando Testar Servidor: o resultado vem numa notificação. */

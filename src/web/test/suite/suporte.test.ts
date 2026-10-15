@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import {
-  enderecoDaOpiniao,
   enderecoDoProblema,
   nomeDoSistema,
   sistemaOperacional,
@@ -15,7 +14,7 @@ const AMBIENTE = {
   desafio: { codigo: "482917", nivel: "medio" as const },
 };
 
-suite("Relatos de problema e opiniões", () => {
+suite("Relatos de problema", () => {
   test("o formulário de problema chega preenchido", () => {
     const endereco = new URL(enderecoDoProblema(AMBIENTE));
 
@@ -65,15 +64,6 @@ suite("Relatos de problema e opiniões", () => {
     assert.strictEqual(endereco.searchParams.has("codigo"), false);
   });
 
-  test("o questionário de opinião leva a versão", () => {
-    const endereco = new URL(enderecoDaOpiniao("0.5.0"));
-
-    assert.deepStrictEqual(Object.fromEntries(endereco.searchParams), {
-      template: "opiniao.yml",
-      versao: "0.5.0",
-    });
-  });
-
   test("para quem não tem GitHub, as mesmas informações num texto", () => {
     assert.strictEqual(
       textoDoAmbiente(AMBIENTE),
@@ -95,7 +85,7 @@ suite("Relatos de problema e opiniões", () => {
     assert.ok(["Linux", "Windows", "macOS", "navegador"].includes(sistemaOperacional()));
   });
 
-  test("os dois comandos ficam no menu da barra lateral", () => {
+  test("o comando fica no menu da barra lateral", () => {
     const pacote = vscode.extensions.getExtension("josebruno10.flexbox-trainer")
       ?.packageJSON as {
       contributes: { menus: { "view/title": { command: string; group: string }[] } };
@@ -104,7 +94,6 @@ suite("Relatos de problema e opiniões", () => {
       .filter((item) => item.group.startsWith("2_ajuda"))
       .map((item) => item.command);
 
-    assert.ok(ajuda.includes("flexbox-trainer.darOpiniao"));
     assert.ok(ajuda.includes("flexbox-trainer.relatarProblema"));
   });
 });

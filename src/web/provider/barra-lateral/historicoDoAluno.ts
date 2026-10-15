@@ -12,7 +12,6 @@ import {
   SequenciaDoDia,
 } from "../../services/historico";
 import { Desafio, Nivel } from "../../types";
-import { CHAVE_OPINIAO_PEDIDA } from "../../sincronizacao";
 import { formatarTempo } from "../barra-de-status";
 import { formatarPorcentagem } from "./resultado";
 
@@ -21,10 +20,6 @@ import { formatarPorcentagem } from "./resultado";
 const HISTORICO_NA_BARRA = 5;
 // O gráfico da evolução mostra os últimos 30 dias em que o aluno treinou.
 const DIAS_NO_GRAFICO = 30;
-// O pedido de opinião aparece uma vez, depois deste tanto de desafios.
-const DESAFIOS_ANTES_DA_OPINIAO = 3;
-const RESPONDER = "Responder";
-const AGORA_NAO = "Agora não";
 
 /** O que a seção Histórico da barra lateral mostra. */
 export type HistoricoNaBarra = {
@@ -43,7 +38,7 @@ export class HistoricoDoAluno {
   private readonly historico: HistoricoDesafios;
 
   public constructor(
-    private readonly armazenamento: vscode.Memento,
+    armazenamento: vscode.Memento,
     private readonly emailDaSessao: () => string | undefined,
   ) {
     this.historico = new HistoricoDesafios(armazenamento);
@@ -143,28 +138,6 @@ export class HistoricoDoAluno {
     return escolhido?.codigo;
   }
 
-  /**
-   * Uma vez só, depois do terceiro desafio verificado: a opinião de quem já
-   * usou a extensão de verdade.
-   */
-  public async pedirOpiniaoSeForAHora(): Promise<void> {
-    if (
-      this.armazenamento.get<boolean>(CHAVE_OPINIAO_PEDIDA) ||
-      this.registros().length < DESAFIOS_ANTES_DA_OPINIAO
-    ) {
-      return;
-    }
-    await this.armazenamento.update(CHAVE_OPINIAO_PEDIDA, true);
-    const escolha = await vscode.window.showInformationMessage(
-      "Pode responder 10 perguntas rápidas sobre o FlexBox Trainer? " +
-        "A sua opinião ajuda no nosso TCC.",
-      RESPONDER,
-      AGORA_NAO,
-    );
-    if (escolha === RESPONDER) {
-      await vscode.commands.executeCommand("flexbox-trainer.darOpiniao");
-    }
-  }
 }
 
 // O melhor que o aluno já fez neste código antes: aparece quando ele refaz

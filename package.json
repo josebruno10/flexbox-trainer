@@ -88,11 +88,6 @@
         "title": "FlexBox Trainer: Histórico de Desafios"
       },
       {
-        "command": "flexbox-trainer.darOpiniao",
-        "title": "FlexBox Trainer: Dar Opinião",
-        "icon": "$(comment-discussion)"
-      },
-      {
         "command": "flexbox-trainer.relatarProblema",
         "title": "FlexBox Trainer: Relatar Problema",
         "icon": "$(report)"
@@ -196,14 +191,9 @@
           "group": "2_ajuda@2"
         },
         {
-          "command": "flexbox-trainer.darOpiniao",
-          "when": "view == flexbox-trainer.sidebar",
-          "group": "2_ajuda@3"
-        },
-        {
           "command": "flexbox-trainer.relatarProblema",
           "when": "view == flexbox-trainer.sidebar",
-          "group": "2_ajuda@4"
+          "group": "2_ajuda@3"
         }
       ]
     },

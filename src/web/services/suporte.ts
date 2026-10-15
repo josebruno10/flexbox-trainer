@@ -3,8 +3,8 @@ import { NOME_DO_NIVEL } from "../niveis";
 import { Nivel } from "../types";
 import { formatarCodigo } from "./codigoDesafio";
 
-// Relatos de problema e opiniões vão para os formulários de issue do GitHub
-// (.github/ISSUE_TEMPLATE). Os campos são preenchidos pelo endereço: cada
+// Os relatos de problema vão para o formulário de issue do GitHub
+// (.github/ISSUE_TEMPLATE/problema.yml). Os campos são preenchidos pelo endereço: cada
 // parâmetro tem o id de um campo do formulário.
 const NOVA_ISSUE = "https://github.com/josebruno10/flexbox-trainer/issues/new";
 
@@ -32,11 +32,6 @@ export function enderecoDoProblema(ambiente: Ambiente): string {
       ? { mensagem: ambiente.mensagem.slice(0, TAMANHO_MAXIMO_MENSAGEM) }
       : {}),
   });
-}
-
-/** O questionário de opinião, já com a versão. */
-export function enderecoDaOpiniao(versao: string): string {
-  return novaIssue({ template: "opiniao.yml", versao });
 }
 
 /** As mesmas informações, para colar numa mensagem à equipe. */
@@ -81,10 +76,6 @@ export async function relatarProblema(ambiente: Ambiente): Promise<void> {
     "Informações copiadas. Conte também o que aconteceu.",
     4000,
   );
-}
-
-export async function darOpiniao(versao: string): Promise<void> {
-  await vscode.env.openExternal(vscode.Uri.parse(enderecoDaOpiniao(versao)));
 }
 
 /** O sistema deste computador; no VS Code pelo navegador, "navegador". */
