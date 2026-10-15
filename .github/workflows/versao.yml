@@ -1,5 +1,6 @@
 # Quando uma versão é publicada em Releases, roda os testes no código da
-# etiqueta e anexa o .vsix gerado aqui, substituindo um anexado à mão.
+# etiqueta, anexa o .vsix gerado aqui (substituindo um anexado à mão) e
+# confere de ponta a ponta que a versão anterior se atualiza para ela.
 name: Versão
 
 on:
@@ -52,3 +53,47 @@ jobs:
         run: |
           npx --yes @vscode/vsce@3 package
           gh release upload "$ETIQUETA" flexbox-trainer-*.vsix --clobber
+
+  ponta-a-ponta:
+    # Com o .vsix já anexado, a versão anterior, instalada num VS Code limpo,
+    # precisa achar esta, se atualizar com um clique e mostrar o que mudou.
+    # Uma pré-versão não é a "latest" do GitHub, que o aviso consulta.
+    needs: vsix
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ETIQUETA: ${{ github.event.release.tag_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      E2E_PASTA: ${{ runner.temp }}/ponta-a-ponta
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Baixar a versão anterior
+        run: |
+          anterior="$(gh release list --exclude-drafts --exclude-pre-releases \
+            --limit 10 --json tagName --jq "[.[].tagName | select(. != \"$ETIQUETA\")][0]")"
+          echo "Versão anterior: $anterior"
+          gh release download "$anterior" --pattern '*.vsix' --dir anterior
+
+      - name: Atualizar de ponta a ponta
+        run: xvfb-run -a npm run test:e2e -- anterior/*.vsix "${ETIQUETA#v}"
+
+      - name: Fotos da falha
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ponta-a-ponta
+          path: ${{ runner.temp }}/ponta-a-ponta/*.png
+          retention-days: 30

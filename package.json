@@ -433,7 +433,8 @@
     "package-web": "webpack --mode production --devtool hidden-source-map",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p . --noUnusedLocals --noUnusedParameters",
-    "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
+    "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
+    "test:e2e": "node scripts/e2e/atualizacao.mjs"
   },
   "devDependencies": {
     "@types/assert": "^1.5.11",
