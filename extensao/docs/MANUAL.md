@@ -51,10 +51,10 @@ Você vai precisar de Git, Node.js 20 ou mais novo e VS Code.
 git clone https://github.com/josebruno10/flexbox-trainer.git
 cd flexbox-trainer/extensao
 npm install
-code .
+code ..
 ```
 
-Abra sempre a pasta `extensao/` no VS Code: é nela que ficam as configurações de execução (`.vscode/`), e é nela que rodam os comandos `npm`.
+O `code ..` abre a pasta `flexbox-trainer` no VS Code: é nela que ficam as configurações de execução (`.vscode/`), então o F5 funciona de lá. Os comandos `npm` rodam dentro de `extensao/`.
 
 No VS Code, abra **Executar e Depurar** (`Ctrl+Shift+D`), escolha **Run Extension (Desktop)** e aperte **F5**. Uma nova janela abre com a pasta `exemplo-treino`, que já tem um `index.html` e um `style.css` de exemplo. O primeiro desafio pergunta se pode limpá-los; depois, `git restore exemplo-treino` traz o exemplo de volta.
 
@@ -235,7 +235,7 @@ O servidor aceita no máximo 4 caracteres (letras minúsculas e números). Se o 
 
 ## Para quem desenvolve
 
-No repositório, a extensão inteira fica em `extensao/`, inclusive as configurações do VS Code, o `.gitignore` e a licença. Na raiz fica só a pasta `.github/`, com os fluxos do GitHub (que só funcionam ali) e o README curto que o GitHub mostra na página do repositório. Assim dá para pôr outras partes do projeto ao lado da extensão.
+No repositório, a extensão inteira fica em `extensao/`, inclusive o `.gitignore` e a licença. Na raiz ficam só a pasta `.github/`, com os fluxos do GitHub (que só funcionam ali) e o README curto que o GitHub mostra na página do repositório, e a `.vscode/`, com as configurações de execução, que o VS Code só lê na pasta aberta. Assim dá para pôr outras partes do projeto ao lado da extensão.
 
 Dentro de `extensao/`, o código fica em `src/web` (a extensão roda no extension host web do VS Code):
 

@@ -4,6 +4,7 @@
     {
       "type": "npm",
       "script": "watch-web",
+      "path": "extensao",
       "group": "build",
       "isBackground": true,
       "problemMatcher": "$window-webpack",
@@ -12,6 +13,7 @@
     {
       "type": "npm",
       "script": "compile-web",
+      "path": "extensao",
       "group": "build",
       "problemMatcher": "$window-webpack",
       "label": "npm: compile-web"

@@ -9,6 +9,6 @@ Extensão do VS Code para treinar a recriação de layouts em HTML e CSS, no for
 </p>
 
 - **Para treinar:** baixe o `.vsix` da [versão mais nova](https://github.com/josebruno10/flexbox-trainer/releases/latest) e siga o [README da extensão](../extensao/README.md).
-- **Para desenvolver:** a extensão inteira fica em [`extensao/`](../extensao/); abra essa pasta no VS Code. Veja [Para quem desenvolve](../extensao/docs/MANUAL.md#para-quem-desenvolve), no manual.
+- **Para desenvolver:** a extensão inteira fica em [`extensao/`](../extensao/); abra a pasta `flexbox-trainer` no VS Code para usar o F5. Veja [Para quem desenvolve](../extensao/docs/MANUAL.md#para-quem-desenvolve), no manual.
 
 Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa. Licença MIT.
