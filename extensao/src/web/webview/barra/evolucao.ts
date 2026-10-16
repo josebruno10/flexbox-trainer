@@ -16,26 +16,31 @@ export function ligarEvolucao(): void {
   new ResizeObserver(() => desenharEvolucao()).observe(graficoEvolucao);
 }
 
-// A linha precisa de dois dias de treino; com um só, o gráfico fica escondido.
+// Desde o primeiro dia de treino no nível: com um só dia, o gráfico é um
+// ponto; a linha aparece a partir do segundo.
 export function renderizarEvolucao(dias: NotaDoDiaRecebida[]): void {
   diasEvolucao = dias;
-  evolucao.hidden = dias.length < 2;
-  if (dias.length < 2) {
+  evolucao.hidden = dias.length < 1;
+  if (dias.length < 1) {
     return;
   }
 
   const primeiro = dias[0];
   const ultimo = dias[dias.length - 1];
-  resumoEvolucao.textContent =
-    `${formatarPorcentagem(primeiro.melhor)} → ` +
-    `${formatarPorcentagem(ultimo.melhor)}%`;
+  const umDia = dias.length === 1;
+  evolucao.classList.toggle("um-dia", umDia);
+  resumoEvolucao.textContent = umDia
+    ? `${formatarPorcentagem(ultimo.melhor)}%`
+    : `${formatarPorcentagem(primeiro.melhor)} → ${formatarPorcentagem(ultimo.melhor)}%`;
   inicioEvolucao.textContent = formatarDia(primeiro.dia);
-  fimEvolucao.textContent = formatarDia(ultimo.dia);
+  fimEvolucao.textContent = umDia ? "" : formatarDia(ultimo.dia);
   graficoEvolucao.setAttribute(
     "aria-label",
-    `Melhor nota por dia: ${formatarPorcentagem(primeiro.melhor)}% em ` +
-      `${formatarDia(primeiro.dia)} e ${formatarPorcentagem(ultimo.melhor)}% ` +
-      `em ${formatarDia(ultimo.dia)}`,
+    umDia
+      ? `Melhor nota: ${formatarPorcentagem(ultimo.melhor)}% em ${formatarDia(ultimo.dia)}`
+      : `Melhor nota por dia: ${formatarPorcentagem(primeiro.melhor)}% em ` +
+          `${formatarDia(primeiro.dia)} e ${formatarPorcentagem(ultimo.melhor)}% ` +
+          `em ${formatarDia(ultimo.dia)}`,
   );
   desenharEvolucao();
 }
@@ -45,14 +50,17 @@ export function renderizarEvolucao(dias: NotaDoDiaRecebida[]): void {
 function desenharEvolucao(): void {
   const dias = diasEvolucao;
   const largura = graficoEvolucao.getBoundingClientRect().width;
-  if (dias.length < 2 || largura === 0) {
+  if (dias.length < 1 || largura === 0) {
     return;
   }
 
   const altura = 64;
   const margem = 4;
+  // Um dia só fica no meio.
   const x = (indice: number) =>
-    margem + (indice * (largura - margem * 2)) / (dias.length - 1);
+    dias.length === 1
+      ? largura / 2
+      : margem + (indice * (largura - margem * 2)) / (dias.length - 1);
   const y = (nota: number) =>
     margem +
     ((100 - Math.min(100, Math.max(0, nota))) * (altura - margem * 2)) / 100;
@@ -83,6 +91,7 @@ function desenharEvolucao(): void {
       .map((dia, indice) => `${x(indice)},${y(dia.melhor)}`)
       .join(" "),
   });
+  const desenhar = dias.length > 1 ? [linha] : [];
   const pontos = dias.map((dia, indice) => {
     const ponto = criar("circle", {
       cx: x(indice),
@@ -95,7 +104,7 @@ function desenharEvolucao(): void {
     ponto.append(dica);
     return ponto;
   });
-  graficoEvolucao.replaceChildren(...guias, linha, ...pontos);
+  graficoEvolucao.replaceChildren(...guias, ...desenhar, ...pontos);
 }
 
 // "2026-10-14" vira "14/10".

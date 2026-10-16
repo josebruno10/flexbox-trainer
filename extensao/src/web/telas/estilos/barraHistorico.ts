@@ -47,6 +47,11 @@ export const ESTILOS_BARRA_HISTORICO = `
       color: var(--texto-suave);
     }
 
+    /* Com um dia só, o ponto fica no meio, e a data embaixo dele. */
+    .evolucao.um-dia .eixo {
+      justify-content: center;
+    }
+
     .evolucao figcaption {
       margin-bottom: 6px;
       letter-spacing: 0.08em;

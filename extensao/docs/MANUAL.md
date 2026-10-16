@@ -93,9 +93,9 @@ Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio 
 
 O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
 
-No topo do Histórico, com dois dias de treino ou mais, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Pare o mouse sobre um ponto para ver o dia e a nota.
+No topo do Histórico, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Ele aparece desde o primeiro dia, como um ponto; a linha surge a partir do segundo dia de treino. Pare o mouse sobre um ponto para ver o dia e a nota.
 
-O histórico fica separado por e-mail: num laboratório, cada aluno vê os próprios desafios. Com a **Sincronização de Configurações** do VS Code ligada (ícone da conta, embaixo à esquerda), o histórico, o gráfico e a sequência vão com você para os outros computadores em que você usar o VS Code, junto com o nível escolhido. Só os seus: os de outros alunos que usaram o mesmo computador não vão.
+O histórico fica separado por e-mail: num laboratório, cada aluno vê os próprios desafios. Com a **Sincronização de Configurações** do VS Code ligada (ícone da conta, embaixo à esquerda), o histórico e o gráfico vão com você para os outros computadores em que você usar o VS Code, junto com o nível escolhido. Só os seus: os de outros alunos que usaram o mesmo computador não vão.
 
 Depois da primeira nota, **Copiar resultado**, no topo do Resultado, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
 
