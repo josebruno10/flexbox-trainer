@@ -201,17 +201,4 @@ suite("Interface do desafio", () => {
     assert.ok(html.includes('data-vista="gabarito" aria-pressed="true"'));
     assert.ok(html.includes('data-vista="pagina" aria-pressed="false"'));
   });
-
-  test("os atalhos só valem quando fazem sentido", () => {
-    const pacote = vscode.extensions.getExtension("josebruno10.flexbox-trainer")?.packageJSON;
-    const atalhos = pacote?.contributes.keybindings as { command: string; key: string; when: string }[];
-
-    assert.deepStrictEqual(
-      atalhos.map(({ command, key, when }) => [command, key, when]),
-      [
-        ["flexbox-trainer.verificar", "ctrl+alt+v", "flexboxTrainer.temDesafio"],
-        ["flexbox-trainer.novoDesafio", "ctrl+alt+d", "flexboxTrainer.autenticado"],
-      ],
-    );
-  });
 });

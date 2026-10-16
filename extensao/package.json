@@ -93,6 +93,11 @@
         "title": "FlexBox Trainer: Guia de Primeiros Passos"
       },
       {
+        "command": "flexbox-trainer.verAtalhos",
+        "title": "FlexBox Trainer: Atalhos e Abreviações Emmet",
+        "icon": "$(keyboard)"
+      },
+      {
         "command": "flexbox-trainer.abrirGabarito",
         "title": "FlexBox Trainer: Abrir Gabarito em uma Aba"
       },
@@ -182,9 +187,14 @@
           "group": "2_ajuda@1"
         },
         {
-          "command": "flexbox-trainer.testarServidor",
+          "command": "flexbox-trainer.verAtalhos",
           "when": "view == flexbox-trainer.sidebar",
           "group": "2_ajuda@2"
+        },
+        {
+          "command": "flexbox-trainer.testarServidor",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "2_ajuda@3"
         }
       ]
     },
@@ -197,6 +207,31 @@
       {
         "command": "flexbox-trainer.novoDesafio",
         "key": "ctrl+alt+d",
+        "when": "flexboxTrainer.autenticado"
+      },
+      {
+        "command": "flexbox-trainer.desafioDoDia",
+        "key": "ctrl+alt+shift+d",
+        "when": "flexboxTrainer.autenticado"
+      },
+      {
+        "command": "flexbox-trainer.copiarResultado",
+        "key": "ctrl+alt+shift+v",
+        "when": "flexboxTrainer.temDesafio"
+      },
+      {
+        "command": "flexbox-trainer.abrirGabarito",
+        "key": "ctrl+alt+a",
+        "when": "flexboxTrainer.temDesafio"
+      },
+      {
+        "command": "flexbox-trainer.refazerDesafio",
+        "key": "ctrl+alt+shift+n",
+        "when": "flexboxTrainer.temDesafio"
+      },
+      {
+        "command": "flexbox-trainer.verHistorico",
+        "key": "ctrl+alt+h",
         "when": "flexboxTrainer.autenticado"
       }
     ],

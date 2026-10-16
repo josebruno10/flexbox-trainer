@@ -4,6 +4,7 @@ import { vscode } from "./api";
 import { ligarAcoes } from "./barra/acoes";
 import { ligarComponentes } from "./barra/componentes";
 import { renderizarEstadoAutenticacao, renderizarExtensoesIa } from "./barra/conta";
+import { ligarDica } from "./barra/dica";
 import { ligarEvolucao } from "./barra/evolucao";
 import {
   desenharDesafio,
@@ -68,6 +69,7 @@ function receber(mensagem: MensagemDaExtensao): void {
 ligarEvolucao();
 ligarAcoes();
 ligarComponentes();
+ligarDica();
 window.addEventListener("message", (event: MessageEvent<MensagemDaExtensao>) =>
   receber(event.data),
 );

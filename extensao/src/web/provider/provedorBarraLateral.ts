@@ -738,6 +738,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       abrirPorCodigo: () => void this.abrirDesafioPorCodigo(),
       refazer: (codigo) => void this.refazerDesafio(codigo),
       verHistorico: () => void this.verHistorico(),
+      verAtalhos: () =>
+        void vscode.commands.executeCommand("flexbox-trainer.verAtalhos"),
       copiarCodigo: () => void this.copiarCodigo(),
       abrirPainelGabarito: () => this.abrirPainelGabarito(),
       verExtensoesIa: () => void this.verExtensoesIa(),

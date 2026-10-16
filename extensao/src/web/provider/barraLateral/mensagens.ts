@@ -26,6 +26,7 @@ export type ControladorDaBarra = {
   abrirPorCodigo(): void;
   refazer(codigo?: string): void;
   verHistorico(): void;
+  verAtalhos(): void;
   copiarCodigo(): void;
   abrirPainelGabarito(): void;
   verExtensoesIa(): void;
@@ -98,6 +99,9 @@ export function rotearMensagem(
       return;
     case "verHistorico":
       barra.verHistorico();
+      return;
+    case "verAtalhos":
+      barra.verAtalhos();
       return;
     case "copiarCodigo":
       barra.copiarCodigo();

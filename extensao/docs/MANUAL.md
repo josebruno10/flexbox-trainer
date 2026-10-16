@@ -142,7 +142,7 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos**, os **Atalhos e Abreviações Emmet** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -177,6 +177,7 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
 | FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
 | FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
+| FlexBox Trainer: Atalhos e Abreviações Emmet | Abre, numa aba, os atalhos da extensão e do editor e as abreviações Emmet de HTML e CSS |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |
 | FlexBox Trainer: Criar index.html e style.css | Cria na pasta aberta os arquivos que faltarem |
 | FlexBox Trainer: Ver Extensões de IA Habilitadas | Mostra as extensões de IA que impedem começar e corrigir desafios e abre a página delas |
@@ -189,9 +190,20 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | Atalho | O que faz | Quando funciona |
 |---|---|---|
 | `Ctrl+Alt+D` | Gera um novo desafio | Com a sessão aberta |
+| `Ctrl+Alt+Shift+D` | Abre o desafio do dia | Com a sessão aberta |
 | `Ctrl+Alt+V` | Verifica a sua página; abre a barra lateral, se estiver fechada | Com um desafio |
+| `Ctrl+Alt+Shift+V` | Copia o resultado (a melhor nota e o tempo) | Com um desafio já verificado |
+| `Ctrl+Alt+A` | Abre o gabarito em uma aba | Com um desafio |
+| `Ctrl+Alt+Shift+N` | Refaz o desafio atual, do zero | Com um desafio |
+| `Ctrl+Alt+H` | Mostra o histórico de desafios | Com a sessão aberta |
 
-No Mac, use Control e Option no lugar de Ctrl e Alt. Para trocar um atalho, abra **Arquivo → Preferências → Atalhos de Teclado** e busque por "FlexBox Trainer".
+Para lembrar: **D** de desafio, **V** de verificar, **A** de aba, **N** de novo e **H** de histórico; com `Shift`, a variação (o desafio do dia, copiar o que foi verificado). Cada botão da barra lateral mostra o seu atalho, pequeno, embaixo do texto.
+
+### Dicas de digitação
+
+No fim da seção Desafio, uma **Dica** ensina um atalho do editor ou uma abreviação **Emmet**, que já vem no VS Code: por exemplo, no `style.css`, `jcc` e Tab viram `justify-content: center;`, e no `index.html`, `.linha>.item*3` e Tab criam uma `.linha` com três `.item` dentro. A dica muda a cada desafio novo. **Ver atalhos**, ao lado dela (ou **FlexBox Trainer: Atalhos e Abreviações Emmet**, no menu **⋯**), abre todos numa aba. As dicas são só sobre digitar mais rápido: nenhuma diz nada sobre o desafio.
+
+No Mac, use Control e Option no lugar de Ctrl e Alt. As teclas foram escolhidas para não tirar atalhos do VS Code nem do Ubuntu e para não atrapalhar quem digita `/`, `?` e `°` com AltGr no teclado ABNT2, no Windows. Para trocar um atalho, abra **Arquivo → Preferências → Atalhos de Teclado** e busque por "FlexBox Trainer".
 
 ## Configurações
 
@@ -244,7 +256,8 @@ Dentro de `extensao/`, o código fica em `src/web` (a extensão roda no extensio
 | `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado |
 | `provider/` | A barra lateral e a aba do gabarito. `provedorBarraLateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barraLateral/` |
 | `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
-| `telas/` | Roda na extensão: o HTML das três telas (barra lateral, aba do gabarito e entrada), com o CSS de cada parte em `telas/estilos/`, e os temas de cores |
+| `atalhos/` | Os atalhos da extensão (a mesma lista do `package.json`, conferida por um teste), os do editor e as abreviações Emmet, de onde saem os atalhos dos botões, a dica da barra lateral e a aba Atalhos. Cada abreviação foi conferida num VS Code de verdade; algumas que parecem óbvias (`fdc`, `fww`, `jcsa`) não fazem o esperado |
+| `telas/` | Roda na extensão: o HTML das quatro telas (barra lateral, aba do gabarito, aba Atalhos e entrada), com o CSS de cada parte em `telas/estilos/`, e os temas de cores |
 | `webview/` | Roda dentro das telas, no navegador da webview: `app.ts` (barra lateral), `painelGabarito.ts` (aba) e `loginPage.ts` (entrada) recebem as mensagens da extensão; as partes de cada um ficam em `webview/barra/` e `webview/aba/`, e o desenho do gabarito, a página do aluno e a medição das formas (`webview/formas/`) servem às duas |
 | `test/suite/` | Testes automatizados, com uma pasta por assunto grande (`auth/`, `barraLateral/`) |
 | `scripts/e2e/` | Teste de ponta a ponta da atualização, num VS Code de verdade |

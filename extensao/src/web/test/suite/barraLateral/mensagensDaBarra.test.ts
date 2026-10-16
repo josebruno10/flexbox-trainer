@@ -49,6 +49,21 @@ suite("Barra lateral: mensagens e comandos", () => {
     assert.strictEqual(provedor.nivelEscolhido(), "facil");
   });
 
+  test("o link Ver atalhos da dica abre a aba Atalhos", async () => {
+    const comandos: string[] = [];
+    vscode.commands.executeCommand = (async (comando: string) => {
+      comandos.push(comando);
+      return undefined;
+    }) as typeof vscode.commands.executeCommand;
+    const provedor = criarProvedorParaTeste([]);
+    const barra = criarBarraFalsa();
+    provedor.resolveWebviewView(barra.vista);
+
+    barra.receber({ type: "verAtalhos" });
+
+    assert.ok(comandos.includes("flexbox-trainer.verAtalhos"));
+  });
+
   test("o atalho de Verificar abre a barra e pede a verificação quando ela carrega", async () => {
     const comandos: string[] = [];
     vscode.commands.executeCommand = (async (comando: string) => {

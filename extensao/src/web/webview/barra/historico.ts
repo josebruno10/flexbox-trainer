@@ -9,6 +9,7 @@ import {
   linhaTentativas,
   listaHistorico,
   secaoHistorico,
+  textoDoBotao,
   valorMelhor,
   valorRecorde,
   valorTentativas,
@@ -70,7 +71,7 @@ export function renderizarHistoricoDesafios(
   secaoHistorico.hidden = historico.registros.length === 0;
   renderizarEvolucao(historico.evolucao ?? []);
   botaoVerHistorico.hidden = historico.total <= historico.registros.length;
-  botaoVerHistorico.textContent = `Ver todos (${historico.total})`;
+  textoDoBotao(botaoVerHistorico).textContent = `Ver todos (${historico.total})`;
   listaHistorico.replaceChildren(
     ...historico.registros.map((registro) => {
       const item = document.createElement("li");

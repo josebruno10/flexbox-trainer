@@ -7,6 +7,10 @@ As mudanças de cada versão do FlexBox Trainer.
 ### Desafios
 - O fácil ficou mais fácil: tira 65% dos componentes (os menores), e não mais a metade. Um desafio fácil típico passa de 15 para 11 componentes (um médio tem 21). Os códigos do nível fácil passam a gerar a imagem com menos componentes.
 
+### Atalhos
+- Novos atalhos: `Ctrl+Alt+Shift+D` (desafio do dia), `Ctrl+Alt+Shift+V` (copiar resultado), `Ctrl+Alt+A` (gabarito em uma aba), `Ctrl+Alt+Shift+N` (refazer o desafio) e `Ctrl+Alt+H` (histórico), além dos que já existiam. Cada botão da barra lateral mostra o seu atalho, pequeno, embaixo do texto.
+- Uma dica de digitação no fim da seção Desafio, trocada a cada desafio: um atalho do editor ou uma abreviação Emmet de HTML ou CSS (como `jcc` + Tab, que vira `justify-content: center;`). **Ver atalhos** abre uma aba com todos.
+
 ### Sessão e histórico
 - O gráfico da evolução aparece desde o primeiro dia de treino no nível, como um ponto; a linha surge no segundo dia.
 - Ao abrir o VS Code, a sessão guardada aparece na hora: a barra lateral não fica mais em "Validando a sessão…" esperando o servidor. A confirmação continua em segundo plano; se o servidor recusar a sessão, ela é encerrada como antes.

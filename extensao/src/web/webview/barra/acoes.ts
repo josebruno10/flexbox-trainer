@@ -18,6 +18,7 @@ import {
   botaoVerificar,
   botoesNivel,
   botoesVista,
+  textoDoBotao,
 } from "./elementos";
 import { estado } from "./estado";
 import { definirVista, marcarNivel } from "./quadro";
@@ -39,9 +40,9 @@ export function ligarAcoes(): void {
 
   botaoCopiarResultado.addEventListener("click", () => {
     vscode.postMessage({ type: "copiarResultado" });
-    botaoCopiarResultado.textContent = "Copiado";
+    textoDoBotao(botaoCopiarResultado).textContent = "Copiado";
     window.setTimeout(() => {
-      botaoCopiarResultado.textContent = "Copiar resultado";
+      textoDoBotao(botaoCopiarResultado).textContent = "Copiar resultado";
     }, 1500);
   });
 

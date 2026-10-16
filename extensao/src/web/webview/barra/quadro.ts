@@ -2,6 +2,7 @@ import { desenharGabarito, normalizarHex } from "../desenhoGabarito";
 import { NOME_DO_NIVEL } from "../../niveis";
 import type { Nivel } from "../../types";
 import { vscode } from "../api";
+import { proximaDica } from "./dica";
 import {
   criarAmostra,
   desenharDestaques,
@@ -94,8 +95,9 @@ export function desenharDesafio(desafio: DesafioRecebido): void {
   mostrarItensDoDesafio(true);
 
   if (mudouDesafio) {
-    // Um desafio novo começa mostrando o gabarito.
+    // Um desafio novo começa mostrando o gabarito, e com outra dica.
     definirVista("gabarito");
+    proximaDica();
     esquecerComponentes();
     mostrarMensagem("Nenhuma verificação.");
     esquecerVerificacao();

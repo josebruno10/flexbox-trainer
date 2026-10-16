@@ -4,6 +4,7 @@ import {
   BarraDeStatus,
   COMANDO_ABRIR_BARRA,
 } from "./provider/barraDeStatus";
+import { PainelAtalhos } from "./provider/painelAtalhos";
 import { ProvedorBarraLateralFlexBox } from "./provider/provedorBarraLateral";
 import { sincronizarComOutrosComputadores } from "./sincronizacao";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
@@ -164,6 +165,14 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
+  const painelAtalhos = new PainelAtalhos(context.extensionUri);
+  context.subscriptions.push(
+    painelAtalhos,
+    vscode.commands.registerCommand("flexbox-trainer.verAtalhos", () =>
+      painelAtalhos.mostrar(),
+    ),
+  );
+
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.verExtensoesIa", () =>
       provedor.verExtensoesIa(),
@@ -180,6 +189,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       if (evento.affectsConfiguration("flexboxTrainer.temaCores")) {
         provedor.aplicarCores();
+        painelAtalhos.aplicarCores();
       }
     }),
     vscode.commands.registerCommand("flexbox-trainer.escolherCores", () =>

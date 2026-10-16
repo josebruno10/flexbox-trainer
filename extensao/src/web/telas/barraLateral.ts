@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
+import { dicasDeDigitacao } from "../atalhos/dicas";
+import { teclasDoComando } from "../atalhos/extensao";
+import { Plataforma, plataformaAtual, teclasDaExtensao } from "../atalhos/plataforma";
 import { lerTemaCores, NomeTema } from "./temas";
 import { CREDITOS, escapeHtml } from "./comum";
+import { ESTILOS_BARRA_ATALHOS } from "./estilos/barraAtalhos";
 import { ESTILOS_BARRA_CONTA } from "./estilos/barraConta";
 import { ESTILOS_BARRA_DESAFIO } from "./estilos/barraDesafio";
 import { ESTILOS_BARRA_HISTORICO } from "./estilos/barraHistorico";
@@ -13,7 +17,14 @@ export function obterHtmlWebview(
   extensionUri: vscode.Uri,
   nomeUsuario?: string,
   tema: NomeTema = lerTemaCores(),
+  plataforma: Plataforma = plataformaAtual(),
 ): string {
+  // O atalho do comando, pequeno, embaixo do texto do botão.
+  const atalho = (comando: string) =>
+    `<small class="atalho">${teclasDaExtensao(teclasDoComando(`flexbox-trainer.${comando}`), plataforma)}</small>`;
+  const comAtalho = (texto: string, comando: string) =>
+    `<span class="rotulo-botao"><span class="texto-botao">${texto}</span>${atalho(comando)}</span>`;
+  const dicas = escapeHtml(JSON.stringify(dicasDeDigitacao(plataforma)));
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
   );
@@ -32,7 +43,7 @@ export function obterHtmlWebview(
     frame-src 'self' https: http: data:;
   ">
   <title>FlexBox Trainer</title>
-  <style>${estilosBase(webview, extensionUri, tema)}${ESTILOS_BARRA_CONTA}${ESTILOS_BARRA_DESAFIO}${ESTILOS_BARRA_RESULTADO}${ESTILOS_BARRA_HISTORICO}
+  <style>${estilosBase(webview, extensionUri, tema)}${ESTILOS_BARRA_CONTA}${ESTILOS_BARRA_DESAFIO}${ESTILOS_BARRA_RESULTADO}${ESTILOS_BARRA_HISTORICO}${ESTILOS_BARRA_ATALHOS}
   </style>
 </head>
 <body>
@@ -87,19 +98,26 @@ export function obterHtmlWebview(
         <button type="button" class="modo" data-nivel="medio" aria-pressed="true" title="Desafios novos no nível do meio">Médio</button>
         <button type="button" class="modo" data-nivel="dificil" aria-pressed="false" title="Desafios novos com todos os componentes">Difícil</button>
       </div>
-      <button id="botaoNovoDesafio" class="largo principal" title="Gerar novo desafio (Ctrl+Alt+D)"><span class="simbolo mais" aria-hidden="true">+</span>Gerar novo desafio</button>
-      <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">Desafio do dia</button>
+      <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>${comAtalho("Gerar novo desafio", "novoDesafio")}</button>
+      <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">${comAtalho("Desafio do dia", "desafioDoDia")}</button>
       <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 6 dígitos, como o que o professor passar">Abrir por código</button>
-      <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>Abrir em uma aba</button>
+      <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>${comAtalho("Abrir em uma aba", "abrirGabarito")}</button>
       <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
-      <button id="botaoRefazer" class="encerrar" title="Começa este mesmo desafio de novo, do zero" hidden>↻ Refazer</button>
+      <button id="botaoRefazer" class="encerrar" title="Começa este mesmo desafio de novo, do zero" hidden>${comAtalho("↻ Refazer", "refazerDesafio")}</button>
+    </div>
+    <div class="dica" id="dicaDigitacao" data-dicas="${dicas}" hidden>
+      <div class="cabecalho-dica">
+        <span class="rotulo">Dica</span>
+        <button type="button" id="botaoVerAtalhos" class="discreto" title="Os atalhos da extensão e do editor e as abreviações Emmet, numa aba">Ver atalhos</button>
+      </div>
+      <p id="textoDica"></p>
     </div>
   </section>
 
   <section class="bloco surge" style="--ordem: 2" aria-label="Resultado">
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">02</span> / Resultado</h2>
-      <button id="botaoCopiarResultado" class="discreto" title="Copia a melhor nota deste desafio, para colar no grupo da turma" hidden>Copiar resultado</button>
+      <button id="botaoCopiarResultado" class="discreto" title="Copia a melhor nota deste desafio, para colar no grupo da turma" hidden>${comAtalho("Copiar resultado", "copiarResultado")}</button>
     </div>
     <div id="avisoArquivos" hidden>
       <p class="falta" id="textoArquivos"></p>
@@ -113,7 +131,7 @@ export function obterHtmlWebview(
       aria-hidden="true"
     ></div>
     <div class="acoes">
-      <button id="botaoVerificar" class="largo principal" title="Verificar (Ctrl+Alt+V)" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>Verificar</button>
+      <button id="botaoVerificar" class="largo principal" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>${comAtalho("Verificar", "verificar")}</button>
     </div>
     <div class="nota resultado" id="notaResultado" hidden>
       <strong class="valor-nota" id="valorNota"></strong>
@@ -130,7 +148,7 @@ export function obterHtmlWebview(
   <section class="bloco surge" style="--ordem: 3" aria-label="Histórico" id="secaoHistorico" hidden>
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">03</span> / Histórico</h2>
-      <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>Ver todos</button>
+      <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>${comAtalho("Ver todos", "verHistorico")}</button>
     </div>
     <figure class="evolucao" id="evolucao" hidden>
       <figcaption><span id="tituloEvolucao">Melhor nota</span><span class="valor" id="resumoEvolucao"></span></figcaption>

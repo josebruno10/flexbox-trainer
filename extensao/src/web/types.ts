@@ -141,6 +141,7 @@ export type MensagemRecebidaBarraLateral =
   | { type: "copiarResultado" }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }
+  | { type: "verAtalhos" }
   | { type: "copiarCodigo" }
   | { type: "cadastrarNoTorneio" }
   | { type: "logout" };

@@ -165,3 +165,13 @@ export const inicioEvolucao = document.getElementById(
   "inicioEvolucao",
 ) as HTMLElement;
 export const fimEvolucao = document.getElementById("fimEvolucao") as HTMLElement;
+export const dicaDigitacao = document.getElementById("dicaDigitacao") as HTMLElement;
+export const textoDica = document.getElementById("textoDica") as HTMLElement;
+export const botaoVerAtalhos = document.getElementById(
+  "botaoVerAtalhos",
+) as HTMLButtonElement;
+
+/** O texto do botão, sem o atalho que fica embaixo (ou ao lado) dele. */
+export function textoDoBotao(botao: HTMLElement): HTMLElement {
+  return botao.querySelector<HTMLElement>(".texto-botao") ?? botao;
+}
