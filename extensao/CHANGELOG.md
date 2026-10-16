@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.6.0] - 2026-10-15
 
 ### Desafios
 - O fácil ficou mais fácil: tira 65% dos componentes (os menores), e não mais a metade. Um desafio fácil típico passa de 15 para 11 componentes (um médio tem 21). Os códigos do nível fácil passam a gerar a imagem com menos componentes.
