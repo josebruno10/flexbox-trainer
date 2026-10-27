@@ -37,6 +37,10 @@ const webExtensionConfig = {
       // see https://webpack.js.org/configuration/resolve/#resolvefallback
       // for the list of Node.js core module polyfills.
       assert: require.resolve("assert"),
+      // O servidor local do login (auth/retornoLocal.ts) só existe no
+      // desktop; no navegador, o http fica vazio e o login volta pelo
+      // vscode://.
+      http: false,
     },
   },
   module: {

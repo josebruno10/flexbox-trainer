@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { AuthService } from "../../../auth/authService";
+import { AuthService, OpcoesAuthService } from "../../../auth/authService";
 
 // O que os testes do AuthService usam: contexto e configuração falsos,
 // respostas do servidor e o começo do login pelo site.
@@ -87,6 +87,11 @@ export function perfilServidor(
     ...sobrescritas,
   };
 }
+
+/** Sem o servidor local: o login volta pelo vscode://, como no navegador. */
+export const SEM_RETORNO_LOCAL: OpcoesAuthService = {
+  abrirRetornoLocal: async () => undefined,
+};
 
 let ultimosParametrosAbertos: URLSearchParams | undefined;
 

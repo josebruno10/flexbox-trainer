@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AuthService } from "./auth/authService";
+import { registrarVoltaDoLogin } from "./auth/voltaDoLogin";
 import {
   BarraDeStatus,
   COMANDO_ABRIR_BARRA,
@@ -38,32 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(authService, barraDeStatus);
-
-  context.subscriptions.push(
-    vscode.window.registerUriHandler({
-      handleUri: async (uri: vscode.Uri) => {
-        const caminhoCallback = uri.path.replace(/\/+$/, "");
-        if (
-          uri.authority !== context.extension.id ||
-          caminhoCallback !== "/auth/callback"
-        ) {
-          return;
-        }
-
-        try {
-          await authService.processarCallback(uri);
-          // A barra lateral aberta já mostra quem entrou.
-          await vscode.commands.executeCommand(
-            COMANDO_ABRIR_BARRA,
-          );
-        } catch (error) {
-          const mensagem =
-            error instanceof Error ? error.message : "Falha na autenticação.";
-          void vscode.window.showErrorMessage("Erro no login: " + mensagem);
-        }
-      },
-    }),
-  );
+  registrarVoltaDoLogin(context, authService);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(

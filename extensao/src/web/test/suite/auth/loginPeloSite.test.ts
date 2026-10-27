@@ -10,15 +10,18 @@ import {
   responderUsuarioDoServidor,
   respostaJson,
   restaurarAoFim,
+  SEM_RETORNO_LOCAL,
   ultimosParametros,
 } from "./auxiliares";
 
-// O login do Google, pelo site de autenticação e o retorno dele à extensão.
+// O login do Google, pelo site de autenticação e o retorno dele à extensão
+// pelo endereço vscode://, como no VS Code pelo navegador. A volta pelo
+// servidor local, do desktop, está em loginPeloRetornoLocal.test.ts.
 suite("AuthService: login pelo site", () => {
   restaurarAoFim();
 
   test("envia state seguro e configuração ao site de autenticação", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
 
     await iniciarFluxoGoogle(authService);
 
@@ -27,7 +30,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("preserva o callback do vscode.dev, que contém ? e &", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     await iniciarFluxoGoogle(
       authService,
       "https://vscode.dev/callback?vscode-reqid=7&vscode-scheme=vscode&vscode-path=%2Fauth%2Fcallback",
@@ -45,7 +48,7 @@ suite("AuthService: login pelo site", () => {
 
   test("aceita server_token no fragmento, valida state e consulta auth/me", async () => {
     const storage: MockStorage = {};
-    const authService = new AuthService(criarContextoFalso(storage));
+    const authService = new AuthService(criarContextoFalso(storage), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     let loginChamado = false;
 
@@ -89,7 +92,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("identifica o aluno pelo e-mail quando o /auth/me traz o ID do provedor", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     const consultas: string[] = [];
 
@@ -130,7 +133,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("mantém o ID do /auth/me quando o e-mail não está cadastrado no servidor", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     const consultas: string[] = [];
 
@@ -170,7 +173,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("não conclui o login quando a busca pelo e-mail falha por outro motivo", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
 
     globalThis.fetch = async (input: RequestInfo | URL) => {
@@ -197,7 +200,7 @@ suite("AuthService: login pelo site", () => {
 
   test("troca token Gmail no POST /login e nunca persiste a credencial do provedor", async () => {
     const storage: MockStorage = {};
-    const authService = new AuthService(criarContextoFalso(storage));
+    const authService = new AuthService(criarContextoFalso(storage), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
 
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -234,7 +237,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("rejeita state diferente antes de chamar o servidor", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     await iniciarFluxoGoogle(authService);
     let fetchChamado = false;
     globalThis.fetch = async () => {
@@ -256,7 +259,7 @@ suite("AuthService: login pelo site", () => {
   });
 
   test("rejeita token recebido na query para não expor credenciais na URL", async () => {
-    const authService = new AuthService(criarContextoFalso());
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     let fetchChamado = false;
     globalThis.fetch = async () => {
@@ -279,7 +282,7 @@ suite("AuthService: login pelo site", () => {
 
   test("não cria sessão quando /login omite o token do servidor", async () => {
     const storage: MockStorage = {};
-    const authService = new AuthService(criarContextoFalso(storage));
+    const authService = new AuthService(criarContextoFalso(storage), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     globalThis.fetch = async () => respostaJson({ usuario: perfilServidor() });
 
@@ -298,7 +301,7 @@ suite("AuthService: login pelo site", () => {
 
   test("remember=false mantém a sessão somente em memória", async () => {
     const storage: MockStorage = {};
-    const authService = new AuthService(criarContextoFalso(storage));
+    const authService = new AuthService(criarContextoFalso(storage), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
       assertBearer(init, "token-temporario");
@@ -314,5 +317,52 @@ suite("AuthService: login pelo site", () => {
     assert.strictEqual(storage.valor, undefined);
     assert.strictEqual(authService.getAccessToken(), "token-temporario");
     assert.strictEqual(authService.getSessaoAtual()?.remember, false);
+  });
+
+  test("um login aberto enquanto a sessão guardada é lida não é cancelado", async () => {
+    // O comando de login também liga a extensão: a leitura da sessão
+    // guardada (inicializar) termina depois de o login começar.
+    const contexto = criarContextoFalso();
+    let entregarSessao: (valor: undefined) => void = () => undefined;
+    contexto.secrets.get = () =>
+      new Promise((pronto) => {
+        entregarSessao = pronto;
+      });
+    const authService = new AuthService(contexto, SEM_RETORNO_LOCAL);
+    const leitura = authService.inicializar();
+
+    const state = await iniciarFluxoGoogle(authService);
+    entregarSessao(undefined);
+    await leitura;
+
+    assert.strictEqual(authService.getEstadoAtual().status, "checking");
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      return responderUsuarioDoServidor(url) ?? respostaJson(perfilServidor());
+    };
+    await authService.processarCallback(
+      vscode.Uri.parse(
+        `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&state=${state}`,
+      ),
+    );
+    assert.strictEqual(authService.isAutenticado(), true);
+    authService.dispose();
+  });
+
+  test("sair cancela o login que estava aberto", async () => {
+    const authService = new AuthService(criarContextoFalso(), SEM_RETORNO_LOCAL);
+    const state = await iniciarFluxoGoogle(authService);
+
+    await authService.logout();
+
+    await assert.rejects(
+      authService.processarCallback(
+        vscode.Uri.parse(
+          `vscode://flexbox-trainer.test/auth/callback#server_token=token-servidor&state=${state}`,
+        ),
+      ),
+      /não iniciado por esta extensão/,
+    );
+    authService.dispose();
   });
 });

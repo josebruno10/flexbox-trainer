@@ -68,6 +68,8 @@ Na primeira vez que a extensão roda, ela abre o **guia de primeiros passos**, q
 
 1. Clique no ícone do **FlexBox Trainer** na barra de atividades, à esquerda.
 2. Entre com **Google**, **GitHub** ou **Microsoft**. Use a conta cujo e-mail está cadastrado no torneio. Se o e-mail não estiver cadastrado, a barra lateral avisa em amarelo e a correção não funciona.
+
+   Com o Google, o navegador abre direto na página de login; escolha a conta e, no fim, o VS Code volta sozinho para a frente, já com a sua conta. A aba do navegador mostra **Pronto!** e pode ser fechada. No VS Code pelo navegador, a volta é pelo endereço `vscode://`, e o navegador pede para abrir o VS Code.
 3. Clique em **Gerar novo desafio**. Se a pasta aberta ainda não tiver `index.html` e `style.css`, a extensão os cria com uma base mínima e os abre. Sem pasta aberta, ela oferece **Abrir pasta**.
 4. Na primeira vez que clicar em **Verificar**, a extensão pergunta se pode criar a sua **dinâmica de treino**: um espaço só seu no servidor, onde ela guarda a imagem do desafio para corrigir. Clique em **Criar dinâmica de treino** e confirme o código sugerido. Isso acontece uma única vez.
 
@@ -253,7 +255,7 @@ Dentro de `extensao/`, o código fica em `src/web` (a extensão roda no extensio
 
 | Pasta | Conteúdo |
 |---|---|
-| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado |
+| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado. No desktop, o login com Google passa por um servidor só da máquina (`retornoLocal.ts`, em 127.0.0.1): o VS Code abre um endereço local, que ele não pede para confirmar, e o site devolve o login a esse servidor num formulário (POST), para o token não ficar no histórico do navegador |
 | `provider/` | A barra lateral e a aba do gabarito. `provedorBarraLateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barraLateral/` |
 | `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
 | `atalhos/` | Os atalhos da extensão (a mesma lista do `package.json`, conferida por um teste), os do editor e as abreviações Emmet, de onde saem os atalhos dos botões, a dica da barra lateral e a aba Atalhos. Cada abreviação foi conferida num VS Code de verdade; algumas que parecem óbvias (`fdc`, `fww`, `jcsa`) não fazem o esperado |

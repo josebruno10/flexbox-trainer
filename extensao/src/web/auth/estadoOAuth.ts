@@ -44,6 +44,11 @@ export class EstadoOAuth {
     this.limpar();
   }
 
+  /** Se há um login esperando a volta do site. */
+  public emAndamento(): boolean {
+    return this.pendente !== undefined;
+  }
+
   public limpar(): void {
     if (this.timeout) {
       clearTimeout(this.timeout);

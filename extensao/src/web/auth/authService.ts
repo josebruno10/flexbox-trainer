@@ -14,12 +14,14 @@ import {
   carregarOpcoesCadastro,
 } from "./cadastroTorneio";
 import { EstadoOAuth } from "./estadoOAuth";
-import {
-  ErroApiAutenticacao,
-  lerUrlBaseApiAutenticacao,
-  validarUrlHttps,
-} from "./http";
+import { ErroApiAutenticacao, validarUrlHttps } from "./http";
 import { lerBooleano } from "./leitura";
+import {
+  abrirNoNavegador,
+  abrirRetornoLocalSePuder,
+  montarEnderecoDoSite,
+  prepararVolta,
+} from "./loginPeloSite";
 import {
   ProvedorVSCode,
   buscarPerfilProvedor,
@@ -27,13 +29,21 @@ import {
 } from "./perfilProvedor";
 import { PerfilServidor, extrairExpiracao } from "./respostasServidor";
 import {
+  RetornoDoSite,
   lerParametrosCallback,
-  normalizarProvedor,
-  tokensDoRetorno,
+  loginDoRetorno,
 } from "./retornoDoSite";
+import type { ResultadoDoLogin, RetornoLocal } from "./retornoLocal";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
 export type { DadosCadastro, OpcoesCadastro } from "./cadastroTorneio";
+export type { ResultadoDoLogin } from "./retornoLocal";
+
+export type OpcoesAuthService = {
+  // O servidor local que recebe o login com Google no desktop; os testes
+  // trocam por outro, ou por nenhum, para testar a volta pelo vscode://.
+  abrirRetornoLocal?: () => Promise<RetornoLocal | undefined>;
+};
 
 // A sessão do aluno no servidor do torneio: o login (pelo site, para o
 // Google, ou pelas contas do VS Code, para o GitHub e a Microsoft), a sessão
@@ -49,16 +59,28 @@ export class AuthService implements vscode.Disposable {
   private sessaoAtual?: SessaoAutenticacao;
   // Preenchido quando o e-mail do login não está cadastrado no torneio.
   private avisoCadastro?: string;
+  private readonly abrirRetornoLocal: () => Promise<RetornoLocal | undefined>;
+  // O servidor que espera o navegador voltar do login com Google.
+  private retornoLocal?: RetornoLocal;
+  private readonly voltaDoNavegador = new vscode.EventEmitter<ResultadoDoLogin>();
 
   public readonly onDidChangeEstado = this.estadoMudou.event;
+  /** O login com Google voltou do navegador pelo servidor local. */
+  public readonly onDidVoltarDoNavegador = this.voltaDoNavegador.event;
 
-  public constructor(private readonly context: vscode.ExtensionContext) {
+  public constructor(
+    private readonly context: vscode.ExtensionContext,
+    opcoes: OpcoesAuthService = {},
+  ) {
     this.tokenManager = new TokenManager(context.secrets);
+    this.abrirRetornoLocal = opcoes.abrirRetornoLocal ?? abrirRetornoLocalSePuder;
   }
 
   public dispose(): void {
     this.estadoOAuth.limpar();
+    this.retornoLocal?.fechar();
     this.estadoMudou.dispose();
+    this.voltaDoNavegador.dispose();
   }
 
   public getEstadoAtual(): EstadoAutenticacao {
@@ -94,6 +116,12 @@ export class AuthService implements vscode.Disposable {
       const sessao = await this.tokenManager.carregarSessao();
 
       if (!this.sessaoEhValidaLocalmente(sessao)) {
+        // O comando de login também liga a extensão: um login que começou
+        // enquanto a sessão era lida continua esperando o navegador.
+        if (this.estadoOAuth.emAndamento()) {
+          await this.tokenManager.limparSessao();
+          return;
+        }
         await this.encerrarSessao();
         return;
       }
@@ -153,33 +181,25 @@ export class AuthService implements vscode.Disposable {
     }
 
     const url = validarUrlHttps(urlSite, "site de autenticação");
-    const callbackBase = vscode.Uri.parse(
-      `${vscode.env.uriScheme}://${this.context.extension.id}/auth/callback`,
+    const { callback, retornoLocal } = await prepararVolta(
+      this.context.extension.id,
+      this.abrirRetornoLocal,
     );
-    const callbackExterno = await vscode.env.asExternalUri(callbackBase);
-    const estado = this.estadoOAuth.criar(() =>
+    // Um login novo substitui o que ainda esperava o navegador, inclusive o
+    // de um segundo clique enquanto este se preparava.
+    this.retornoLocal?.fechar();
+    this.retornoLocal = retornoLocal;
+    const estado = this.estadoOAuth.criar(() => {
+      retornoLocal?.fechar();
       this.restaurarEstadoAposFalhaOAuth(
         "O login expirou. Inicie o processo novamente.",
-      ),
-    );
-
-    // toString() codificaria = e & da query do callback do vscode.dev.
-    url.searchParams.set("callback", callbackExterno.toString(true));
-    url.searchParams.set("state", estado);
-    // O site devolve o modo no retorno; só existe o login.
-    url.searchParams.set("mode", "login");
-    url.searchParams.set("apiBaseUrl", lerUrlBaseApiAutenticacao());
-
-    const googleClientId = configuracao
-      .get<string>("googleClientId", "")
-      .trim();
-
-    if (googleClientId) {
-      // O site mais novo usa clientId; googleClientId mantém compatibilidade
-      // com a versão anterior publicada pelo projeto.
-      url.searchParams.set("clientId", googleClientId);
-      url.searchParams.set("googleClientId", googleClientId);
-    }
+      );
+    });
+    montarEnderecoDoSite(url, {
+      callback,
+      estado,
+      googleClientId: configuracao.get<string>("googleClientId", "").trim(),
+    });
 
     this.definirEstado({
       status: "checking",
@@ -187,24 +207,50 @@ export class AuthService implements vscode.Disposable {
     });
 
     try {
-      // Um Uri passa por encodeURI(uri.toString(true)) antes de chegar ao
-      // navegador, o que codifica os parâmetros em dobro (https%253A...) e faz
-      // o site recusar apiBaseUrl e callback. Uma string é aberta como está,
-      // inclusive quando o callback do vscode.dev contém ? e &.
-      const abriu = await vscode.env.openExternal(
-        url.toString() as unknown as vscode.Uri,
-      );
-
-      if (!abriu) {
+      if (!(await abrirNoNavegador(url, estado, retornoLocal))) {
         throw new Error("Não foi possível abrir o login do Google.");
       }
     } catch (error) {
+      retornoLocal?.fechar();
       this.estadoOAuth.limpar();
       this.restaurarEstadoAposFalhaOAuth(
         "Não foi possível abrir o login do Google.",
       );
       throw error;
     }
+
+    if (retornoLocal) {
+      void this.aguardarRetornoLocal(retornoLocal);
+    }
+  }
+
+  // A volta do navegador pelo servidor local: confere e salva a sessão,
+  // mostra o resultado na página e avisa a extensão, que traz o VS Code para
+  // a frente.
+  private async aguardarRetornoLocal(retornoLocal: RetornoLocal): Promise<void> {
+    let retorno: RetornoDoSite;
+    try {
+      retorno = await retornoLocal.recebido;
+    } catch {
+      // Fechado antes: o login expirou, foi substituído ou a extensão parou.
+      return;
+    }
+
+    let resultado: ResultadoDoLogin;
+    try {
+      await this.processarCallback(retorno);
+      resultado = { ok: true, nome: this.sessaoAtual?.displayName };
+    } catch (error) {
+      resultado = {
+        ok: false,
+        mensagem: error instanceof Error ? error.message : "Falha na autenticação.",
+      };
+    }
+    retornoLocal.concluir(resultado);
+    if (this.retornoLocal === retornoLocal) {
+      this.retornoLocal = undefined;
+    }
+    this.voltaDoNavegador.fire(resultado);
   }
 
   public async loginComProvedorVSCode(provedor: ProvedorVSCode): Promise<void> {
@@ -274,41 +320,14 @@ export class AuthService implements vscode.Disposable {
     }
   }
 
-  public async processarCallback(uri: vscode.Uri): Promise<void> {
+  public async processarCallback(uri: RetornoDoSite): Promise<void> {
     try {
       const parametros = lerParametrosCallback(uri);
       this.estadoOAuth.consumir(parametros.get("state") || "");
-
-      const erroProvedor = (parametros.get("error") || "").trim();
-      if (erroProvedor) {
-        throw new Error(`O provedor recusou o login: ${erroProvedor}.`);
-      }
-
-      const provedor = normalizarProvedor(
-        parametros.get("provider") || parametros.get("provedor") || "gmail",
+      const { provedor, tokenServidor, respostaLogin } = await loginDoRetorno(
+        uri,
+        parametros,
       );
-      const { tokenServidor: tokenServidorRecebido, tokenProvedor } =
-        tokensDoRetorno(uri);
-
-      let tokenServidor: string;
-      let respostaLogin: unknown = {};
-
-      if (tokenServidorRecebido) {
-        tokenServidor = tokenServidorRecebido;
-      } else {
-        if (!tokenProvedor) {
-          throw new Error(
-            "O site de autenticação não devolveu um token válido.",
-          );
-        }
-
-        const resultado = await trocarTokenProvedorPorTokenServidor(
-          provedor,
-          tokenProvedor,
-        );
-        tokenServidor = resultado.serverToken;
-        respostaLogin = resultado.resposta;
-      }
 
       this.definirEstado({
         status: "checking",
@@ -341,6 +360,9 @@ export class AuthService implements vscode.Disposable {
 
   public async logout(): Promise<void> {
     const tokenServidor = this.sessaoAtual?.serverToken;
+    // Sair também desiste de um login que esperava o navegador.
+    this.estadoOAuth.limpar();
+    this.retornoLocal?.fechar();
 
     try {
       if (tokenServidor) {
@@ -543,8 +565,9 @@ export class AuthService implements vscode.Disposable {
     });
   }
 
+  // Não cancela um login em andamento: a sessão pode acabar (expirar, ser
+  // recusada) enquanto o aluno entra de novo pelo navegador.
   private async encerrarSessao(mensagem?: string): Promise<void> {
-    this.estadoOAuth.limpar();
     await this.tokenManager.limparSessao();
     this.sessaoAtual = undefined;
     this.avisoCadastro = undefined;

@@ -10,6 +10,7 @@ import {
   responderUsuarioDoServidor,
   respostaJson,
   restaurarAoFim,
+  SEM_RETORNO_LOCAL,
 } from "./auxiliares";
 
 function sessaoGuardada(): Record<string, unknown> {
@@ -245,7 +246,7 @@ suite("AuthService: sessão guardada", () => {
 
   test("invalidarSessao remove token e metadados", async () => {
     const storage: MockStorage = {};
-    const authService = new AuthService(criarContextoFalso(storage));
+    const authService = new AuthService(criarContextoFalso(storage), SEM_RETORNO_LOCAL);
     const state = await iniciarFluxoGoogle(authService);
     globalThis.fetch = async () => respostaJson(perfilServidor());
     await authService.processarCallback(
