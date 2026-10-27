@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.6.1] - 2026-10-27
 
 ### Login
 - Entrar com Google ficou direto: o VS Code abre o navegador sem o aviso "Deseja que Code abra o site externo?", que mostrava o endereço inteiro e ficava esticado. No fim do login, o VS Code volta sozinho para a frente, sem o navegador pedir para abrir o VS Code; a aba mostra **Pronto!**. No VS Code pelo navegador, a volta continua pelo `vscode://`.
