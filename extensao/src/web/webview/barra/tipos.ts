@@ -78,7 +78,6 @@ export type EstadoAutenticacaoRecebido = {
   email?: string;
   avatarUrl?: string;
   aviso?: string;
-  podeCadastrar?: boolean;
 };
 
 export type ExtensaoIaRecebida = { id: string; nome: string };

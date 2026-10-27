@@ -141,13 +141,14 @@ export async function buscarPerfilAutenticado(
           `time ${perfil.teamId ?? "nenhum"}.`,
   );
   // Sem cadastro, o servidor aceita o login mas devolve o ID do provedor,
-  // que não existe no torneio; a correção não funcionaria.
+  // que não existe no torneio; a correção não funcionaria. A extensão não
+  // cadastra ninguém: só corrige quem já está no Frontend Teams Cup.
   const avisoCadastro = emailCadastrado
     ? undefined
     : (candidatos.length > 1
-        ? `Nenhum e-mail desta conta (${candidatos.join(", ")}) está cadastrado no torneio.`
-        : `O e-mail ${perfil.email} não está cadastrado no torneio.`) +
-      " Saia e entre com a conta cadastrada (de preferência pelo Google) para poder corrigir.";
+        ? `Nenhum e-mail desta conta (${candidatos.join(", ")}) está no torneio`
+        : `O e-mail ${perfil.email} não está no torneio`) +
+      ", e só quem está consegue corrigir. Se você se inscreveu, saia e entre com a conta do e-mail inscrito.";
 
   if (!perfil.userId) {
     throw new Error("O servidor não informou o ID do usuário.");

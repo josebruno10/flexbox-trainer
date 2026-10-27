@@ -55,9 +55,6 @@ export function obterHtmlWebview(
     <button id="botaoSair" class="discreto">Sair</button>
   </header>
 
-  <div class="acoes" id="cadastroTorneio" hidden>
-    <button id="botaoCadastrar" class="largo secundario">Cadastrar no torneio</button>
-  </div>
 
   <div class="aviso-ia" id="avisoIa" role="alert" hidden>
     <p class="rotulo">IA habilitada</p>

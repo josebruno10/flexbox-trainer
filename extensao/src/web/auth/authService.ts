@@ -7,12 +7,6 @@ import {
   encerrarNoServidor,
   trocarTokenProvedorPorTokenServidor,
 } from "./apiTorneio";
-import {
-  DadosCadastro,
-  OpcoesCadastro,
-  cadastrarAluno,
-  carregarOpcoesCadastro,
-} from "./cadastroTorneio";
 import { EstadoOAuth } from "./estadoOAuth";
 import { ErroApiAutenticacao, validarUrlHttps } from "./http";
 import { lerBooleano } from "./leitura";
@@ -36,7 +30,6 @@ import {
 import type { ResultadoDoLogin, RetornoLocal } from "./retornoLocal";
 import { SessaoAutenticacao, TokenManager } from "./tokenManager";
 
-export type { DadosCadastro, OpcoesCadastro } from "./cadastroTorneio";
 export type { ResultadoDoLogin } from "./retornoLocal";
 
 export type OpcoesAuthService = {
@@ -375,66 +368,8 @@ export class AuthService implements vscode.Disposable {
     }
   }
 
-  /**
-   * O pré-cadastro cria o aluno no servidor da competição; fica desligado
-   * até as rotas serem confirmadas com a organização do torneio.
-   */
-  public preCadastroLigado(): boolean {
-    return (
-      vscode.workspace
-        .getConfiguration("flexboxTrainer")
-        .get<boolean>("preCadastro", false) === true
-    );
-  }
-
-  /** Republica a sessão quando a configuração do pré-cadastro muda. */
-  public atualizarOfertaCadastro(): void {
-    if (this.isAutenticado() && this.sessaoAtual) {
-      this.publicarSessaoAutenticada(this.sessaoAtual);
-    }
-  }
-
-  public podeCadastrarNoTorneio(): boolean {
-    return Boolean(
-      this.isAutenticado() && this.avisoCadastro && this.preCadastroLigado(),
-    );
-  }
-
-  /** Sedes do evento e níveis do torneio, para o formulário de cadastro. */
-  public async carregarOpcoesCadastro(): Promise<OpcoesCadastro> {
-    return carregarOpcoesCadastro(this.exigirTokenParaCadastro());
-  }
-
-  /**
-   * Cadastra no torneio o e-mail da sessão, põe o aluno no time genérico se
-   * ele ficar sem time e procura o aluno de novo, para a correção funcionar.
-   */
-  public async cadastrarNoTorneio(dados: DadosCadastro): Promise<void> {
-    if (!this.podeCadastrarNoTorneio()) {
-      throw new Error("O cadastro no torneio não está disponível nesta sessão.");
-    }
-
-    const token = this.exigirTokenParaCadastro();
-    await cadastrarAluno(token, this.sessaoAtual as SessaoAutenticacao, dados);
-    await this.validarSessaoComApi();
-
-    if (this.avisoCadastro) {
-      throw new Error(
-        "O cadastro foi enviado, mas o servidor ainda não encontra o aluno. Saia e entre de novo.",
-      );
-    }
-  }
-
   public async invalidarSessao(mensagem: string): Promise<void> {
     await this.encerrarSessao(mensagem);
-  }
-
-  private exigirTokenParaCadastro(): string {
-    const token = this.getAccessToken();
-    if (!token) {
-      throw new Error("Entre antes de se cadastrar no torneio.");
-    }
-    return token;
   }
 
   private sessaoEhValidaLocalmente(
@@ -561,7 +496,6 @@ export class AuthService implements vscode.Disposable {
       avatarUrl: sessao.avatarUrl,
       message: `Conectado como ${sessao.displayName}.`,
       aviso: this.avisoCadastro,
-      podeCadastrar: Boolean(this.avisoCadastro && this.preCadastroLigado()),
     });
   }
 

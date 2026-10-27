@@ -11,12 +11,6 @@ export const avatarFallback = document.getElementById(
   "avatarFallback",
 ) as HTMLDivElement;
 export const botaoSair = document.getElementById("botaoSair");
-export const cadastroTorneio = document.getElementById(
-  "cadastroTorneio",
-) as HTMLDivElement;
-export const botaoCadastrar = document.getElementById(
-  "botaoCadastrar",
-) as HTMLButtonElement;
 export const avisoIa = document.getElementById("avisoIa") as HTMLDivElement;
 export const textoAvisoIa = document.getElementById(
   "textoAvisoIa",

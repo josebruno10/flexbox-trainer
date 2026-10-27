@@ -165,8 +165,14 @@ suite("AuthService: login pelo site", () => {
     assert.strictEqual(authService.getEstadoAtual().status, "authenticated");
     assert.match(
       authService.getEstadoAtual().aviso ?? "",
-      /aluno@example\.com não está cadastrado no torneio/,
+      /aluno@example\.com não está no torneio/,
     );
+    // A extensão não cadastra: o aviso diz que sem o torneio não há correção.
+    assert.match(
+      authService.getEstadoAtual().aviso ?? "",
+      /só quem está consegue corrigir/,
+    );
+    assert.strictEqual("podeCadastrar" in authService.getEstadoAtual(), false);
 
     await authService.invalidarSessao("Saiu.");
     assert.strictEqual(authService.getEstadoAtual().aviso, undefined);

@@ -2,6 +2,12 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Conta
+- Quem entra com um e-mail que não está no torneio vê um aviso mais claro: só quem está no Frontend Teams Cup consegue corrigir; quem se inscreveu deve entrar com a conta do e-mail inscrito.
+- Sai o pré-cadastro no torneio (a configuração `flexboxTrainer.preCadastro`, que nunca foi ligada, e o botão **Cadastrar no torneio**): a organização não vai liberar as rotas de cadastro, e a extensão não cadastra ninguém.
+
 ## [0.6.1] - 2026-10-27
 
 ### Login

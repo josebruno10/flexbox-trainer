@@ -67,9 +67,8 @@ export type EstadoAutenticacao = {
   displayName?: string;
   email?: string;
   avatarUrl?: string;
+  // O e-mail da conta não está no torneio: entra, mas não corrige.
   aviso?: string;
-  // O e-mail não está no torneio e o pré-cadastro está ligado.
-  podeCadastrar?: boolean;
 };
 
 export type ResumoWorkspace = {
@@ -143,5 +142,4 @@ export type MensagemRecebidaBarraLateral =
   | { type: "verHistorico" }
   | { type: "verAtalhos" }
   | { type: "copiarCodigo" }
-  | { type: "cadastrarNoTorneio" }
   | { type: "logout" };

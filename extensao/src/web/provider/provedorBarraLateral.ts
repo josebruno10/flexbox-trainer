@@ -45,7 +45,6 @@ import {
   confirmarLimpeza,
   criarArquivosComAviso,
 } from "./barraLateral/arquivosDeTreino";
-import { cadastrarNoTorneio } from "./barraLateral/cadastro";
 import { pedirCodigo } from "./barraLateral/codigos";
 import { sessaoRecusada, testarConexao } from "./barraLateral/conexao";
 import { Corretor } from "./barraLateral/corretor";
@@ -338,10 +337,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.motivoInvalidacao = motivo;
     this.avaliacaoAtual = resultadoInvalidado(motivo);
     log.info(`Desafio ${this.desafioAtual.challengeId} invalidado: ${motivo}`);
-  }
-
-  public cadastrarNoTorneio(): Promise<void> {
-    return cadastrarNoTorneio(this.authService);
   }
 
   /**
@@ -744,7 +739,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       abrirPainelGabarito: () => this.abrirPainelGabarito(),
       verExtensoesIa: () => void this.verExtensoesIa(),
       criarArquivos: () => void this.criarArquivosDeTreino(),
-      cadastrarNoTorneio: () => void this.cadastrarNoTorneio(),
       encerrarDesafio: () => this.encerrarDesafioAtual(),
       atualizarPreview: () => void this.atualizarPreviewWorkspace(),
       verificar: (challengeId, formas, verificacaoId) =>

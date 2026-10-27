@@ -3,7 +3,6 @@ import { vscode } from "../api";
 import {
   botaoAbrirAba,
   botaoAtualizarPreview,
-  botaoCadastrar,
   botaoCodigo,
   botaoCopiarResultado,
   botaoCriarArquivos,
@@ -90,10 +89,6 @@ export function ligarAcoes(): void {
 
   botaoSair?.addEventListener("click", () => {
     vscode.postMessage({ type: "logout" });
-  });
-
-  botaoCadastrar.addEventListener("click", () => {
-    vscode.postMessage({ type: "cadastrarNoTorneio" });
   });
 
   for (const botao of botoesVista) {

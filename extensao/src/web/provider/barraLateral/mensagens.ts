@@ -31,7 +31,6 @@ export type ControladorDaBarra = {
   abrirPainelGabarito(): void;
   verExtensoesIa(): void;
   criarArquivos(): void;
-  cadastrarNoTorneio(): void;
   encerrarDesafio(): void;
   atualizarPreview(): void;
   verificar(challengeId: string, formas: FormaMedida[], verificacaoId?: number): void;
@@ -114,9 +113,6 @@ export function rotearMensagem(
       return;
     case "criarArquivos":
       barra.criarArquivos();
-      return;
-    case "cadastrarNoTorneio":
-      barra.cadastrarNoTorneio();
       return;
     case "encerrarDesafio":
       barra.encerrarDesafio();

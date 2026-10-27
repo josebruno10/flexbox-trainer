@@ -3,7 +3,6 @@ import {
   avatarUsuario,
   avisoIa,
   botaoNovoDesafio,
-  cadastroTorneio,
   statusAutenticacao,
   textoAvisoIa,
 } from "./elementos";
@@ -17,10 +16,6 @@ export function renderizarEstadoAutenticacao(
   if (!statusAutenticacao) {
     return;
   }
-
-  cadastroTorneio.hidden = !(
-    estado.status === "authenticated" && estado.podeCadastrar
-  );
 
   if (estado.status === "checking") {
     statusAutenticacao.textContent = estado.message || "Validando a sessão…";

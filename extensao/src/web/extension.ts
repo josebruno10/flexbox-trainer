@@ -160,9 +160,6 @@ export async function activate(context: vscode.ExtensionContext) {
     // houver desafio, pode invalidá-lo.
     vscode.extensions.onDidChange(() => provedor.atualizarExtensoesIa()),
     vscode.workspace.onDidChangeConfiguration((evento) => {
-      if (evento.affectsConfiguration("flexboxTrainer.preCadastro")) {
-        authService.atualizarOfertaCadastro();
-      }
       if (evento.affectsConfiguration("flexboxTrainer.temaCores")) {
         provedor.aplicarCores();
         painelAtalhos.aplicarCores();

@@ -216,7 +216,6 @@ Em **Arquivo → Preferências → Configurações**, aba **Usuário**, busque p
 | `flexboxTrainer.eventoTreino` | Código da sua dinâmica de treino. É preenchido sozinho quando você cria a dinâmica |
 | `flexboxTrainer.modoDesenvolvedor` | Mostra ferramentas de teste. Deixe desligado para treinar |
 | `flexboxTrainer.temaCores` | Cores de destaque: Floresta (a padrão, em verdes), Campus (verde com toques de vermelho), Oceano, Noite, Violeta, Magenta, Pôr do sol, Grafite ou as do tema do VS Code. Muda só o degradê, o botão principal e os destaques; o resto segue o tema do VS Code |
-| `flexboxTrainer.preCadastro` | Oferece cadastrar no torneio quem entra com um e-mail que não está lá. Ainda desligado: espera a organização confirmar as rotas de cadastro |
 | `flexboxTrainer.apiBaseUrl`, `flexboxTrainer.authApiBaseUrl` | Endereço da API do torneio. Não precisa mudar |
 | `flexboxTrainer.authSiteUrl`, `flexboxTrainer.googleClientId` | Site e cliente do login pelo Google. Não precisa mudar |
 | `flexboxTrainer.apiToken` | Token manual, só para desenvolvimento |
@@ -230,7 +229,7 @@ Como no torneio, você só começa e corrige desafios sem elas. Clique em **Ver 
 A barra lateral mostra o motivo: uma extensão de IA foi habilitada durante o desafio, ou o `index.html` ou o `style.css` foram alterados fora do editor. Veja [As regras do desafio](#as-regras-do-desafio). Gere um novo desafio e faça-o no editor, sem IA.
 
 **A barra lateral avisa que o meu e-mail não está cadastrado no torneio.**
-Você entrou com uma conta cujo e-mail não existe no torneio (é comum com GitHub ou Microsoft, quando o e-mail deles é outro). A extensão procura o aluno por todos os e-mails verificados da conta; no GitHub, dá para adicionar e confirmar o e-mail do torneio em github.com/settings/emails e entrar de novo. Senão, clique em **Sair** e entre com a conta cadastrada, de preferência pelo Google. Com `flexboxTrainer.preCadastro` ligado, aparece o botão **Cadastrar no torneio**: ele pede nome, ano de ingresso, período, sede e nível, cadastra o e-mail da conta e coloca você no time genérico.
+Você entrou com uma conta cujo e-mail não existe no torneio (é comum com GitHub ou Microsoft, quando o e-mail deles é outro). A extensão procura o aluno por todos os e-mails verificados da conta; no GitHub, dá para adicionar e confirmar o e-mail do torneio em github.com/settings/emails e entrar de novo. Senão, clique em **Sair** e entre com a conta cadastrada, de preferência pelo Google. A extensão não cadastra ninguém no torneio: sem cadastro no Frontend Teams Cup, dá para gerar desafios e treinar, mas não para corrigir.
 
 **Ao apertar F5, apareceu "Select debugger" ou a tela "Run and Debug".**
 O VS Code não abriu a pasta certa. Use **Arquivo → Abrir Pasta** e escolha a pasta `flexbox-trainer`, a que tem `package.json`, `src` e `.vscode` dentro. Se aparecer o aviso de confiança, responda que confia nos autores.
@@ -255,7 +254,7 @@ Dentro de `extensao/`, o código fica em `src/web` (a extensão roda no extensio
 
 | Pasta | Conteúdo |
 |---|---|
-| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores, o pré-cadastro e a leitura das respostas ficam em módulos ao lado. No desktop, o login com Google passa por um servidor só da máquina (`retornoLocal.ts`, em 127.0.0.1): o VS Code abre um endereço local, que ele não pede para confirmar, e o site devolve o login a esse servidor num formulário (POST), para o token não ficar no histórico do navegador |
+| `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores e a leitura das respostas ficam em módulos ao lado. No desktop, o login com Google passa por um servidor só da máquina (`retornoLocal.ts`, em 127.0.0.1): o VS Code abre um endereço local, que ele não pede para confirmar, e o site devolve o login a esse servidor num formulário (POST), para o token não ficar no histórico do navegador |
 | `provider/` | A barra lateral e a aba do gabarito. `provedorBarraLateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barraLateral/` |
 | `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
 | `atalhos/` | Os atalhos da extensão (a mesma lista do `package.json`, conferida por um teste), os do editor e as abreviações Emmet, de onde saem os atalhos dos botões, a dica da barra lateral e a aba Atalhos. Cada abreviação foi conferida num VS Code de verdade; algumas que parecem óbvias (`fdc`, `fww`, `jcsa`) não fazem o esperado |
