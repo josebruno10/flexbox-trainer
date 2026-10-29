@@ -1,3 +1,5 @@
+import { hexAleatorio } from "./aleatorio";
+
 // O state do login pelo site: um valor aleatório que vai ao site e precisa
 // voltar igual no retorno, e só vale por dez minutos.
 const DURACAO_ESTADO_OAUTH_MS = 10 * 60 * 1000;
@@ -8,7 +10,7 @@ export class EstadoOAuth {
 
   /** Um state novo; aoExpirar roda se o retorno não chegar a tempo. */
   public criar(aoExpirar: () => void): string {
-    const valor = gerarValor();
+    const valor = hexAleatorio(24);
     this.pendente = { valor, criadoEm: Date.now() };
 
     if (this.timeout) {
@@ -57,21 +59,4 @@ export class EstadoOAuth {
 
     this.pendente = undefined;
   }
-}
-
-function gerarValor(): string {
-  if (
-    typeof globalThis.crypto !== "undefined" &&
-    typeof globalThis.crypto.getRandomValues === "function"
-  ) {
-    const bytes = new Uint8Array(24);
-    globalThis.crypto.getRandomValues(bytes);
-    return Array.from(bytes, (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
-  }
-
-  throw new Error(
-    "O ambiente não disponibilizou geração criptográfica segura para iniciar o login.",
-  );
 }

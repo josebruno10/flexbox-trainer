@@ -15,7 +15,7 @@
     "url": "https://github.com/josebruno10/flexbox-trainer/issues"
   },
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.82.0"
   },
   "categories": [
     "Education",
@@ -450,7 +450,7 @@
   "devDependencies": {
     "@types/assert": "^1.5.11",
     "@types/mocha": "^10.0.10",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "1.82.0",
     "@types/webpack-env": "^1.18.8",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/test-web": "^0.0.80",

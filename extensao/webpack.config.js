@@ -41,6 +41,8 @@ const webExtensionConfig = {
       // desktop; no navegador, o http fica vazio e o login volta pelo
       // vscode://.
       http: false,
+      // No navegador vale o crypto global (auth/aleatorio.ts).
+      crypto: false,
     },
   },
   module: {
@@ -168,7 +170,20 @@ const webviewAppConfig = {
 const desktopTestConfig = {
   ...nodeExtensionConfig,
   entry: { "test/desktop": "./src/web/test/desktop.ts" },
-  externals: { vscode: "commonjs vscode", mocha: "commonjs mocha" },
+  module: {
+    rules: [
+      ...nodeExtensionConfig.module.rules,
+      {
+        // Os require(nome) do mocha só carregam relatores e arquivos de
+        // testes de fora, que a suíte não usa; sem isto, o webpack avisa.
+        test: /[\\/]node_modules[\\/]mocha[\\/].*\.c?js$/,
+        parser: { exprContextCritical: false },
+      },
+    ],
+  },
+  // O mocha vai dentro do pacote: o 12 carrega módulos ES pelo require, o que
+  // o Node 18 do VS Code 1.82 não faz.
+  externals: { vscode: "commonjs vscode" },
 };
 
 // O pacote dos testes do desktop só é gerado quando pedido. O de produção, o

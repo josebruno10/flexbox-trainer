@@ -4,6 +4,9 @@ As mudanças de cada versão do FlexBox Trainer.
 
 ## [Não lançado]
 
+### Compatibilidade
+- A extensão funciona no VS Code 1.82 (agosto de 2023) ou mais novo, e não mais só a partir da 1.110: dá para usar nos computadores de laboratório com um VS Code antigo. Antes da 1.110, ao fim do login no navegador, o VS Code não vem sozinho para a frente.
+
 ### Conta
 - Quem entra com um e-mail que não está no torneio vê um aviso mais claro: só quem está no Frontend Teams Cup consegue corrigir; quem se inscreveu deve entrar com a conta do e-mail inscrito.
 - Sai o pré-cadastro no torneio (a configuração `flexboxTrainer.preCadastro`, que nunca foi ligada, e o botão **Cadastrar no torneio**): a organização não vai liberar as rotas de cadastro, e a extensão não cadastra ninguém.
