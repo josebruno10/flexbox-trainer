@@ -1,5 +1,6 @@
 import * as http from "http";
 import type { AddressInfo } from "net";
+import { hexAleatorio } from "./aleatorio";
 import {
   paginaDeAviso,
   paginaDoResultado,
@@ -64,7 +65,7 @@ export class RetornoLocal {
   public readonly recebido: Promise<RetornoDoSite>;
 
   private readonly base: string;
-  private readonly codigo = gerarHex(16);
+  private readonly codigo = hexAleatorio(16);
   private readonly hostsAceitos: Set<string>;
   private destino?: { endereco: string; estado: string };
   private receber!: (retorno: RetornoDoSite) => void;
@@ -155,7 +156,7 @@ export class RetornoLocal {
     if (pedido.method === "GET" && url.pathname === "/entrar") {
       this.entrar(url, resposta);
     } else if (pedido.method === "GET" && url.pathname === "/retorno") {
-      const nonce = gerarHex(16);
+      const nonce = hexAleatorio(16);
       resposta.setHeader(
         "Content-Security-Policy",
         `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; ` +
@@ -303,10 +304,4 @@ function enviar(
 ): void {
   resposta.writeHead(status, { "Content-Type": `${tipo}; charset=utf-8` });
   resposta.end(corpo);
-}
-
-function gerarHex(bytes: number): string {
-  const valores = new Uint8Array(bytes);
-  globalThis.crypto.getRandomValues(valores);
-  return Array.from(valores, (valor) => valor.toString(16).padStart(2, "0")).join("");
 }

@@ -46,6 +46,13 @@ jobs:
       - name: Testes no VS Code desktop
         run: xvfb-run -a npm run test:desktop
 
+      # A versão mais antiga que o engines do package.json aceita: roda as
+      # extensões no Node 18, sem o crypto global nem o require de módulos ES.
+      - name: Testes no VS Code desktop 1.82
+        run: xvfb-run -a npm run test:desktop
+        env:
+          VSCODE_TESTE_VERSAO: 1.82.0
+
       - name: Gerar o .vsix
         run: npm run vsix
 

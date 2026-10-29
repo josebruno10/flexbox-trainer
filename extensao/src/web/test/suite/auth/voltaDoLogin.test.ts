@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { RetornoLocal } from "../../../auth/retornoLocal";
 import { voltarDoLogin } from "../../../auth/voltaDoLogin";
 import { COMANDO_ABRIR_BARRA } from "../../../provider/barraDeStatus";
+import { ehMaisNova } from "../../../services/versaoNova";
 
 // O fim do login no navegador, do lado do VS Code.
 suite("Volta do login", () => {
@@ -52,7 +53,9 @@ suite("Volta do login", () => {
   });
 
   test("o VS Code desktop tem o comando de trazer a janela para a frente", async function () {
-    if (!RetornoLocal.disponivel()) {
+    // O VS Code 1.82 ainda não tem o comando, e o login volta sem trazer a
+    // janela; a 1.110 já o tem.
+    if (!RetornoLocal.disponivel() || ehMaisNova("1.110.0", vscode.version)) {
       this.skip();
     }
     const comandos = await vscode.commands.getCommands(true);

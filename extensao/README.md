@@ -27,7 +27,7 @@ O guia de primeiros passos, que abre na primeira vez, mostra cada passo. O hist√
 
 ## Requisitos
 
-- VS Code 1.110 ou mais novo, com internet.
+- VS Code 1.82 (agosto de 2023) ou mais novo, com internet.
 - Uma conta no Frontend Teams Cup.
 
 ## Mais

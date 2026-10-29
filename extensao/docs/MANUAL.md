@@ -29,7 +29,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 
 ## Requisitos
 
-- VS Code 1.110 ou mais novo.
+- VS Code 1.82 (agosto de 2023) ou mais novo.
 - Uma conta cadastrada no Frontend Teams Cup, com o mesmo e-mail que você vai usar para entrar (de preferência pelo Google).
 - Internet: a extensão valida a sua conta no servidor do torneio ao abrir, e a correção também é feita lá.
 

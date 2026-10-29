@@ -51,6 +51,7 @@ jobs:
         run: |
           xvfb-run -a npm test
           xvfb-run -a npm run test:desktop
+          VSCODE_TESTE_VERSAO=1.82.0 xvfb-run -a npm run test:desktop
 
       - name: Gerar e anexar o .vsix
         env:
