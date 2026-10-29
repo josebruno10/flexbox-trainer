@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.6.2] - 2026-10-29
 
 ### Compatibilidade
 - A extensão funciona no VS Code 1.82 (agosto de 2023) ou mais novo, e não mais só a partir da 1.110: dá para usar nos computadores de laboratório com um VS Code antigo. Antes da 1.110, ao fim do login no navegador, o VS Code não vem sozinho para a frente.
