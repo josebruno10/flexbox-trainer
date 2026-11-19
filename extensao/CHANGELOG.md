@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.7.0] - 2026-11-19
 
 ### Desafios
 - O código do desafio passa a ter 4 letras (como `MESA`), como os códigos do servidor, e não mais 6 dígitos. Os códigos de 6 dígitos deixam de valer em todo lugar: **Abrir por código** não os aceita, e os desafios com eles saem do histórico. O gráfico da evolução continua.
