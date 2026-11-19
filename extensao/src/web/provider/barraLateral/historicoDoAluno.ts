@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
-import { formatarCodigo } from "../../services/codigoDesafio";
 import {
   HistoricoDesafios,
   NotaDoDia,
@@ -90,7 +89,7 @@ export class HistoricoDoAluno {
     const escolhido = await vscode.window.showQuickPick(
       registros.map((registro) => ({
         label:
-          `${formatarCodigo(registro.codigo)} · ` +
+          `${registro.codigo} · ` +
           NOME_DO_NIVEL[nivelDoCodigo(registro.codigo)],
         description: `${formatarPorcentagem(registro.melhor)}% em ${formatarTempo(registro.tempoMelhorMs)}`,
         detail:

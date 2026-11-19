@@ -15,17 +15,18 @@ import {
 } from "../types";
 import {
   codigoDoDia,
-  formatarCodigo,
   normalizarCodigo,
   sortearCodigo,
 } from "../services/codigoDesafio";
 import { ehNivel } from "../niveis";
 import { criarDesafioPorCodigo } from "../services/desafio";
 import {
+  escreverArquivosDeTreino,
   lerResumoWorkspace,
   limparArquivosDeTreino,
   temTrabalhoDoAluno,
 } from "../services/workspace";
+import { ConteudoDoAluno } from "../services/servidor/conteudo";
 import { AlteracaoExterna } from "../services/alteracoesExternas";
 import { log } from "../services/logger";
 import {
@@ -52,6 +53,11 @@ import { mensagensDaBarra, ProgressoGuia } from "./barraLateral/estado";
 import { HistoricoDoAluno } from "./barraLateral/historicoDoAluno";
 import { CHAVE_NIVEL } from "../sincronizacao";
 import { PaginaDoAluno } from "./barraLateral/paginaDoAluno";
+import {
+  ContextoDoProgresso,
+  puxarProgresso,
+  salvarProgresso,
+} from "./barraLateral/progresso";
 import { ControladorDaBarra, rotearMensagem } from "./barraLateral/mensagens";
 import {
   avisarExtensoesIa,
@@ -193,8 +199,14 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
   }
 
-  /** Sem código, sorteia um desafio; com código, abre exatamente aquele. */
-  public async iniciarNovoDesafio(codigo?: string): Promise<void> {
+  /**
+   * Sem código, sorteia um desafio; com código, abre exatamente aquele. Com
+   * o progresso puxado do servidor, o desafio começa com ele nos arquivos.
+   */
+  public async iniciarNovoDesafio(
+    codigo?: string,
+    retomado?: ConteudoDoAluno,
+  ): Promise<void> {
     if (!this.authService.isAutenticado()) {
       return;
     }
@@ -215,8 +227,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     try {
       // Como no torneio, cada desafio começa do zero: o que o aluno escreveu
       // no anterior não é reaproveitado nem fica fora do tempo.
+      // Quem puxa o progresso já confirmou a troca dos arquivos.
       const temTrabalho = temTrabalhoDoAluno(await this.lerArquivosDoAluno());
-      if (temTrabalho && !(await confirmarLimpeza())) {
+      if (!retomado && temTrabalho && !(await confirmarLimpeza())) {
         return;
       }
 
@@ -234,8 +247,10 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       this.melhorDaTentativa = undefined;
       this.verificarQuandoPronta = false;
 
-      if (temTrabalho) {
-        await this.limparComAviso();
+      if (retomado) {
+        await this.gravarComAviso(() => this.escreverArquivosDoAluno(retomado));
+      } else if (temTrabalho) {
+        await this.gravarComAviso(() => this.limparArquivosDoAluno());
       }
 
       // O tempo começa com os arquivos já limpos.
@@ -259,14 +274,18 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     return limparArquivosDeTreino();
   }
 
-  private async limparComAviso(): Promise<void> {
+  private escreverArquivosDoAluno(conteudo: ConteudoDoAluno): Promise<void> {
+    return escreverArquivosDeTreino(conteudo.html, conteudo.css);
+  }
+
+  private async gravarComAviso(gravar: () => Promise<void>): Promise<void> {
     try {
-      await this.limparArquivosDoAluno();
+      await gravar();
     } catch (error) {
       const mensagem = error instanceof Error ? error.message : "Erro desconhecido.";
-      log.error("Não foi possível limpar os arquivos de treino", error);
+      log.error("Não foi possível gravar os arquivos de treino", error);
       void vscode.window.showErrorMessage(
-        `Não foi possível limpar index.html e style.css: ${mensagem}`,
+        `Não foi possível gravar index.html e style.css: ${mensagem}`,
       );
     }
   }
@@ -387,7 +406,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarVerificacaoPendente();
   }
 
-  /** "Desafio médio 482 917: 87,42% em 12:34", para colar no grupo da turma. */
+  /** "Desafio médio MESA: 87,42% em 12:34", para colar no grupo da turma. */
   public textoDoResultado(agora = new Date()): string | undefined {
     const codigo = this.desafioAtual?.codigo;
     return codigo && this.melhorDaTentativa
@@ -444,7 +463,33 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       return;
     }
     await vscode.env.clipboard.writeText(codigo);
-    vscode.window.setStatusBarMessage(`Código ${formatarCodigo(codigo)} copiado.`, 2500);
+    vscode.window.setStatusBarMessage(`Código ${codigo} copiado.`, 2500);
+  }
+
+  /** Guarda no servidor o index.html e o style.css do desafio atual. */
+  public salvarProgresso(): Promise<boolean> {
+    return salvarProgresso(this.contextoDoProgresso());
+  }
+
+  /** Traz o que foi salvo em outro computador (veja barraLateral/progresso.ts). */
+  public puxarProgresso(): Promise<void> {
+    return puxarProgresso(this.contextoDoProgresso());
+  }
+
+  private contextoDoProgresso(): ContextoDoProgresso {
+    return {
+      autenticado: () => this.authService.isAutenticado(),
+      configuracao: () => this.lerConfiguracaoServidorAtual(),
+      desafio: () => this.desafioAtual,
+      lerArquivos: () => this.lerArquivosDoAluno(),
+      abrirDesafio: (codigo, conteudo) => this.iniciarNovoDesafio(codigo, conteudo),
+      gravarArquivos: async (conteudo) => {
+        await this.gravarComAviso(() => this.escreverArquivosDoAluno(conteudo));
+        await this.atualizarPreviewWorkspace();
+      },
+      recusarSessaoSePreciso: (httpStatus) =>
+        this.invalidarSessaoSeRecusada(httpStatus),
+    };
   }
 
   /** Abre a página das extensões de IA habilitadas, para desabilitá-las. */
@@ -736,6 +781,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       verAtalhos: () =>
         void vscode.commands.executeCommand("flexbox-trainer.verAtalhos"),
       copiarCodigo: () => void this.copiarCodigo(),
+      salvarProgresso: () => void this.salvarProgresso(),
+      puxarProgresso: () => void this.puxarProgresso(),
       abrirPainelGabarito: () => this.abrirPainelGabarito(),
       verExtensoesIa: () => void this.verExtensoesIa(),
       criarArquivos: () => void this.criarArquivosDeTreino(),

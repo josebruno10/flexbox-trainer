@@ -22,7 +22,8 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Como a extensão oficial do torneio, não aceita IA durante o desafio: não deixa começar nem corrigir com extensões de IA habilitadas (Copilot, Claude Code, Codex, Continue, Cline e outras) e invalida o desafio se uma delas for habilitada ou se o código for alterado fora do editor (veja [As regras do desafio](#as-regras-do-desafio)).
 - Cria o `index.html` e o `style.css` quando a pasta ainda não os tem.
 - Marca o tempo de cada tentativa.
-- Dá a cada desafio um código de 6 dígitos: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
+- Dá a cada desafio um código de 4 letras: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
+- Salva o seu progresso no servidor (o desafio, o `index.html` e o `style.css`), para você continuar em outro computador.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
 - Mostra a sua evolução, com a melhor nota de cada dia num gráfico.
 - Avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
@@ -75,7 +76,7 @@ Na primeira vez que a extensão roda, ela abre o **guia de primeiros passos**, q
 
 ## Como treinar
 
-1. Escolha o nível logo acima de **Gerar novo desafio**: **Fácil**, **Médio** ou **Difícil**. Nos mais fáceis saem os componentes menores, que dão mais trabalho (65% deles no fácil e 30% no médio); o difícil tem todos. A escolha fica guardada. **Gerar novo desafio** (`Ctrl+Alt+D`) cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite os 6 dígitos; **Desafio do dia** abre o de hoje, o mesmo para todos.
+1. Escolha o nível logo acima de **Gerar novo desafio**: **Fácil**, **Médio** ou **Difícil**. Nos mais fáceis saem os componentes menores, que dão mais trabalho (75% deles no fácil, sem nunca ficar com menos de 8, e 30% no médio); o difícil tem todos. A escolha fica guardada. **Gerar novo desafio** (`Ctrl+Alt+D`) cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite as 4 letras; **Desafio do dia** abre o de hoje, o mesmo para todos.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela. A sua página é desenhada numa área do tamanho do gabarito (800 × 800 px), como no torneio: o `html` e o `body` já têm esse tamanho, e o que passar dele fica de fora. Não precisa definir o tamanho da página; basta preencher essa área (por exemplo, com `height: 100%` no elemento que envolve o layout).
 3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
 4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
@@ -87,7 +88,7 @@ Só contam elementos com cor de fundo sólida (`background` ou `background-color
 
 ### Código do desafio, desafio do dia e histórico
 
-Cada desafio tem um **código** de 6 dígitos, que aparece nos dados do desafio (clique nele para copiar) e no topo da aba do gabarito. O mesmo código gera sempre a mesma imagem, no mesmo nível: o nível vem do próprio código, e aparece no título da seção (por exemplo, **Desafio · médio**). Quem abre o código de um colega treina o mesmo nível dele, qualquer que seja o nível escolhido.
+Cada desafio tem um **código** de 4 letras (como `MESA`), que aparece nos dados do desafio (clique nele para copiar) e no topo da aba do gabarito. O mesmo código gera sempre a mesma imagem, no mesmo nível: o nível vem do próprio código, e aparece no título da seção (por exemplo, **Desafio · médio**). Quem abre o código de um colega treina o mesmo nível dele, qualquer que seja o nível escolhido.
 
 - **Em sala:** o professor passa um código, e cada aluno abre o desafio com **Abrir por código**. Todos treinam o mesmo layout, cada um na própria dinâmica de treino.
 - **Desafio do dia:** sem ninguém passar um código, **Desafio do dia** abre o desafio da data, o mesmo para todos que o abrirem no mesmo dia (vale a data do computador). Ele é sempre médio. Enquanto ele está aberto, a seção se chama **Desafio do dia**.
@@ -102,9 +103,19 @@ O histórico fica separado por e-mail: num laboratório, cada aluno vê os próp
 Depois da primeira nota, **Copiar resultado**, no topo do Resultado, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
 
 ```text
-Desafio médio 482 917: 87,42% em 12:34
-Desafio do dia 14/10 (071 881): 87,42% em 12:34
+Desafio médio MESA: 87,42% em 12:34
+Desafio do dia 14/10 (DHAG): 87,42% em 12:34
 ```
+
+### Continuar em outro computador
+
+**Salvar progresso**, na seção Desafio, guarda no servidor o `index.html` e o `style.css` do desafio atual, junto com o código dele. Eles ficam numa pasta sua, dentro da sua dinâmica de treino, pelas mesmas rotas da extensão oficial do torneio (`salvar-conteudo` e `obter-conteudo`). Cada vez que você salva, o que estava salvo antes é substituído: o servidor guarda um progresso por aluno.
+
+No outro computador, entre com a mesma conta e clique em **Puxar progresso**. A extensão abre o mesmo desafio e grava nele os arquivos salvos. Se a pasta aberta já tiver algo escrito, ela pergunta antes de substituir. O cronômetro recomeça.
+
+Num computador onde você ainda não usou a extensão, ela pergunta pela sua dinâmica de treino: clique em **Já tenho uma** e confirme o código da dinâmica que você criou no primeiro computador (o mesmo código que aparece em `flexboxTrainer.eventoTreino` lá). Com a **Sincronização de Configurações** ligada, isso já vem sozinho.
+
+Só quem está no torneio salva e puxa o progresso, como acontece na correção. O histórico de notas não vai pelo servidor; ele acompanha você pela Sincronização de Configurações (veja acima).
 
 ## As regras do desafio
 
@@ -114,9 +125,9 @@ Como no torneio, o desafio é feito do começo ao fim no editor, sem IA:
 - Se uma extensão de IA for habilitada durante o desafio, ele é **invalidado**, mesmo que você a desabilite depois.
 - Se o `index.html` ou o `style.css` forem alterados fora do editor durante o desafio, ele também é invalidado. Isso pega assistentes de IA que rodam no terminal e gravam direto nos arquivos, mas vale para qualquer programa ou comando (outra janela do VS Code, `git checkout`, um formatador rodado no terminal).
 - Um desafio invalidado não pode mais ser corrigido: a barra lateral mostra o motivo, e é só gerar outro.
-- Cada desafio começa do zero. Ao gerar um desafio novo, o `index.html` e o `style.css` voltam à base (o HTML mínimo e o reset do CSS: `box-sizing`, `margin` e `padding`), para nada do desafio anterior ser reaproveitado e o tempo contar o desafio inteiro. Se você escreveu algo, a extensão pergunta antes de limpar; com o arquivo aberto, `Ctrl+Z` no editor desfaz a limpeza.
+- Cada desafio começa do zero. Ao gerar um desafio novo, o `index.html` e o `style.css` voltam à base (o HTML mínimo e o reset do CSS: `box-sizing`, `margin` e `padding`), para nada do desafio anterior ser reaproveitado e o tempo contar o desafio inteiro. Se você escreveu algo, a extensão pergunta antes de limpar; com o arquivo aberto, `Ctrl+Z` no editor desfaz a limpeza. A exceção é **Puxar progresso**: o desafio recomeça com os arquivos que você mesmo salvou.
 
-Salvar no editor, inclusive com formatação ao salvar, e criar ou limpar os arquivos pela extensão não contam como alteração de fora.
+Salvar no editor, inclusive com formatação ao salvar, e criar, limpar ou puxar os arquivos pela extensão não contam como alteração de fora.
 
 ## A barra lateral
 
@@ -128,7 +139,9 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 | Fácil, Médio, Difícil | Escolhem o nível dos desafios novos; a escolha fica guardada |
 | Gerar novo desafio | Cria um desafio novo, no nível escolhido, e reinicia o cronômetro (`Ctrl+Alt+D`) |
 | Desafio do dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
-| Abrir por código | Abre o desafio de um código de 6 dígitos, como o que o professor passar |
+| Abrir por código | Abre o desafio de um código de 4 letras, como o que o professor passar |
+| Salvar progresso | Aparece com um desafio aberto; guarda no servidor o desafio, o `index.html` e o `style.css` |
+| Puxar progresso | Traz o que você salvou, de qualquer computador: abre o mesmo desafio com os seus arquivos |
 | O código, nos dados do desafio | Copia o código, para outra pessoa abrir o mesmo desafio |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
 | ↻ Refazer | Aparece depois de encerrar, no lugar de Encerrar desafio; começa o mesmo desafio de novo, do zero |
@@ -144,7 +157,7 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, o **Guia de Primeiros Passos**, os **Atalhos e Abreviações Emmet** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, **Salvar Progresso no Servidor**, **Puxar Progresso do Servidor**, o **Guia de Primeiros Passos**, os **Atalhos e Abreviações Emmet** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
@@ -173,17 +186,20 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Iniciar | Abre a barra lateral (e o login, se precisar) |
 | FlexBox Trainer: Gerar Novo Desafio | Sorteia um desafio novo |
 | FlexBox Trainer: Desafio do Dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
-| FlexBox Trainer: Abrir Desafio por Código | Abre o desafio de um código de 6 dígitos |
+| FlexBox Trainer: Abrir Desafio por Código | Abre o desafio de um código de 4 letras |
 | FlexBox Trainer: Verificar | Verifica a sua página, como o botão da barra lateral |
 | FlexBox Trainer: Copiar Resultado | Copia o código, a melhor nota e o tempo do desafio atual |
 | FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
 | FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
+| FlexBox Trainer: Salvar Progresso no Servidor | Guarda no servidor o desafio atual, o `index.html` e o `style.css` |
+| FlexBox Trainer: Puxar Progresso do Servidor | Abre o desafio salvo com os arquivos salvos, em qualquer computador |
 | FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
 | FlexBox Trainer: Atalhos e Abreviações Emmet | Abre, numa aba, os atalhos da extensão e do editor e as abreviações Emmet de HTML e CSS |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |
 | FlexBox Trainer: Criar index.html e style.css | Cria na pasta aberta os arquivos que faltarem |
 | FlexBox Trainer: Ver Extensões de IA Habilitadas | Mostra as extensões de IA que impedem começar e corrigir desafios e abre a página delas |
 | FlexBox Trainer: Criar Dinâmica de Treino | Cria a sua dinâmica de treino, se você não a criou no primeiro Verificar |
+| FlexBox Trainer: Usar Minha Dinâmica de Treino | Num computador novo, usa a dinâmica que você já criou em outro, sem criar outra |
 | FlexBox Trainer: Testar Servidor | Confere se a sua sessão está valendo no servidor |
 | FlexBox Trainer: Escolher Cores | Troca as cores de destaque da extensão |
 
@@ -246,6 +262,9 @@ Confira se todos os elementos usam cor de fundo sólida e se as medidas batem ex
 **O código da dinâmica de treino foi recusado.**
 O servidor aceita no máximo 4 caracteres (letras minúsculas e números). Se o código sugerido já existir, escolha outro.
 
+**Num computador novo, a extensão diz que a minha dinâmica já existe.**
+Ela é a que você criou no outro computador. Em vez de criar outra, clique em **Já tenho uma** (ou use **FlexBox Trainer: Usar Minha Dinâmica de Treino**) e confirme o código dela.
+
 ## Para quem desenvolve
 
 No repositório, a extensão inteira fica em `extensao/`, inclusive o `.gitignore` e a licença. Na raiz ficam só a pasta `.github/`, com os fluxos do GitHub (que só funcionam ali) e o README curto que o GitHub mostra na página do repositório, e a `.vscode/`, com as configurações de execução, que o VS Code só lê na pasta aberta. Assim dá para pôr outras partes do projeto ao lado da extensão.
@@ -255,8 +274,8 @@ Dentro de `extensao/`, o código fica em `src/web` (a extensão roda no extensio
 | Pasta | Conteúdo |
 |---|---|
 | `auth/` | Login pelo Google (site externo), GitHub e Microsoft, e a sessão com o servidor: `authService.ts` coordena; as rotas do torneio, o perfil dos provedores e a leitura das respostas ficam em módulos ao lado. No desktop, o login com Google passa por um servidor só da máquina (`retornoLocal.ts`, em 127.0.0.1): o VS Code abre um endereço local, que ele não pede para confirmar, e o site devolve o login a esse servidor num formulário (POST), para o token não ficar no histórico do navegador |
-| `provider/` | A barra lateral e a aba do gabarito. `provedorBarraLateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, mensagens, regras do treino, conexão) ficam em `provider/barraLateral/` |
-| `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
+| `provider/` | A barra lateral e a aba do gabarito. `provedorBarraLateral.ts` guarda o estado e coordena; as partes dele (verificação, correção, histórico, progresso no servidor, mensagens, regras do treino, conexão) ficam em `provider/barraLateral/` |
+| `services/` | Gerador de desafios, correção, dinâmica de treino, chamadas ao servidor e leitura dos arquivos. As rotas do servidor ficam em `services/servidor/` (pedidos, gabaritos, correção, dinâmica, conteúdo do aluno e conexão) e as partes do gerador em `services/gerador/` (sorteios, cores, padrões, regiões e níveis), com a entrada em `services/desafio.ts` |
 | `atalhos/` | Os atalhos da extensão (a mesma lista do `package.json`, conferida por um teste), os do editor e as abreviações Emmet, de onde saem os atalhos dos botões, a dica da barra lateral e a aba Atalhos. Cada abreviação foi conferida num VS Code de verdade; algumas que parecem óbvias (`fdc`, `fww`, `jcsa`) não fazem o esperado |
 | `telas/` | Roda na extensão: o HTML das quatro telas (barra lateral, aba do gabarito, aba Atalhos e entrada), com o CSS de cada parte em `telas/estilos/`, e os temas de cores |
 | `webview/` | Roda dentro das telas, no navegador da webview: `app.ts` (barra lateral), `painelGabarito.ts` (aba) e `loginPage.ts` (entrada) recebem as mensagens da extensão; as partes de cada um ficam em `webview/barra/` e `webview/aba/`, e o desenho do gabarito, a página do aluno e a medição das formas (`webview/formas/`) servem às duas |
@@ -289,7 +308,7 @@ Os testes simulam as respostas do servidor e não criam dados reais. O `npm test
 - **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. O selo no topo do README mostra se a última execução no `main` passou. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
 - **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.5.0` e `0.5.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído. Depois, o teste de ponta a ponta instala a versão anterior num VS Code limpo e confere que ela avisa da nova, se atualiza com um clique e mostra o que mudou; se falhar, as fotos da tela ficam em **Artifacts**. Ele precisa da rede e da versão já publicada, por isso não roda a cada envio.
 
-O gerador, em `services/desafio.ts`, é a porta do script do Vitor (commit `271c492`). Os níveis tiram os componentes menores (65% no fácil, 30% no médio; o script do Vitor tira 50% no fácil, mas assim o fácil parecia um médio), um padrão inteiro por vez (uma sequência ou uma fileira de círculos nunca fica pela metade), e nunca deixam menos de 8. O nível vem do código: o resto da divisão por 3 (0 é fácil, 1 é médio, 2 é difícil).
+O gerador, em `services/desafio.ts`, é a porta do script do Vitor (commit `271c492`). Os níveis tiram os componentes menores (75% no fácil, 30% no médio; o script do Vitor tira 50% no fácil, mas assim o fácil parecia um médio), um padrão inteiro por vez (uma sequência ou uma fileira de círculos nunca fica pela metade), e nunca deixam menos de 8. O nível vem do código: as 4 letras são lidas como um número de base 26 (`AAAA` é 0, `AAAB` é 1, `ZZZZ` é 456.975), e o resto da divisão dele por 3 dá o nível (0 é fácil, 1 é médio, 2 é difícil).
 
 Os códigos de desafio dependem do gerador: se ele mudar, os códigos já passados à turma geram outros desafios. Um teste em `codigoDesafio.test.ts` avisa quando isso acontece.
 

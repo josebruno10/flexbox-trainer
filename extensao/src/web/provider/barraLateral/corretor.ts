@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import { avaliarTentativa } from "../../services/avaliacao";
+import { oferecerDinamicaDeTreino } from "../../services/dinamicaTreino";
 import {
   ConfiguracaoServidor,
   FormaMedida,
   GabaritoGerado,
   ResultadoAvaliacao,
 } from "../../types";
-
-const CRIAR_DINAMICA = "Criar dinâmica de treino";
 
 export type TentativaParaCorrigir = {
   challengeId: string;
@@ -43,7 +42,13 @@ export class Corretor {
     aindaValida: () => boolean,
   ): Promise<ResultadoAvaliacao | undefined> {
     if (!this.lerConfiguracao().eventoTreino) {
-      await oferecerDinamicaDeTreino();
+      // Primeiro uso: sem a paleta de comandos; sem a dinâmica,
+      // avaliarTentativa explica como configurar.
+      await oferecerDinamicaDeTreino(
+        "Você ainda não tem uma dinâmica de treino.",
+        "É nela que o servidor guarda o seu gabarito para corrigir. Só " +
+          "precisa criar uma vez; em outro computador, use a mesma.",
+      );
       if (!aindaValida()) {
         return undefined;
       }
@@ -80,23 +85,5 @@ export class Corretor {
   /** Ao sair, nenhuma nota passa para a próxima sessão. */
   public esquecer(): void {
     this.ultima = undefined;
-  }
-}
-
-// Primeiro uso: oferece criar a dinâmica aqui mesmo, sem a paleta de
-// comandos; sem ela, avaliarTentativa explica como configurar.
-async function oferecerDinamicaDeTreino(): Promise<void> {
-  const escolha = await vscode.window.showInformationMessage(
-    "Você ainda não tem uma dinâmica de treino.",
-    {
-      modal: true,
-      detail:
-        "É nela que o servidor guarda o seu gabarito para corrigir. " +
-        "Só precisa criar uma vez.",
-    },
-    CRIAR_DINAMICA,
-  );
-  if (escolha === CRIAR_DINAMICA) {
-    await vscode.commands.executeCommand("flexbox-trainer.criarDinamicaTreino");
   }
 }

@@ -1,4 +1,4 @@
-// Cada desafio tem um código de 6 dígitos, fácil de ditar em sala: o mesmo
+// Cada desafio tem um código de 4 letras, fácil de ditar em sala: o mesmo
 // código gera sempre a mesma imagem, no mesmo nível. Assim a turma treina o
 // mesmo layout, e o aluno pode refazer um desafio para bater a própria nota.
 //
@@ -7,10 +7,9 @@
 // gerador avisam quando isso acontece.
 
 import type { Nivel } from "../types";
-import { NIVEIS } from "../niveis";
+import { LETRAS_DO_CODIGO, NIVEIS, TAMANHO_DO_CODIGO } from "../niveis";
 
-const DIGITOS = 6;
-const TOTAL_CODIGOS = 10 ** DIGITOS;
+const TOTAL_CODIGOS = LETRAS_DO_CODIGO.length ** TAMANHO_DO_CODIGO;
 
 /** Um código ao acaso, entre os do nível pedido (veja nivelDoCodigo). */
 export function sortearCodigo(
@@ -18,21 +17,18 @@ export function sortearCodigo(
   aleatorio: () => number = Math.random,
 ): string {
   const resto = NIVEIS.indexOf(nivel);
-  // Quantos códigos de 000000 a 999999 deixam esse resto na divisão por 3.
+  // Quantos códigos de AAAA a ZZZZ deixam esse resto na divisão por 3.
   const quantidade = Math.floor((TOTAL_CODIGOS - 1 - resto) / 3) + 1;
   const indice = Math.min(quantidade - 1, Math.floor(aleatorio() * quantidade));
-  return String(indice * 3 + resto).padStart(DIGITOS, "0");
+  return codigoDoValor(indice * 3 + resto);
 }
 
-/** Aceita "482917", "482 917" ou "482-917"; qualquer outra coisa é inválida. */
+/** Aceita "MESA", "mesa" ou "me-sa"; qualquer outra coisa é inválida. */
 export function normalizarCodigo(texto: string): string | undefined {
-  const codigo = texto.replace(/[\s.-]/g, "");
-  return /^\d{6}$/.test(codigo) ? codigo : undefined;
-}
-
-/** "482917" vira "482 917", mais fácil de ler e de ditar. */
-export function formatarCodigo(codigo: string): string {
-  return `${codigo.slice(0, 3)} ${codigo.slice(3)}`;
+  const codigo = texto.replace(/[\s.-]/g, "").toUpperCase();
+  return new RegExp(`^[A-Z]{${TAMANHO_DO_CODIGO}}$`).test(codigo)
+    ? codigo
+    : undefined;
 }
 
 /**
@@ -44,11 +40,11 @@ export function codigoDoDia(data: Date = new Date()): string {
   const sorteado =
     semente(`flexbox-trainer:dia:${diaLocal(data)}`) % TOTAL_CODIGOS;
   // O código médio mais próximo (resto 1 na divisão por 3).
-  let codigo = sorteado - (sorteado % 3) + 1;
-  if (codigo >= TOTAL_CODIGOS) {
-    codigo -= 3;
+  let valor = sorteado - (sorteado % 3) + 1;
+  if (valor >= TOTAL_CODIGOS) {
+    valor -= 3;
   }
-  return String(codigo).padStart(DIGITOS, "0");
+  return codigoDoValor(valor);
 }
 
 /** A data do computador, como "2026-10-14". */
@@ -75,8 +71,18 @@ export function aleatorioDoCodigo(codigo: string): () => number {
   };
 }
 
-// Espalha o texto num número de 32 bits, para códigos vizinhos ("000001" e
-// "000002") darem desafios bem diferentes.
+// O contrário de valorDoCodigo: 0 é "AAAA", 1 é "AAAB" e 456975 é "ZZZZ".
+function codigoDoValor(valor: number): string {
+  let codigo = "";
+  for (let posicao = 0; posicao < TAMANHO_DO_CODIGO; posicao++) {
+    codigo = LETRAS_DO_CODIGO[valor % LETRAS_DO_CODIGO.length] + codigo;
+    valor = Math.floor(valor / LETRAS_DO_CODIGO.length);
+  }
+  return codigo;
+}
+
+// Espalha o texto num número de 32 bits, para códigos vizinhos ("AAAB" e
+// "AAAC") darem desafios bem diferentes.
 function semente(texto: string): number {
   let valor = 1779033703 ^ texto.length;
   for (let indice = 0; indice < texto.length; indice++) {

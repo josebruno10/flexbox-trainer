@@ -1,7 +1,3 @@
-export function formatarCodigo(codigo: string): string {
-  return `${codigo.slice(0, 3)} ${codigo.slice(3)}`;
-}
-
 export function formatarPorcentagem(valor: number): string {
   return valor.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,

@@ -64,7 +64,7 @@ suite("Barra lateral: desafio novo", () => {
   });
 
   test("abre o desafio do código digitado e refaz o mesmo desafio", async () => {
-    vscode.window.showInputBox = (async () => " 482 917 ") as typeof vscode.window.showInputBox;
+    vscode.window.showInputBox = (async () => " me sa ") as typeof vscode.window.showInputBox;
     const provedor = criarProvedorParaTeste([]);
     const interno = provedor as unknown as ProvedorInterno;
     interno.testarConexaoServidor = async () => undefined;
@@ -72,12 +72,12 @@ suite("Barra lateral: desafio novo", () => {
     await provedor.abrirDesafioPorCodigo();
 
     const primeiro = interno.desafioAtual!;
-    assert.strictEqual(primeiro.codigo, "482917");
-    assert.deepStrictEqual(primeiro.blocks, criarDesafioPorCodigo("482917").blocks);
+    assert.strictEqual(primeiro.codigo, "MESA");
+    assert.deepStrictEqual(primeiro.blocks, criarDesafioPorCodigo("MESA").blocks);
 
     await provedor.refazerDesafio();
 
-    assert.strictEqual(interno.desafioAtual!.codigo, "482917");
+    assert.strictEqual(interno.desafioAtual!.codigo, "MESA");
     assert.deepStrictEqual(interno.desafioAtual!.blocks, primeiro.blocks);
     assert.notStrictEqual(interno.desafioAtual!.challengeId, primeiro.challengeId);
   });
@@ -87,11 +87,11 @@ suite("Barra lateral: desafio novo", () => {
     const interno = provedor as unknown as ProvedorInterno;
     interno.testarConexaoServidor = async () => undefined;
 
-    for (const resposta of [undefined, "", "12345"]) {
+    for (const resposta of [undefined, "", "MES", "482917"]) {
       vscode.window.showInputBox = (async () => resposta) as typeof vscode.window.showInputBox;
       await provedor.abrirDesafioPorCodigo();
     }
-    await provedor.refazerDesafio("abc");
+    await provedor.refazerDesafio("482917");
 
     assert.strictEqual(interno.desafioAtual, undefined);
   });

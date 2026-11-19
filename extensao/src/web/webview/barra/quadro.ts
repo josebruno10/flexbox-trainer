@@ -16,6 +16,7 @@ import {
   botaoEncerrarDesafio,
   botaoNovoDesafio,
   botaoRefazer,
+  botaoSalvarProgresso,
   botaoVerificar,
   botoesNivel,
   botoesVista,
@@ -34,7 +35,7 @@ import {
   vistas,
 } from "./elementos";
 import { ALTURA_PADRAO, LARGURA_PADRAO, estado } from "./estado";
-import { formatarCodigo, formatarTempo } from "./formatos";
+import { formatarTempo } from "./formatos";
 import { mostrarMensagem } from "./resultado";
 import { desenharMensagemPreview } from "./suaPagina";
 import type { DesafioRecebido } from "./tipos";
@@ -113,7 +114,7 @@ export function desenharDesafio(desafio: DesafioRecebido): void {
   tituloDesafio.textContent =
     (desafio.doDia ? "Desafio do dia" : "Desafio") +
     (desafio.nivel ? ` · ${NOME_DO_NIVEL[desafio.nivel]}` : "");
-  botaoCodigo.textContent = desafio.codigo ? formatarCodigo(desafio.codigo) : "--";
+  botaoCodigo.textContent = desafio.codigo ?? "--";
   botaoCodigo.disabled = !desafio.codigo;
   valorFundo.replaceChildren(
     criarAmostra(desafio.backgroundColor),
@@ -190,6 +191,7 @@ function mostrarItensDoDesafio(visiveis: boolean): void {
     detalheComponente,
     metaDesafio,
     botaoAbrirAba,
+    botaoSalvarProgresso,
     botaoEncerrarDesafio,
   ]) {
     item.hidden = !visiveis;

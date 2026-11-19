@@ -10,7 +10,10 @@ import { ProvedorBarraLateralFlexBox } from "./provider/provedorBarraLateral";
 import { sincronizarComOutrosComputadores } from "./sincronizacao";
 import { MonitorAlteracoesExternas } from "./services/alteracoesExternas";
 import { gerarSolucaoAbsoluta, gerarSolucaoFlexbox } from "./services/solucao";
-import { criarDinamicaTreinoInterativa } from "./services/dinamicaTreino";
+import {
+  criarDinamicaTreinoInterativa,
+  usarDinamicaExistenteInterativa,
+} from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
 import {
   avisarAtualizacao,
@@ -120,6 +123,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.verHistorico", () =>
       provedor.verHistorico(),
     ),
+    vscode.commands.registerCommand("flexbox-trainer.salvarProgresso", () =>
+      provedor.salvarProgresso(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.puxarProgresso", async () => {
+      await abrirBarraLateral();
+      await provedor.puxarProgresso();
+    }),
     vscode.commands.registerCommand("flexbox-trainer.abrirGuia", () =>
       vscode.commands.executeCommand(
         "workbench.action.openWalkthrough",
@@ -208,6 +218,9 @@ export async function activate(context: vscode.ExtensionContext) {
       async () => {
         await criarDinamicaTreinoInterativa(authService);
       },
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.usarDinamicaTreino", () =>
+      usarDinamicaExistenteInterativa(authService),
     ),
   );
 

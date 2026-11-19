@@ -16,11 +16,7 @@ import {
 } from "./elementos";
 import { estado } from "./estado";
 import { renderizarEvolucao } from "./evolucao";
-import {
-  formatarCodigo,
-  formatarPorcentagem,
-  formatarTempo,
-} from "./formatos";
+import { formatarPorcentagem, formatarTempo } from "./formatos";
 import type { HistoricoDesafiosRecebido } from "./tipos";
 
 // O recorde do código em andamento, quando o aluno já o fez antes.
@@ -81,7 +77,7 @@ export function renderizarHistoricoDesafios(
       const nivel = document.createElement("span");
       nivel.className = "nivel";
       nivel.textContent = nomeDoNivel;
-      codigo.append(formatarCodigo(registro.codigo), " ", nivel);
+      codigo.append(registro.codigo, " ", nivel);
       const nota = document.createElement("span");
       nota.textContent = `${formatarPorcentagem(registro.melhor)}%`;
       const tempo = document.createElement("span");
@@ -91,7 +87,7 @@ export function renderizarHistoricoDesafios(
       refazer.type = "button";
       refazer.className = "discreto";
       refazer.textContent = "↻";
-      refazer.title = `Refazer o desafio ${formatarCodigo(registro.codigo)} (${nomeDoNivel})`;
+      refazer.title = `Refazer o desafio ${registro.codigo} (${nomeDoNivel})`;
       refazer.setAttribute("aria-label", refazer.title);
       refazer.addEventListener("click", () => {
         vscode.postMessage({ type: "refazer", codigo: registro.codigo });

@@ -39,7 +39,9 @@ export type ProvedorInterno = {
   testarConexaoServidor(): Promise<unknown>;
   lerArquivosDoAluno(): Promise<ResumoWorkspace>;
   limparArquivosDoAluno(): Promise<void>;
+  escreverArquivosDoAluno(conteudo: { html: string; css: string }): Promise<void>;
   lerConfiguracaoServidorAtual(): ConfiguracaoServidor;
+  criarArquivosSeFaltarem(): Promise<void>;
 };
 
 export type OpcoesProvedorTeste = {
@@ -140,6 +142,10 @@ export function criarProvedorParaTeste(
     opcoes.barraDeStatus,
   );
   const interno = provedor as unknown as ProvedorInterno;
+  // Cada desafio novo cria, sem esperar, os arquivos que faltam. Sem pasta
+  // aberta (no navegador), o aviso disso chegaria depois, no meio de outro
+  // teste. Os testes de criar os arquivos chamam criarArquivosDeTreino.
+  interno.criarArquivosSeFaltarem = async () => undefined;
 
   interno.visualizacaoWebview = {
     webview: {

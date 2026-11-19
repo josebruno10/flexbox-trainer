@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { ProgressoGuia } from "../../../provider/provedorBarraLateral";
+import { valorDoCodigo } from "../../../niveis";
 import { criarDesafioPorCodigo } from "../../../services/desafio";
 import {
   criarBarraFalsa,
@@ -41,7 +42,7 @@ suite("Barra lateral: mensagens e comandos", () => {
 
     await provedor.iniciarNovoDesafio();
     assert.strictEqual(interno.desafioAtual!.nivel, "facil");
-    assert.strictEqual(Number(interno.desafioAtual!.codigo) % 3, 0);
+    assert.strictEqual(valorDoCodigo(interno.desafioAtual!.codigo!) % 3, 0);
 
     // Um nível que não existe é ignorado.
     barra.receber({ type: "definirNivel", nivel: "impossivel" });
@@ -73,7 +74,7 @@ suite("Barra lateral: mensagens e comandos", () => {
     const provedor = criarProvedorParaTeste([]);
     const interno = provedor as unknown as ProvedorInterno;
     interno.testarConexaoServidor = async () => undefined;
-    interno.desafioAtual = criarDesafioPorCodigo("482917");
+    interno.desafioAtual = criarDesafioPorCodigo("MESA");
     const barra = criarBarraFalsa();
     provedor.resolveWebviewView(barra.vista);
 
@@ -99,7 +100,7 @@ suite("Barra lateral: mensagens e comandos", () => {
     // Um desafio novo descarta o pedido que ainda esperava.
     barra.mudarVisibilidade(false);
     await provedor.pedirVerificacao();
-    await provedor.iniciarNovoDesafio("482917");
+    await provedor.iniciarNovoDesafio("MESA");
     barra.mudarVisibilidade(true);
     assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 3);
   });
@@ -125,7 +126,7 @@ suite("Barra lateral: mensagens e comandos", () => {
       verificou: false,
     });
 
-    await prepararCodigo(provedor, registro, "482917");
+    await prepararCodigo(provedor, registro, "MESA");
     await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
 
     assert.deepStrictEqual(progressos[progressos.length - 1], {

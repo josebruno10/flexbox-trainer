@@ -1,7 +1,10 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { AuthService } from "../../auth/authService";
-import { criarDinamicaTreinoInterativa } from "../../services/dinamicaTreino";
+import {
+  criarDinamicaTreinoInterativa,
+  usarDinamicaExistenteInterativa,
+} from "../../services/dinamicaTreino";
 
 type Requisicao = {
   metodo: string;
@@ -204,6 +207,39 @@ suite("Criação da dinâmica de treino", () => {
 
     assert.strictEqual(requisicoes.filter((r) => r.metodo === "PUT").length, 0);
     assert.strictEqual(atualizacoes.length, 1);
+  });
+
+  test("em outro computador, usa a dinâmica que já existe sem mexer nela", async () => {
+    const requisicoes = mockarServidor({
+      "GET /tipoDinamica/fb74": () => json({ evento: "fb74", tipo: 2 }),
+    });
+
+    await usarDinamicaExistenteInterativa(criarAuthService());
+
+    assert.strictEqual(opcoesDoCampo?.value, "fb74");
+    assert.deepStrictEqual(
+      requisicoes.map((r) => `${r.metodo} ${r.caminho}`),
+      ["GET /tipoDinamica/fb74"],
+    );
+    assert.deepStrictEqual(atualizacoes, [
+      {
+        chave: "eventoTreino",
+        valor: "fb74",
+        alvo: vscode.ConfigurationTarget.Global,
+      },
+    ]);
+    assert.match(informacoes[0] ?? "", /fb74/);
+  });
+
+  test("não usa uma dinâmica que não existe", async () => {
+    mockarServidor({
+      "GET /tipoDinamica/fb74": () => json({ detail: "Não encontrado" }, 404),
+    });
+
+    await usarDinamicaExistenteInterativa(criarAuthService());
+
+    assert.match(avisos[0] ?? "", /Não existe a dinâmica "fb74"/);
+    assert.deepStrictEqual(atualizacoes, []);
   });
 
   test("pede login antes de criar", async () => {

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ehNivel } from "../niveis";
 import { Nivel } from "../types";
-import { diaLocal } from "./codigoDesafio";
+import { diaLocal, normalizarCodigo } from "./codigoDesafio";
 
 // Os desafios que o aluno já verificou, com a melhor nota de cada um. Ficam
 // separados por e-mail: num laboratório, cada aluno vê os próprios. Com a
@@ -167,13 +167,15 @@ function ehNotaDoDia(valor: unknown): valor is NotaDoDia {
   );
 }
 
-// O armazenamento pode ter dados de outra versão: só passam registros completos.
+// O armazenamento pode ter dados de outra versão: só passam registros
+// completos, com o código de 4 letras. Os de 6 dígitos, de até a 0.6.2, saem.
 function ehRegistro(valor: unknown): valor is RegistroHistorico {
   const registro = valor as Partial<RegistroHistorico> | null;
   return (
     typeof registro === "object" &&
     registro !== null &&
     typeof registro.codigo === "string" &&
+    normalizarCodigo(registro.codigo) === registro.codigo &&
     typeof registro.melhor === "number" &&
     typeof registro.tempoMelhorMs === "number" &&
     typeof registro.verificacoes === "number" &&

@@ -179,9 +179,9 @@ suite("Gerador de desafios", () => {
       }
     }
 
-    // Quase sempre o fácil tira 65%, e o médio, 30%. As exceções são as
-    // imagens pequenas, que param perto dos 8 componentes.
-    assert.ok(tirouAPorcentagem >= 90, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
+    // O médio quase sempre tira 30%; o fácil tira 75% em metade das imagens
+    // (49 de 100 nestes casos). As outras param no mínimo de 8 componentes.
+    assert.ok(tirouAPorcentagem >= 40, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {

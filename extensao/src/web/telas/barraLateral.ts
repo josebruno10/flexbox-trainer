@@ -97,7 +97,9 @@ export function obterHtmlWebview(
       </div>
       <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>${comAtalho("Gerar novo desafio", "novoDesafio")}</button>
       <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">${comAtalho("Desafio do dia", "desafioDoDia")}</button>
-      <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 6 dígitos, como o que o professor passar">Abrir por código</button>
+      <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 4 letras, como o que o professor passar">Abrir por código</button>
+      <button id="botaoSalvarProgresso" class="secundario" title="Guarda no servidor o index.html e o style.css deste desafio, para continuar em outro computador" hidden>Salvar progresso</button>
+      <button id="botaoPuxarProgresso" class="secundario" title="Traz o desafio e os arquivos que você salvou no servidor, de qualquer computador">Puxar progresso</button>
       <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>${comAtalho("Abrir em uma aba", "abrirGabarito")}</button>
       <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
       <button id="botaoRefazer" class="encerrar" title="Começa este mesmo desafio de novo, do zero" hidden>${comAtalho("↻ Refazer", "refazerDesafio")}</button>

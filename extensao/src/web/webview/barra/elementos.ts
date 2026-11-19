@@ -73,6 +73,12 @@ export const botaoDesafioDia = document.getElementById(
 export const botaoAbrirAba = document.getElementById(
   "botaoAbrirAba",
 ) as HTMLButtonElement;
+export const botaoSalvarProgresso = document.getElementById(
+  "botaoSalvarProgresso",
+) as HTMLButtonElement;
+export const botaoPuxarProgresso = document.getElementById(
+  "botaoPuxarProgresso",
+) as HTMLButtonElement;
 
 // A página do aluno.
 export const avisoArquivos = document.getElementById(

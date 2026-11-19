@@ -28,6 +28,8 @@ export type ControladorDaBarra = {
   verHistorico(): void;
   verAtalhos(): void;
   copiarCodigo(): void;
+  salvarProgresso(): void;
+  puxarProgresso(): void;
   abrirPainelGabarito(): void;
   verExtensoesIa(): void;
   criarArquivos(): void;
@@ -104,6 +106,12 @@ export function rotearMensagem(
       return;
     case "copiarCodigo":
       barra.copiarCodigo();
+      return;
+    case "salvarProgresso":
+      barra.salvarProgresso();
+      return;
+    case "puxarProgresso":
+      barra.puxarProgresso();
       return;
     case "abrirPainelGabarito":
       barra.abrirPainelGabarito();

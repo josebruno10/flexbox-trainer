@@ -123,6 +123,18 @@
         "title": "FlexBox Trainer: Criar Dinâmica de Treino"
       },
       {
+        "command": "flexbox-trainer.usarDinamicaTreino",
+        "title": "FlexBox Trainer: Usar Minha Dinâmica de Treino"
+      },
+      {
+        "command": "flexbox-trainer.salvarProgresso",
+        "title": "FlexBox Trainer: Salvar Progresso no Servidor"
+      },
+      {
+        "command": "flexbox-trainer.puxarProgresso",
+        "title": "FlexBox Trainer: Puxar Progresso do Servidor"
+      },
+      {
         "command": "flexbox-trainer.gerarSolucaoTeste",
         "title": "FlexBox Trainer: Gerar Solução Exata do Desafio (teste)"
       },
@@ -147,6 +159,10 @@
         },
         {
           "command": "flexbox-trainer.copiarResultado",
+          "when": "flexboxTrainer.temDesafio"
+        },
+        {
+          "command": "flexbox-trainer.salvarProgresso",
           "when": "flexboxTrainer.temDesafio"
         }
       ],
@@ -180,6 +196,16 @@
           "command": "flexbox-trainer.copiarResultado",
           "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
           "group": "1_desafio@4"
+        },
+        {
+          "command": "flexbox-trainer.salvarProgresso",
+          "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
+          "group": "1_desafio@5"
+        },
+        {
+          "command": "flexbox-trainer.puxarProgresso",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_desafio@6"
         },
         {
           "command": "flexbox-trainer.abrirGuia",
@@ -398,7 +424,7 @@
           {
             "id": "codigo",
             "title": "Treine com a turma",
-            "description": "Cada desafio tem um código de 6 dígitos: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
+            "description": "Cada desafio tem um código de 4 letras: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
             "media": {
               "image": {
                 "dark": "media/guia/codigo-escuro.png",

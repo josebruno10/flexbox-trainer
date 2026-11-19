@@ -10,7 +10,9 @@ import {
   botaoEncerrarDesafio,
   botaoNovoDesafio,
   botaoPorCodigo,
+  botaoPuxarProgresso,
   botaoRefazer,
+  botaoSalvarProgresso,
   botaoSair,
   botaoVerExtensoesIa,
   botaoVerHistorico,
@@ -35,6 +37,14 @@ export function ligarAcoes(): void {
 
   botaoDesafioDia.addEventListener("click", () => {
     vscode.postMessage({ type: "desafioDoDia" });
+  });
+
+  botaoSalvarProgresso.addEventListener("click", () => {
+    vscode.postMessage({ type: "salvarProgresso" });
+  });
+
+  botaoPuxarProgresso.addEventListener("click", () => {
+    vscode.postMessage({ type: "puxarProgresso" });
   });
 
   botaoCopiarResultado.addEventListener("click", () => {

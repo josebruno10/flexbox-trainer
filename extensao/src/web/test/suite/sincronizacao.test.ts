@@ -36,9 +36,9 @@ suite("Sincronização entre computadores", () => {
     const aluno = "aluno@example.com";
 
     await historico.registrarNota(aluno, {
-      codigo: "482917",
+      codigo: "MESA",
       nivel: "medio",
-      tentativa: "challenge-482917-a",
+      tentativa: "challenge-MESA-a",
       precisao: 50,
       tempoMs: 600_000,
       instante: Date.now(),

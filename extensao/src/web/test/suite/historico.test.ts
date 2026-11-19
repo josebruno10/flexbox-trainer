@@ -16,9 +16,9 @@ function armazenamentoFalso(inicial: Record<string, unknown> = {}): vscode.Memen
 
 function nota(sobrescritas: Partial<NotaDoDesafio> = {}): NotaDoDesafio {
   return {
-    codigo: "482917",
+    codigo: "MESA",
     nivel: "medio",
-    tentativa: "challenge-482917-a",
+    tentativa: "challenge-MESA-a",
     precisao: 50,
     tempoMs: 600_000,
     instante: 1_000,
@@ -49,7 +49,7 @@ suite("Histórico de desafios", () => {
     await historico.registrarNota(ALUNO, nota({ precisao: 90, tempoMs: 900_000 }));
     await historico.registrarNota(
       ALUNO,
-      nota({ tentativa: "challenge-482917-b", precisao: 90, tempoMs: 500_000 }),
+      nota({ tentativa: "challenge-MESA-b", precisao: 90, tempoMs: 500_000 }),
     );
 
     assert.strictEqual(historico.listar(ALUNO)[0].tempoMelhorMs, 500_000);
@@ -58,9 +58,9 @@ suite("Histórico de desafios", () => {
   test("refazer um desafio soma na mesma linha e conta as vezes", async () => {
     const historico = new HistoricoDesafios(armazenamentoFalso());
 
-    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-482917-a" }));
-    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-482917-a" }));
-    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-482917-b" }));
+    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-MESA-a" }));
+    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-MESA-a" }));
+    await historico.registrarNota(ALUNO, nota({ tentativa: "challenge-MESA-b" }));
 
     const registros = historico.listar(ALUNO);
     assert.strictEqual(registros.length, 1);
@@ -72,7 +72,7 @@ suite("Histórico de desafios", () => {
     const historico = new HistoricoDesafios(armazenamentoFalso());
 
     for (let indice = 0; indice < 35; indice++) {
-      const codigo = String(indice).padStart(6, "0");
+      const codigo = `AA${"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(indice / 26)]}${"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[indice % 26]}`;
       await historico.registrarNota(
         ALUNO,
         nota({ codigo, tentativa: `challenge-${codigo}-a`, instante: indice }),
@@ -81,44 +81,53 @@ suite("Histórico de desafios", () => {
     // Uma nota nova num desafio antigo o traz para o topo.
     await historico.registrarNota(
       ALUNO,
-      nota({ codigo: "000020", tentativa: "challenge-000020-b", instante: 99 }),
+      nota({ codigo: "AAAU", tentativa: "challenge-AAAU-b", instante: 99 }),
     );
 
     const codigos = historico.listar(ALUNO).map((registro) => registro.codigo);
     assert.strictEqual(codigos.length, 30);
-    assert.deepStrictEqual(codigos.slice(0, 3), ["000020", "000034", "000033"]);
-    assert.ok(!codigos.includes("000000"));
+    assert.deepStrictEqual(codigos.slice(0, 3), ["AAAU", "AABI", "AABH"]);
+    assert.ok(!codigos.includes("AAAA"));
   });
 
   test("cada aluno vê o próprio histórico, e sem sessão não há histórico", async () => {
     const historico = new HistoricoDesafios(armazenamentoFalso());
 
-    await historico.registrarNota("Ana@Example.com", nota({ codigo: "111111" }));
-    await historico.registrarNota("bruno@example.com", nota({ codigo: "222222" }));
-    await historico.registrarNota(undefined, nota({ codigo: "333333" }));
+    await historico.registrarNota("Ana@Example.com", nota({ codigo: "KTBW" }));
+    await historico.registrarNota("bruno@example.com", nota({ codigo: "PRTO" }));
+    await historico.registrarNota(undefined, nota({ codigo: "XUVA" }));
 
     assert.deepStrictEqual(
       historico.listar("ana@example.com").map((registro) => registro.codigo),
-      ["111111"],
+      ["KTBW"],
     );
-    assert.strictEqual(historico.buscar("bruno@example.com", "222222")?.melhor, 50);
+    assert.strictEqual(historico.buscar("bruno@example.com", "PRTO")?.melhor, 50);
     assert.deepStrictEqual(historico.listar(undefined), []);
   });
 
-  test("ignora registros incompletos de outra versão", () => {
+  test("ignora registros incompletos ou com o código de 6 dígitos de antes", () => {
     const historico = new HistoricoDesafios(
       armazenamentoFalso({
         [`flexboxTrainer.historico2|${ALUNO}`]: [
-          { codigo: "482917" },
+          { codigo: "MESA" },
           null,
           {
-            codigo: "111111",
+            codigo: "482917",
+            melhor: 90,
+            tempoMelhorMs: 1,
+            verificacoes: 1,
+            vezes: 1,
+            ultimaVez: 2,
+            ultimaTentativa: "challenge-482917-a",
+          },
+          {
+            codigo: "KTBW",
             melhor: 70,
             tempoMelhorMs: 1,
             verificacoes: 1,
             vezes: 1,
             ultimaVez: 1,
-            ultimaTentativa: "challenge-111111-a",
+            ultimaTentativa: "challenge-KTBW-a",
           },
         ],
       }),
@@ -126,7 +135,7 @@ suite("Histórico de desafios", () => {
 
     assert.deepStrictEqual(
       historico.listar(ALUNO).map((registro) => registro.codigo),
-      ["111111"],
+      ["KTBW"],
     );
   });
 

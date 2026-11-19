@@ -36,19 +36,19 @@ suite("Barra lateral: histórico", () => {
     const registro = criarRegistroFalso();
     const mensagens: MensagemWebview[] = [];
     const provedor = criarProvedorParaTeste(mensagens, { registro });
-    const interno = await prepararCodigo(provedor, registro, "482917");
+    const interno = await prepararCodigo(provedor, registro, "MESA");
 
     await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
 
     assert.deepStrictEqual(
       historicoEnviado(mensagens).registros.map(({ codigo, melhor }) => [codigo, melhor]),
-      [["482917", 42.5]],
+      [["MESA", 42.5]],
     );
     // Na primeira vez, o recorde é a própria nota: não aparece.
     assert.strictEqual(historicoEnviado(mensagens).recorde, null);
 
     // Refeito, o desafio mostra o recorde da vez anterior como a nota a bater.
-    await prepararCodigo(provedor, registro, "482917");
+    await prepararCodigo(provedor, registro, "MESA");
     interno.enviarEstado();
     assert.strictEqual(historicoEnviado(mensagens).recorde, 42.5);
 
@@ -72,7 +72,7 @@ suite("Barra lateral: histórico", () => {
     });
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste([], { registro });
-    const interno = await prepararCodigo(provedor, registro, "482917");
+    const interno = await prepararCodigo(provedor, registro, "MESA");
     interno.inicioTentativaMs = 0;
     const outroDia = new Date(2026, 0, 1);
 
@@ -89,7 +89,7 @@ suite("Barra lateral: histórico", () => {
 
     assert.strictEqual(
       provedor.textoDoResultado(outroDia),
-      "Desafio médio 482 917: 42,50% em 12:34",
+      "Desafio médio MESA: 42,50% em 12:34",
     );
 
     // O desafio do dia diz a data, para o grupo da turma saber qual é.
@@ -97,7 +97,7 @@ suite("Barra lateral: histórico", () => {
     interno.desafioAtual = { ...interno.desafioAtual!, codigo: codigoDoDia(dia) };
     assert.strictEqual(
       provedor.textoDoResultado(dia),
-      "Desafio do dia 14/10 (071 881): 42,50% em 12:34",
+      "Desafio do dia 14/10 (DHAG): 42,50% em 12:34",
     );
   });
 
@@ -112,9 +112,9 @@ suite("Barra lateral: histórico", () => {
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste(mensagens, { registro });
     const verificacoes: [string, Date][] = [
-      ["482917", new Date(2026, 9, 13, 10)],
-      ["305114", new Date(2026, 9, 14, 9)],
-      ["771208", new Date(2026, 9, 14, 11)],
+      ["MESA", new Date(2026, 9, 13, 10)],
+      ["MESB", new Date(2026, 9, 14, 9)],
+      ["MESD", new Date(2026, 9, 14, 11)],
     ];
 
     for (const [codigo, instante] of verificacoes) {
@@ -123,7 +123,7 @@ suite("Barra lateral: histórico", () => {
       await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
     }
 
-    // O gráfico é o do nível escolhido (o médio); o 305 114 é difícil.
+    // O gráfico é o do nível escolhido (o médio); o MESB é difícil.
     assert.deepStrictEqual(historicoEnviado(mensagens).evolucao, [
       { dia: "2026-10-13", nivel: "medio", melhor: 40 },
       { dia: "2026-10-14", nivel: "medio", melhor: 52 },

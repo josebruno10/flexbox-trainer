@@ -2,6 +2,17 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Desafios
+- O código do desafio passa a ter 4 letras (como `MESA`), como os códigos do servidor, e não mais 6 dígitos. Os códigos de 6 dígitos deixam de valer em todo lugar: **Abrir por código** não os aceita, e os desafios com eles saem do histórico. O gráfico da evolução continua.
+- O desafio do dia também ganha um código de 4 letras: alunos com a 0.6.2 e com esta versão veem desafios do dia diferentes.
+- O fácil ficou mais fácil de novo: tira 75% dos componentes (os menores), e não mais 65%, sem nunca deixar menos de 8. Um desafio fácil típico passa de 11 para 8 componentes, e o maior, de 20 para 14 (um médio tem 21).
+
+### Progresso
+- **Salvar progresso** e **Puxar progresso**, na seção Desafio: o desafio, o `index.html` e o `style.css` vão para uma pasta sua no servidor e voltam em outro computador, pelas rotas `criar-pasta`, `salvar-conteudo` e `obter-conteudo`, as mesmas da extensão oficial. Ao puxar, a extensão abre o mesmo desafio com os arquivos salvos e pergunta antes de substituir o que já estiver escrito.
+- Num computador novo, sem dinâmica de treino, a extensão oferece **Já tenho uma**, além de criar uma: o aluno informa o código da dinâmica que já criou, e ela é conferida no servidor sem ser alterada. Também pelo comando **FlexBox Trainer: Usar Minha Dinâmica de Treino**.
+
 ## [0.6.2] - 2026-10-29
 
 ### Compatibilidade

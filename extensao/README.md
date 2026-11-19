@@ -14,10 +14,12 @@ Treino de recriação de layouts em HTML e CSS, no formato do torneio Frontend T
 
 1. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser vazia: a extensão cria o `index.html` e o `style.css`.
 2. Clique no ícone do **FlexBox Trainer**, na barra de atividades, e entre com **Google**, **GitHub** ou **Microsoft**, usando a conta cujo e-mail está cadastrado no torneio.
-3. Escolha o nível (fácil, médio ou difícil), clique em **Gerar novo desafio** e recrie a imagem. Para treinar o mesmo desafio que a turma, use **Desafio do dia**, igual para todos na mesma data, ou **Abrir por código**, com o código que o professor passar. Clique num componente do gabarito para ver as medidas e a cor; **Abrir em uma aba** mostra todos de uma vez.
+3. Escolha o nível (fácil, médio ou difícil), clique em **Gerar novo desafio** e recrie a imagem. Para treinar o mesmo desafio que a turma, use **Desafio do dia**, igual para todos na mesma data, ou **Abrir por código**, com o código de 4 letras que o professor passar. Clique num componente do gabarito para ver as medidas e a cor; **Abrir em uma aba** mostra todos de uma vez.
 4. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`) para receber a precisão. Na primeira vez, a extensão pede para criar a sua dinâmica de treino no servidor.
 
 O guia de primeiros passos, que abre na primeira vez, mostra cada passo. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde. **Copiar resultado** copia a nota e o tempo, para mandar à turma.
+
+Para continuar em outro computador, use **Salvar progresso**: o desafio, o `index.html` e o `style.css` ficam no servidor. No outro computador, entre com a mesma conta e clique em **Puxar progresso**.
 
 ## As regras, como no torneio
 

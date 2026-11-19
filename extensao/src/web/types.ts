@@ -142,4 +142,6 @@ export type MensagemRecebidaBarraLateral =
   | { type: "verHistorico" }
   | { type: "verAtalhos" }
   | { type: "copiarCodigo" }
+  | { type: "salvarProgresso" }
+  | { type: "puxarProgresso" }
   | { type: "logout" };
