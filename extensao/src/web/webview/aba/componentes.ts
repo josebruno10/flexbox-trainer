@@ -14,7 +14,7 @@ export function renderizarResumo(atual: GabaritoRecebido): void {
   rotulo.className = "rotulo";
   // O código identifica o desafio, para conferir que é o mesmo da turma.
   rotulo.textContent = atual.codigo
-    ? `Desafio ${atual.codigo.slice(0, 3)} ${atual.codigo.slice(3)}` +
+    ? `Desafio ${atual.codigo}` +
       (atual.nivel ? ` · ${NOME_DO_NIVEL[atual.nivel]}` : "")
     : "Gabarito";
   const titulo = document.createElement("strong");
