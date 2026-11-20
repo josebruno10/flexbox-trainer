@@ -20,11 +20,12 @@ function armazenamentoFalso(): vscode.Memento {
 }
 
 suite("Sincronização entre computadores", () => {
-  test("vão o nível e o histórico do aluno da sessão", () => {
+  test("vão o nível, o histórico e os progressos salvos do aluno da sessão", () => {
     assert.deepStrictEqual(chavesSincronizadas(" Aluno@Example.com "), [
       CHAVE_NIVEL,
       "flexboxTrainer.historico2|aluno@example.com",
       "flexboxTrainer.evolucao|aluno@example.com",
+      "flexboxTrainer.progressos|aluno@example.com",
     ]);
     // Sem sessão, nada de aluno nenhum.
     assert.deepStrictEqual(chavesSincronizadas(undefined), [CHAVE_NIVEL]);

@@ -25,10 +25,10 @@ suite("Barra lateral: desafio novo", () => {
     const mensagens: MensagemWebview[] = [];
     const provedor = criarProvedorParaTeste(mensagens);
     const interno = provedor as unknown as ProvedorInterno;
-    interno.desafioAtual = criarDesafioGerado({
+    interno.tentativa.desafio = criarDesafioGerado({
       aleatorio: criarAleatorioTeste(101),
     });
-    interno.inicioTentativaMs = 1_000;
+    interno.tentativa.inicioMs = 1_000;
 
     interno.enviarEstado();
     assert.deepStrictEqual(ultimoEstadoDesafio(mensagens), {
@@ -54,8 +54,8 @@ suite("Barra lateral: desafio novo", () => {
     interno.testarConexaoServidor = async () => undefined;
     await provedor.iniciarNovoDesafio();
 
-    assert.strictEqual(interno.fimTentativaMs, undefined);
-    assert.strictEqual(interno.inicioTentativaMs, 20_000);
+    assert.strictEqual(interno.tentativa.fimMs, undefined);
+    assert.strictEqual(interno.tentativa.inicioMs, 20_000);
     assert.deepStrictEqual(
       ultimoEstadoDesafio(mensagens),
       { tempoAtualMs: 0, encerrado: false },
@@ -71,15 +71,15 @@ suite("Barra lateral: desafio novo", () => {
 
     await provedor.abrirDesafioPorCodigo();
 
-    const primeiro = interno.desafioAtual!;
+    const primeiro = interno.tentativa.desafio!;
     assert.strictEqual(primeiro.codigo, "MESA");
     assert.deepStrictEqual(primeiro.blocks, criarDesafioPorCodigo("MESA").blocks);
 
     await provedor.refazerDesafio();
 
-    assert.strictEqual(interno.desafioAtual!.codigo, "MESA");
-    assert.deepStrictEqual(interno.desafioAtual!.blocks, primeiro.blocks);
-    assert.notStrictEqual(interno.desafioAtual!.challengeId, primeiro.challengeId);
+    assert.strictEqual(interno.tentativa.desafio!.codigo, "MESA");
+    assert.deepStrictEqual(interno.tentativa.desafio!.blocks, primeiro.blocks);
+    assert.notStrictEqual(interno.tentativa.desafio!.challengeId, primeiro.challengeId);
   });
 
   test("não abre nada com um código inválido ou cancelado", async () => {
@@ -93,7 +93,7 @@ suite("Barra lateral: desafio novo", () => {
     }
     await provedor.refazerDesafio("482917");
 
-    assert.strictEqual(interno.desafioAtual, undefined);
+    assert.strictEqual(interno.tentativa.desafio, undefined);
   });
 
   test("abre o desafio do dia e avisa a barra lateral que ele é o do dia", async () => {
@@ -104,7 +104,7 @@ suite("Barra lateral: desafio novo", () => {
 
     await provedor.abrirDesafioDoDia();
 
-    assert.strictEqual(interno.desafioAtual!.codigo, codigoDoDia());
+    assert.strictEqual(interno.tentativa.desafio!.codigo, codigoDoDia());
     const dados = ultimaMensagem(mensagens, "dadosDesafio")?.payload as { doDia: boolean };
     assert.strictEqual(dados.doDia, true);
   });
@@ -166,17 +166,17 @@ suite("Barra lateral: desafio novo", () => {
       assert.strictEqual(perguntas.length, 1);
       assert.match(perguntas[0], /apaga o que você escreveu/);
       assert.strictEqual(limpezas.length, 1);
-      assert.ok(interno.inicioTentativaMs >= limpezas[0].instante);
+      assert.ok(interno.tentativa.inicioMs >= limpezas[0].instante);
     });
 
     test("não gera nem apaga nada quando o aluno cancela", async () => {
       const { provedor, interno, limpezas } = preparar(comTrabalho, undefined);
       const anterior = criarDesafioGerado({ aleatorio: criarAleatorioTeste(240) });
-      interno.desafioAtual = anterior;
+      interno.tentativa.desafio = anterior;
 
       await provedor.iniciarNovoDesafio();
 
-      assert.strictEqual(interno.desafioAtual, anterior);
+      assert.strictEqual(interno.tentativa.desafio, anterior);
       assert.deepStrictEqual(limpezas, []);
     });
 
@@ -192,7 +192,7 @@ suite("Barra lateral: desafio novo", () => {
 
       assert.deepStrictEqual(perguntas, []);
       assert.deepStrictEqual(limpezas, []);
-      assert.ok(interno.desafioAtual);
+      assert.ok(interno.tentativa.desafio);
     });
   });
 });

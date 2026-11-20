@@ -5,7 +5,7 @@ import {
   TentativaPayload,
 } from "../types";
 import { corrigirFormas } from "./servidor/correcao";
-import { enviarGabaritoDeTreino } from "./servidor/gabaritos";
+import { dataUrlParaPng, enviarGabaritoDeTreino } from "./servidor/gabaritos";
 import { ErroHttpServidor } from "./servidor/requisicao";
 
 // Gabarito que esta instalação criou no evento de treino e o desafio que ele
@@ -133,9 +133,4 @@ function falha(
   error: string,
 ): ResultadoAvaliacao {
   return { precision: 0, score: 0, source, error };
-}
-
-function dataUrlParaPng(dataUrl: string): Uint8Array<ArrayBuffer> {
-  const binario = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
-  return Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0));
 }

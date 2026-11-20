@@ -79,6 +79,39 @@ export async function enviarGabaritoDeTreino(
   return cod;
 }
 
+/**
+ * A dinâmica de um desafio guarda a imagem dele como gabarito: sem gabarito,
+ * o servidor recusa o salvar-conteudo ("Nenhum gabarito encontrado"). Só
+ * cadastra se a dinâmica ainda não tiver nenhum; nunca substitui nem apaga.
+ * Devolve se cadastrou.
+ */
+export async function garantirGabaritoDaDinamica(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+  png: Uint8Array<ArrayBuffer>,
+): Promise<boolean> {
+  if ((await listarGabaritos(configuracao, evento)).length > 0) {
+    return false;
+  }
+  const resposta = await requisitarApi(
+    configuracao,
+    "POST",
+    `/tipo-dinamica/${encodeURIComponent(evento)}/gabarito`,
+    criarFormularioImagem(png),
+    "cadastrar o gabarito do desafio",
+  );
+  log.info(
+    `Gabarito do desafio cadastrado em ${evento}: ${JSON.stringify(resposta).slice(0, 300)}`,
+  );
+  return true;
+}
+
+/** A imagem do gabarito, que chega da barra lateral como data URL. */
+export function dataUrlParaPng(dataUrl: string): Uint8Array<ArrayBuffer> {
+  const binario = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
+  return Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0));
+}
+
 async function listarGabaritos(
   configuracao: ConfiguracaoServidor,
   evento: string,

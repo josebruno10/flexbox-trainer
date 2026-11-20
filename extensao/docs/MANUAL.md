@@ -23,7 +23,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Cria o `index.html` e o `style.css` quando a pasta ainda não os tem.
 - Marca o tempo de cada tentativa.
 - Dá a cada desafio um código de 4 letras: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
-- Salva o seu progresso no servidor (o desafio, o `index.html` e o `style.css`), para você continuar em outro computador.
+- Salva o progresso de cada desafio no servidor (o `index.html` e o `style.css`), para você continuar em outro computador pelo código do desafio.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
 - Mostra a sua evolução, com a melhor nota de cada dia num gráfico.
 - Avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
@@ -109,13 +109,13 @@ Desafio do dia 14/10 (DHAG): 87,42% em 12:34
 
 ### Continuar em outro computador
 
-**Salvar progresso**, na seção Desafio, guarda no servidor o `index.html` e o `style.css` do desafio atual, junto com o código dele. Eles ficam numa pasta sua, dentro da sua dinâmica de treino, pelas mesmas rotas da extensão oficial do torneio (`salvar-conteudo` e `obter-conteudo`). Cada vez que você salva, o que estava salvo antes é substituído: o servidor guarda um progresso por aluno.
+Cada desafio pode ter um progresso salvo no servidor. **Salvar progresso**, na seção Desafio, guarda o `index.html` e o `style.css` do desafio atual numa dinâmica com o mesmo código dele: o desafio `MESA` fica na dinâmica `mesa`. A extensão cria essa dinâmica no primeiro salvamento, e o servidor guarda os arquivos numa pasta sua dentro dela, pelas mesmas rotas da extensão oficial do torneio (`criar-pasta`, `salvar-conteudo` e `obter-conteudo`). Salvar de novo o mesmo desafio substitui o que estava salvo nele; os outros desafios não mudam.
 
-No outro computador, entre com a mesma conta e clique em **Puxar progresso**. A extensão abre o mesmo desafio e grava nele os arquivos salvos. Se a pasta aberta já tiver algo escrito, ela pergunta antes de substituir. O cronômetro recomeça.
+Para continuar, em qualquer computador, entre com a mesma conta e clique em **Puxar progresso**. A extensão lista os desafios que você salvou; escolha um, ou **Digitar outro código…**. Ela puxa o que está no servidor para aquele código, abre o desafio e grava nele os seus arquivos. Se a pasta aberta já tiver algo escrito, ela pergunta antes de substituir. O cronômetro recomeça.
 
-Num computador onde você ainda não usou a extensão, ela pergunta pela sua dinâmica de treino: clique em **Já tenho uma** e confirme o código da dinâmica que você criou no primeiro computador (o mesmo código que aparece em `flexboxTrainer.eventoTreino` lá). Com a **Sincronização de Configurações** ligada, isso já vem sozinho.
+A lista dos desafios salvos acompanha você pela **Sincronização de Configurações**. Sem ela, digite o código no outro computador: depois de puxar, dá para voltar a salvar ali normalmente.
 
-Só quem está no torneio salva e puxa o progresso, como acontece na correção. O histórico de notas não vai pelo servidor; ele acompanha você pela Sincronização de Configurações (veja acima).
+A extensão só salva numa dinâmica que ela mesma criou para você. Se já existir no servidor uma dinâmica com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o progresso desse desafio não é salvo (puxar continua funcionando, porque só lê). Só quem está no torneio salva e puxa o progresso, como acontece na correção. O histórico de notas não vai pelo servidor; ele acompanha você pela Sincronização de Configurações (veja acima).
 
 ## As regras do desafio
 
@@ -140,8 +140,8 @@ A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gab
 | Gerar novo desafio | Cria um desafio novo, no nível escolhido, e reinicia o cronômetro (`Ctrl+Alt+D`) |
 | Desafio do dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
 | Abrir por código | Abre o desafio de um código de 4 letras, como o que o professor passar |
-| Salvar progresso | Aparece com um desafio aberto; guarda no servidor o desafio, o `index.html` e o `style.css` |
-| Puxar progresso | Traz o que você salvou, de qualquer computador: abre o mesmo desafio com os seus arquivos |
+| Salvar progresso | Aparece com um desafio aberto; guarda no servidor o `index.html` e o `style.css` deste desafio |
+| Puxar progresso | Pede o código de um desafio salvo e o abre com os seus arquivos, em qualquer computador |
 | O código, nos dados do desafio | Copia o código, para outra pessoa abrir o mesmo desafio |
 | Encerrar desafio | Congela o cronômetro do desafio atual |
 | ↻ Refazer | Aparece depois de encerrar, no lugar de Encerrar desafio; começa o mesmo desafio de novo, do zero |
@@ -191,8 +191,8 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Copiar Resultado | Copia o código, a melhor nota e o tempo do desafio atual |
 | FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
 | FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
-| FlexBox Trainer: Salvar Progresso no Servidor | Guarda no servidor o desafio atual, o `index.html` e o `style.css` |
-| FlexBox Trainer: Puxar Progresso do Servidor | Abre o desafio salvo com os arquivos salvos, em qualquer computador |
+| FlexBox Trainer: Salvar Progresso no Servidor | Guarda no servidor o `index.html` e o `style.css` do desafio atual |
+| FlexBox Trainer: Puxar Progresso do Servidor | Pede o código de um desafio salvo e o abre com os arquivos salvos |
 | FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
 | FlexBox Trainer: Atalhos e Abreviações Emmet | Abre, numa aba, os atalhos da extensão e do editor e as abreviações Emmet de HTML e CSS |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |

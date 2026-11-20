@@ -6,18 +6,12 @@ import {
   Desafio,
   EstadoAutenticacao,
   FormaMedida,
-  GabaritoGerado,
   MensagemRecebidaBarraLateral,
   Nivel,
   ResumoWorkspace,
-  ResultadoAvaliacao,
   StatusConexaoServidor,
 } from "../types";
-import {
-  codigoDoDia,
-  normalizarCodigo,
-  sortearCodigo,
-} from "../services/codigoDesafio";
+import { sortearCodigo } from "../services/codigoDesafio";
 import { ehNivel } from "../niveis";
 import { criarDesafioPorCodigo } from "../services/desafio";
 import {
@@ -27,6 +21,7 @@ import {
   temTrabalhoDoAluno,
 } from "../services/workspace";
 import { ConteudoDoAluno } from "../services/servidor/conteudo";
+import { ProgressosSalvos } from "../services/progressosSalvos";
 import { AlteracaoExterna } from "../services/alteracoesExternas";
 import { log } from "../services/logger";
 import {
@@ -34,22 +29,22 @@ import {
   encontrarExtensoesIa,
   ExtensaoIa,
 } from "../services/extensoesIa";
-import { lerConfiguracaoServidor } from "../services/servidor/configuracao";
 import { obterHtmlWebview } from "../telas/barraLateral";
 import { obterHtmlAutenticacao } from "../telas/entrada";
-import {
-  BarraDeStatus,
-  COMANDO_ABRIR_BARRA,
-  EstadoBarraDeStatus,
-} from "./barraDeStatus";
+import { BarraDeStatus, COMANDO_ABRIR_BARRA } from "./barraDeStatus";
 import {
   confirmarLimpeza,
   criarArquivosComAviso,
 } from "./barraLateral/arquivosDeTreino";
-import { pedirCodigo } from "./barraLateral/codigos";
-import { sessaoRecusada, testarConexao } from "./barraLateral/conexao";
+import * as porCodigo from "./barraLateral/codigos";
+import * as conexao from "./barraLateral/conexao";
 import { Corretor } from "./barraLateral/corretor";
-import { mensagensDaBarra, ProgressoGuia } from "./barraLateral/estado";
+import {
+  estadoDaBarraDeStatus,
+  mensagensDaBarra,
+  progressoDoGuia,
+  ProgressoGuia,
+} from "./barraLateral/estado";
 import { HistoricoDoAluno } from "./barraLateral/historicoDoAluno";
 import { CHAVE_NIVEL } from "../sincronizacao";
 import { PaginaDoAluno } from "./barraLateral/paginaDoAluno";
@@ -63,42 +58,27 @@ import {
   avisarExtensoesIa,
   ehArquivoDeTreino,
   motivoExtensoesIa,
-  resultadoInvalidado,
 } from "./barraLateral/regras";
 import { TentativaEmCurso, verificarTentativa } from "./barraLateral/verificacao";
-import {
-  melhorEntre,
-  MelhorDaTentativa,
-  textoDoResultado,
-} from "./barraLateral/resultado";
+import { Tentativa } from "./barraLateral/tentativa";
+import { criarControlador } from "./barraLateral/controlador";
+import { VistaDaBarra } from "./barraLateral/vista";
 
 export type { ProgressoGuia } from "./barraLateral/estado";
 
 /**
- * A barra lateral: guarda o desafio em andamento e coordena as partes que
- * ficam em barraLateral/ (mensagens, correção, histórico, arquivos).
+ * A barra lateral: coordena o desafio em andamento e as partes que ficam em
+ * barraLateral/ (tentativa, mensagens, correção, histórico, arquivos).
  */
 export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public static readonly viewType = "flexbox-trainer.sidebar";
 
   private readonly loginProvider: LoginProvider;
 
-  private visualizacaoWebview?: vscode.WebviewView;
+  private readonly vista = new VistaDaBarra();
 
-  private desafioAtual?: Desafio;
-
-  private gabaritoAtual?: GabaritoGerado;
-
-  private avaliacaoAtual?: ResultadoAvaliacao;
-
-  private inicioTentativaMs = Date.now();
-
-  private fimTentativaMs?: number;
-
-  // Por que o desafio atual não pode mais ser corrigido. Fica só na memória,
-  // como o desafio: a extensão de IA que estava rodando só sai da lista
-  // depois de "Reiniciar Extensões", que reinicia esta extensão também.
-  private motivoInvalidacao?: string;
+  // O desafio em andamento (veja barraLateral/tentativa.ts).
+  private readonly tentativa = new Tentativa();
 
   private estadoAutenticacao: EstadoAutenticacao;
 
@@ -108,20 +88,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   // gera um segundo desafio.
   private gerandoDesafio = false;
 
-  // Precisões das correções do desafio atual, da primeira à última.
-  private historicoNotas: number[] = [];
-
-  // A melhor nota desta vez que o desafio é feito, para Copiar resultado.
-  private melhorDaTentativa?: MelhorDaTentativa;
-
-  // A verificação mede a página dentro da barra lateral: o atalho só a pede
-  // quando o script da barra já carregou.
-  private barraPronta = false;
-  private verificarQuandoPronta = false;
-
   private readonly historico: HistoricoDoAluno;
 
   private readonly corretor: Corretor;
+
+  private readonly progressos: ProgressosSalvos;
 
   // O resumo dos arquivos fica na página do aluno; os testes o trocam aqui.
   private get resumoWorkspaceAtual(): ResumoWorkspace {
@@ -158,6 +129,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       () => this.lerConfiguracaoServidorAtual(),
       registroGabaritos,
     );
+    this.progressos = new ProgressosSalvos(registroGabaritos);
     this.estadoAutenticacao = authService.getEstadoAtual();
 
     this.authService.onDidChangeEstado((estado) => {
@@ -177,16 +149,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public resolveWebviewView(
     visualizacaoWebview: vscode.WebviewView,
   ): void | Thenable<void> {
-    this.visualizacaoWebview = visualizacaoWebview;
-    visualizacaoWebview.webview.options = { enableScripts: true };
+    this.vista.conectar(visualizacaoWebview);
     this.renderizarWebviewAtual();
-    visualizacaoWebview.onDidDispose(() => {
-      this.barraPronta = false;
-      this.visualizacaoWebview = undefined;
-    });
-    visualizacaoWebview.onDidChangeVisibility(() =>
-      this.enviarVerificacaoPendente(),
-    );
 
     const controlador = this.controladorDaBarra();
     visualizacaoWebview.webview.onDidReceiveMessage(
@@ -233,19 +197,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         return;
       }
 
-      this.desafioAtual = criarDesafioPorCodigo(
+      const desafio = criarDesafioPorCodigo(
         codigo ?? sortearCodigo(this.nivelEscolhido()),
       );
-      log.info(
-        `Novo desafio: código ${this.desafioAtual.codigo} (${this.desafioAtual.challengeId}).`,
-      );
-      this.motivoInvalidacao = undefined;
-      this.pagina.mostrarDesafio(this.desafioAtual);
-      this.gabaritoAtual = undefined;
-      this.avaliacaoAtual = undefined;
-      this.historicoNotas = [];
-      this.melhorDaTentativa = undefined;
-      this.verificarQuandoPronta = false;
+      log.info(`Novo desafio: código ${desafio.codigo} (${desafio.challengeId}).`);
+      this.tentativa.comecar(desafio);
+      this.pagina.mostrarDesafio(desafio);
+      this.vista.esquecerVerificacao();
 
       if (retomado) {
         await this.gravarComAviso(() => this.escreverArquivosDoAluno(retomado));
@@ -254,8 +212,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       }
 
       // O tempo começa com os arquivos já limpos.
-      this.inicioTentativaMs = Date.now();
-      this.fimTentativaMs = undefined;
+      this.tentativa.iniciarRelogio();
       this.enviarEstado();
       void this.testarConexaoServidor();
       // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
@@ -306,7 +263,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   public obterDesafioAtual(): Desafio | undefined {
-    return this.desafioAtual;
+    return this.tentativa.desafio;
   }
 
   /**
@@ -316,7 +273,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   public atualizarExtensoesIa(): void {
     const extensoesIa = this.detectarExtensoesIa();
     if (extensoesIa.length > 0) {
-      this.invalidarDesafio(motivoExtensoesIa(extensoesIa));
+      this.tentativa.invalidar(motivoExtensoesIa(extensoesIa));
     }
     this.enviarEstado();
   }
@@ -332,9 +289,9 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     await this.atualizarPreviewWorkspace();
 
     if (
-      !this.desafioAtual ||
-      this.motivoInvalidacao ||
-      alteracao.instante < this.inicioTentativaMs
+      !this.tentativa.desafio ||
+      this.tentativa.motivoInvalidacao ||
+      alteracao.instante < this.tentativa.inicioMs
     ) {
       return;
     }
@@ -344,18 +301,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     }
 
     const nome = alteracao.uri.path.split("/").pop() ?? "arquivo";
-    this.invalidarDesafio(`o ${nome} foi alterado fora do editor.`);
+    this.tentativa.invalidar(`o ${nome} foi alterado fora do editor.`);
     this.enviarEstado();
-  }
-
-  private invalidarDesafio(motivo: string): void {
-    if (!this.desafioAtual || this.motivoInvalidacao) {
-      return;
-    }
-
-    this.motivoInvalidacao = motivo;
-    this.avaliacaoAtual = resultadoInvalidado(motivo);
-    log.info(`Desafio ${this.desafioAtual.challengeId} invalidado: ${motivo}`);
   }
 
   /**
@@ -378,15 +325,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.enviarEstado();
   }
 
-  /** O desafio do dia: o mesmo para todos na mesma data. */
-  public async abrirDesafioDoDia(): Promise<void> {
-    if (!this.authService.isAutenticado()) {
-      void vscode.window.showWarningMessage("Entre antes de abrir um desafio.");
-      return;
-    }
-    await this.iniciarNovoDesafio(codigoDoDia());
-  }
-
   /**
    * O atalho de Verificar: abre a barra lateral, que mede a página, e pede a
    * verificação a ela assim que ela carregar e estiver à vista.
@@ -396,74 +334,53 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       void vscode.window.showInformationMessage("Entre antes de verificar.");
       return;
     }
-    if (!this.desafioAtual) {
+    if (!this.tentativa.desafio) {
       void vscode.window.showInformationMessage("Gere um desafio antes de verificar.");
       return;
     }
 
-    this.verificarQuandoPronta = true;
+    this.vista.guardarVerificacao();
     await vscode.commands.executeCommand(COMANDO_ABRIR_BARRA);
-    this.enviarVerificacaoPendente();
+    this.vista.enviarVerificacaoPendente();
   }
 
-  /** "Desafio médio MESA: 87,42% em 12:34", para colar no grupo da turma. */
+  // Abrir, refazer e copiar pelo código ficam em barraLateral/codigos.ts.
+  public abrirDesafioDoDia(): Promise<void> {
+    return porCodigo.abrirDesafioDoDia(this.contextoDosCodigos());
+  }
+
+  public abrirDesafioPorCodigo(): Promise<void> {
+    return porCodigo.abrirDesafioPorCodigo(this.contextoDosCodigos());
+  }
+
+  public refazerDesafio(codigo?: string): Promise<void> {
+    return porCodigo.refazerDesafio(this.contextoDosCodigos(), codigo);
+  }
+
+  public verHistorico(): Promise<void> {
+    return porCodigo.verHistorico(this.contextoDosCodigos());
+  }
+
+  public copiarCodigo(): Promise<void> {
+    return porCodigo.copiarCodigo(this.contextoDosCodigos());
+  }
+
   public textoDoResultado(agora = new Date()): string | undefined {
-    const codigo = this.desafioAtual?.codigo;
-    return codigo && this.melhorDaTentativa
-      ? textoDoResultado(codigo, this.melhorDaTentativa, agora)
-      : undefined;
+    return porCodigo.textoDoResultadoAtual(this.contextoDosCodigos(), agora);
   }
 
-  public async copiarResultado(): Promise<void> {
-    const texto = this.textoDoResultado();
-    if (!texto) {
-      void vscode.window.showInformationMessage(
-        "Verifique o desafio antes de copiar o resultado.",
-      );
-      return;
-    }
-    await vscode.env.clipboard.writeText(texto);
-    vscode.window.setStatusBarMessage(`Copiado: ${texto}`, 3000);
+  public copiarResultado(): Promise<void> {
+    return porCodigo.copiarResultado(this.contextoDosCodigos());
   }
 
-  /** Pede um código (o que o professor ou um colega passou) e abre o desafio. */
-  public async abrirDesafioPorCodigo(): Promise<void> {
-    if (!this.authService.isAutenticado()) {
-      void vscode.window.showWarningMessage("Entre antes de abrir um desafio.");
-      return;
-    }
-
-    const codigo = await pedirCodigo();
-    if (codigo) {
-      await this.iniciarNovoDesafio(codigo);
-    }
-  }
-
-  /** Começa de novo um desafio: o atual ou um do histórico. */
-  public async refazerDesafio(codigo = this.desafioAtual?.codigo): Promise<void> {
-    const valido = codigo ? normalizarCodigo(codigo) : undefined;
-    if (!valido) {
-      void vscode.window.showInformationMessage("Gere um desafio antes de refazê-lo.");
-      return;
-    }
-    await this.iniciarNovoDesafio(valido);
-  }
-
-  /** Todos os desafios do histórico; escolher um começa ele de novo. */
-  public async verHistorico(): Promise<void> {
-    const codigo = await this.historico.escolher();
-    if (codigo) {
-      await this.refazerDesafio(codigo);
-    }
-  }
-
-  public async copiarCodigo(): Promise<void> {
-    const codigo = this.desafioAtual?.codigo;
-    if (!codigo) {
-      return;
-    }
-    await vscode.env.clipboard.writeText(codigo);
-    vscode.window.setStatusBarMessage(`Código ${codigo} copiado.`, 2500);
+  private contextoDosCodigos(): porCodigo.ContextoDosCodigos {
+    return {
+      autenticado: () => this.authService.isAutenticado(),
+      codigoAtual: () => this.tentativa.desafio?.codigo,
+      melhorDaTentativa: () => this.tentativa.melhor,
+      historico: this.historico,
+      abrir: (codigo) => this.iniciarNovoDesafio(codigo),
+    };
   }
 
   /** Guarda no servidor o index.html e o style.css do desafio atual. */
@@ -471,7 +388,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     return salvarProgresso(this.contextoDoProgresso());
   }
 
-  /** Traz o que foi salvo em outro computador (veja barraLateral/progresso.ts). */
+  /** Pede o código e traz o que foi salvo nele (veja barraLateral/progresso.ts). */
   public puxarProgresso(): Promise<void> {
     return puxarProgresso(this.contextoDoProgresso());
   }
@@ -479,14 +396,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private contextoDoProgresso(): ContextoDoProgresso {
     return {
       autenticado: () => this.authService.isAutenticado(),
+      dono: () => this.authService.getSessaoAtual()?.email,
+      progressos: this.progressos,
       configuracao: () => this.lerConfiguracaoServidorAtual(),
-      desafio: () => this.desafioAtual,
+      desafio: () => this.tentativa.desafio,
+      gabarito: () => this.tentativa.gabarito,
       lerArquivos: () => this.lerArquivosDoAluno(),
       abrirDesafio: (codigo, conteudo) => this.iniciarNovoDesafio(codigo, conteudo),
-      gravarArquivos: async (conteudo) => {
-        await this.gravarComAviso(() => this.escreverArquivosDoAluno(conteudo));
-        await this.atualizarPreviewWorkspace();
-      },
       recusarSessaoSePreciso: (httpStatus) =>
         this.invalidarSessaoSeRecusada(httpStatus),
     };
@@ -500,7 +416,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   public abrirPainelGabarito(): void {
-    this.pagina.abrirAba(this.desafioAtual);
+    this.pagina.abrirAba(this.tentativa.desafio);
   }
 
   /** A página do aluno acompanha a digitação. */
@@ -518,26 +434,17 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   private encerrarDesafioAtual(): void {
-    if (!this.desafioAtual || this.fimTentativaMs !== undefined) {
-      return;
+    if (this.tentativa.encerrar()) {
+      this.enviarEstado();
     }
-
-    this.fimTentativaMs = Date.now();
-    this.enviarEstado();
   }
 
   // Ao sair, nada do desafio passa para a próxima sessão.
   private esquecerDesafio(): void {
-    this.desafioAtual = undefined;
-    this.fimTentativaMs = undefined;
-    this.motivoInvalidacao = undefined;
-    this.gabaritoAtual = undefined;
-    this.avaliacaoAtual = undefined;
+    this.tentativa.esquecer();
     this.pagina.esquecer();
     this.corretor.esquecer();
-    this.historicoNotas = [];
-    this.melhorDaTentativa = undefined;
-    this.verificarQuandoPronta = false;
+    this.vista.esquecerVerificacao();
   }
 
   private verificarTentativaAtual(
@@ -558,15 +465,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private tentativaEmCurso(): TentativaEmCurso {
     return {
       autenticado: () => this.authService.isAutenticado(),
-      desafio: () => this.desafioAtual,
-      gabarito: () => this.gabaritoAtual,
+      desafio: () => this.tentativa.desafio,
+      gabarito: () => this.tentativa.gabarito,
       extensoesIa: () => this.detectarExtensoesIa(),
-      motivoInvalidacao: () => this.motivoInvalidacao,
-      invalidar: (motivo) => this.invalidarDesafio(motivo),
+      motivoInvalidacao: () => this.tentativa.motivoInvalidacao,
+      invalidar: (motivo) => this.tentativa.invalidar(motivo),
       resumo: () => this.resumoWorkspaceAtual,
       definirResumo: (resumo) => this.pagina.definir(resumo),
       guardarResultado: (resultado) => {
-        this.avaliacaoAtual = resultado;
+        this.tentativa.avaliacao = resultado;
       },
       registrarNota: (precisao) => this.registrarNota(precisao),
       enviarEstado: () => this.enviarEstado(),
@@ -574,97 +481,76 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       recusarSessaoSePreciso: (httpStatus) =>
         this.invalidarSessaoSeRecusada(httpStatus),
       viewId: ProvedorBarraLateralFlexBox.viewType,
-      postar: (mensagem) =>
-        void this.visualizacaoWebview?.webview.postMessage(mensagem),
+      postar: (mensagem) => this.vista.postar(mensagem),
     };
   }
 
   // Uma nota nova: entra nas tentativas, na melhor da vez e no histórico.
   private async registrarNota(precisao: number): Promise<void> {
-    const desafio = this.desafioAtual;
+    const desafio = this.tentativa.desafio;
     if (!desafio) {
       return;
     }
-    const tempoAte = (instante: number) =>
-      (this.fimTentativaMs ?? instante) - this.inicioTentativaMs;
-
-    this.historicoNotas = [...this.historicoNotas, precisao];
-    this.melhorDaTentativa = melhorEntre(this.melhorDaTentativa, {
-      precisao,
-      tempoMs: tempoAte(Date.now()),
-    });
-    await this.historico.registrarNota(desafio, precisao, tempoAte);
+    this.tentativa.registrarNota(precisao);
+    await this.historico.registrarNota(desafio, precisao, (instante) =>
+      this.tentativa.tempoAte(instante),
+    );
   }
 
-  /** O comando Testar Servidor: o resultado vem numa notificação. */
-  public async testarServidorPeloComando(): Promise<void> {
-    if (!this.authService.isAutenticado()) {
-      void vscode.window.showWarningMessage("Entre antes de testar o servidor.");
-      return;
-    }
-
-    const status = await this.testarConexaoServidor(true);
-    if (status.ok) {
-      void vscode.window.showInformationMessage(status.mensagem);
-    } else {
-      void vscode.window.showErrorMessage(`Servidor: ${status.mensagem}`);
-    }
+  /** O comando Testar Servidor (veja barraLateral/conexao.ts). */
+  public testarServidorPeloComando(): Promise<void> {
+    return conexao.testarServidorPeloComando(this.authService.isAutenticado(), () =>
+      this.testarConexaoServidor(true),
+    );
   }
 
   // Cada desafio novo testa a sessão; a barra lateral só fala se der erro.
   private async testarConexaoServidor(
     peloComando = false,
   ): Promise<StatusConexaoServidor> {
-    const { status, httpStatus } = await testarConexao(
+    const { status, httpStatus } = await conexao.testarConexao(
       this.lerConfiguracaoServidorAtual(),
     );
     await this.invalidarSessaoSeRecusada(httpStatus, true);
 
     if (!peloComando && !status.ok) {
-      void this.visualizacaoWebview?.webview.postMessage({
-        type: "statusServidor",
-        payload: status,
-      });
+      this.vista.postar({ type: "statusServidor", payload: status });
     }
     return status;
   }
 
   private lerConfiguracaoServidorAtual(): ConfiguracaoServidor {
-    const sessao = this.authService.getSessaoAtual();
-    // Aluno e time vêm só da sessão, que os busca no servidor pelo e-mail;
-    // assim ninguém corrige em nome de outra pessoa.
-    return {
-      ...lerConfiguracaoServidor(this.authService.getAccessToken()),
-      userId: sessao?.userId ?? 0,
-      teamId: sessao?.teamId ?? 0,
-    };
+    return conexao.configuracaoDaSessao(this.authService);
   }
 
-  private async invalidarSessaoSeRecusada(
+  private invalidarSessaoSeRecusada(
     httpStatus?: number,
     incluirAcessoNegado = false,
   ): Promise<void> {
-    if (sessaoRecusada(httpStatus, incluirAcessoNegado)) {
-      await this.authService.invalidarSessao(
-        "O servidor recusou a sessão. Entre novamente.",
-      );
-    }
+    return conexao.encerrarSessaoSeRecusada(
+      this.authService,
+      httpStatus,
+      incluirAcessoNegado,
+    );
   }
 
   private enviarEstado(): void {
     // A barra de status e o guia valem mesmo com a barra lateral fechada.
-    this.barraDeStatus?.atualizar(this.estadoBarraDeStatus());
-    this.progressoMudou.fire(this.progressoGuia());
+    const tentativa = this.tentativa.resumo(
+      this.authService.isAutenticado(),
+      this.detectarExtensoesIa(),
+      this.historico.registros().length > 0,
+    );
+    this.barraDeStatus?.atualizar(estadoDaBarraDeStatus(tentativa));
+    this.progressoMudou.fire(
+      progressoDoGuia(tentativa, (vscode.workspace.workspaceFolders?.length ?? 0) > 0),
+    );
 
-    const webview = this.visualizacaoWebview?.webview;
-    if (!webview) {
+    if (!this.vista.webview) {
       return;
     }
 
-    void webview.postMessage({
-      type: "estadoAutenticacao",
-      payload: this.estadoAutenticacao,
-    });
+    this.vista.postar({ type: "estadoAutenticacao", payload: this.estadoAutenticacao });
     if (!this.authService.isAutenticado()) {
       return;
     }
@@ -673,129 +559,52 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     for (const mensagem of mensagensDaBarra({
       extensoesIa: this.detectarExtensoesIa(),
       nivel,
-      desafio: this.desafioAtual,
-      inicioMs: this.inicioTentativaMs,
-      fimMs: this.fimTentativaMs,
+      desafio: this.tentativa.desafio,
+      inicioMs: this.tentativa.inicioMs,
+      fimMs: this.tentativa.fimMs,
       resumoWorkspace: this.resumoWorkspaceAtual,
-      historicoNotas: this.historicoNotas,
-      historico: this.historico.naBarra(this.desafioAtual, nivel),
-      avaliacao: this.avaliacaoAtual,
+      historicoNotas: this.tentativa.notas,
+      historico: this.historico.naBarra(this.tentativa.desafio, nivel),
+      avaliacao: this.tentativa.avaliacao,
     })) {
-      void webview.postMessage(mensagem);
+      this.vista.postar(mensagem);
     }
-  }
-
-  // Escondida, a barra não mede a página: o pedido espera ela aparecer.
-  private enviarVerificacaoPendente(): void {
-    if (
-      !this.verificarQuandoPronta ||
-      !this.barraPronta ||
-      !this.visualizacaoWebview?.visible
-    ) {
-      return;
-    }
-    this.verificarQuandoPronta = false;
-    void this.visualizacaoWebview.webview.postMessage({ type: "verificar" });
-  }
-
-  private progressoGuia(): ProgressoGuia {
-    const autenticado = this.authService.isAutenticado();
-    return {
-      autenticado,
-      pastaAberta: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
-      semExtensoesIa: this.detectarExtensoesIa().length === 0,
-      temDesafio: autenticado && Boolean(this.desafioAtual),
-      verificou:
-        this.historicoNotas.length > 0 || this.historico.registros().length > 0,
-    };
-  }
-
-  private estadoBarraDeStatus(): EstadoBarraDeStatus | undefined {
-    if (!this.authService.isAutenticado() || !this.desafioAtual) {
-      return undefined;
-    }
-
-    return {
-      inicioMs: this.inicioTentativaMs,
-      fimMs: this.fimTentativaMs,
-      precisao: this.historicoNotas[this.historicoNotas.length - 1],
-      invalidado: Boolean(this.motivoInvalidacao),
-    };
   }
 
   private renderizarWebviewAtual(): void {
-    if (!this.visualizacaoWebview) {
-      return;
-    }
-
-    // HTML novo recarrega o script da barra; ele avisa de novo quando carregar.
-    this.barraPronta = false;
-    const webview = this.visualizacaoWebview.webview;
-    webview.html = this.authService.isAutenticado()
-      ? obterHtmlWebview(
-          webview,
-          this.extensionUri,
-          this.authService.getSessaoAtual()?.displayName,
-        )
-      : obterHtmlAutenticacao(webview, this.extensionUri);
+    this.vista.renderizar((webview) =>
+      this.authService.isAutenticado()
+        ? obterHtmlWebview(
+            webview,
+            this.extensionUri,
+            this.authService.getSessaoAtual()?.displayName,
+          )
+        : obterHtmlAutenticacao(webview, this.extensionUri),
+    );
   }
 
-  // O que cada pedido da barra lateral faz (veja barraLateral/mensagens.ts).
+  // O que cada pedido da barra lateral faz (veja barraLateral/controlador.ts).
   private controladorDaBarra(): ControladorDaBarra {
-    return {
-      autenticado: () => this.authService.isAutenticado(),
-      desafioAtual: () => this.desafioAtual,
+    return criarControlador({
+      provedor: this,
+      authService: this.authService,
+      loginProvider: this.loginProvider,
+      desafioAtual: () => this.tentativa.desafio,
       aoCarregar: () => {
-        this.barraPronta = true;
+        this.vista.marcarPronta();
         this.enviarEstado();
         if (this.authService.isAutenticado()) {
           void this.atualizarPreviewWorkspace();
         }
         // O atalho de Verificar abriu a barra: agora ela já pode medir.
-        this.enviarVerificacaoPendente();
+        this.vista.enviarVerificacaoPendente();
       },
-      abrirLogin: () =>
-        void this.loginProvider.abrirLogin().catch(mostrarFalhaAoAbrirLogin),
-      entrarCom: (provedor) =>
-        void this.authService.loginComProvedorVSCode(provedor),
-      entrarComGoogle: () =>
-        void this.authService.abrirLoginGoogle().catch(mostrarFalhaAoAbrirLogin),
-      revalidarSessao: () => void this.loginProvider.revalidarSessao(),
-      sair: () => void this.loginProvider.sair(),
       receberGabarito: (gabarito) => {
-        this.gabaritoAtual = gabarito;
-        log.info(
-          `Gabarito PNG gerado: ${gabarito.challengeId} (${gabarito.width}x${gabarito.height})`,
-        );
+        this.tentativa.gabarito = gabarito;
       },
-      novoDesafio: () => {
-        void this.iniciarNovoDesafio();
-        void this.atualizarPreviewWorkspace();
-      },
-      desafioDoDia: () => void this.abrirDesafioDoDia(),
-      definirNivel: (nivel) => void this.definirNivel(nivel),
-      copiarResultado: () => void this.copiarResultado(),
-      abrirPorCodigo: () => void this.abrirDesafioPorCodigo(),
-      refazer: (codigo) => void this.refazerDesafio(codigo),
-      verHistorico: () => void this.verHistorico(),
-      verAtalhos: () =>
-        void vscode.commands.executeCommand("flexbox-trainer.verAtalhos"),
-      copiarCodigo: () => void this.copiarCodigo(),
-      salvarProgresso: () => void this.salvarProgresso(),
-      puxarProgresso: () => void this.puxarProgresso(),
-      abrirPainelGabarito: () => this.abrirPainelGabarito(),
-      verExtensoesIa: () => void this.verExtensoesIa(),
-      criarArquivos: () => void this.criarArquivosDeTreino(),
       encerrarDesafio: () => this.encerrarDesafioAtual(),
-      atualizarPreview: () => void this.atualizarPreviewWorkspace(),
       verificar: (challengeId, formas, verificacaoId) =>
         void this.verificarTentativaAtual(challengeId, formas, verificacaoId),
-    };
+    });
   }
-}
-
-function mostrarFalhaAoAbrirLogin(error: unknown): void {
-  const mensagem =
-    error instanceof Error ? error.message : "Não foi possível abrir o login.";
-  void vscode.window.showErrorMessage(`Erro no login: ${mensagem}`);
 }

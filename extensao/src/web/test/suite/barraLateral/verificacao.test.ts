@@ -39,16 +39,16 @@ suite("Barra lateral: verificação", () => {
     const interno = prepararVerificacao(provedor, 213);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
     assert.deepStrictEqual(comandos, ["flexbox-trainer.criarDinamicaTreino"]);
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 64);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 64);
   });
 
   test("não envia uma página sem formas medidas", async () => {
@@ -57,9 +57,9 @@ suite("Barra lateral: verificação", () => {
     const provedor = criarProvedorParaTeste([]);
     const interno = prepararVerificacao(provedor, 214);
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, []);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, []);
 
-    assert.strictEqual(interno.avaliacaoAtual?.source, "sem-formas");
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "sem-formas");
     assert.strictEqual(requisicoes.length, 0);
   });
 
@@ -77,14 +77,14 @@ suite("Barra lateral: verificação", () => {
     const interno = prepararVerificacao(provedor, 230);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.strictEqual(correcoes, 1);
-    assert.deepStrictEqual(interno.avaliacaoAtual, {
+    assert.deepStrictEqual(interno.tentativa.avaliacao, {
       precision: 42.5,
       score: 42.5,
       source: "servidor",
@@ -92,12 +92,12 @@ suite("Barra lateral: verificação", () => {
     });
 
     // Uma forma diferente é outra página: volta ao servidor.
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, [
       { ...FORMAS[0], cor: "#123456" },
       FORMAS[1],
     ]);
     assert.strictEqual(correcoes, 2);
-    assert.strictEqual(interno.avaliacaoAtual?.repetida, undefined);
+    assert.strictEqual(interno.tentativa.avaliacao?.repetida, undefined);
   });
 
   test("guarda as precisões do desafio para o histórico e a barra de status", async () => {
@@ -115,7 +115,7 @@ suite("Barra lateral: verificação", () => {
     const mensagens: MensagemWebview[] = [];
     const provedor = criarProvedorParaTeste(mensagens, { registro, barraDeStatus });
     const interno = prepararVerificacao(provedor, 232);
-    const id = interno.desafioAtual!.challengeId;
+    const id = interno.tentativa.desafio!.challengeId;
     await registro.update(CHAVE_REGISTRO, { cod: 91, challengeId: id });
 
     await interno.verificarTentativaAtual(id, FORMAS);
@@ -169,15 +169,15 @@ suite("Barra lateral: verificação", () => {
     const interno = prepararVerificacao(provedor, 231);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
-    assert.strictEqual(interno.avaliacaoAtual?.source, "api-error");
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "api-error");
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.strictEqual(correcoes, 2);
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 80);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 80);
   });
 
   test("mostra as etapas e avisa a conclusão com o número da verificação", async () => {
@@ -193,7 +193,7 @@ suite("Barra lateral: verificação", () => {
     const interno = prepararVerificacao(provedor, 232);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
       7,
     );
@@ -250,15 +250,15 @@ suite("Barra lateral: verificação", () => {
     const interno = prepararVerificacao(provedor, 216);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.deepStrictEqual(interno.avaliacaoAtual, {
+    assert.deepStrictEqual(interno.tentativa.avaliacao, {
       precision: 0,
       score: 0,
       source: "servidor-sem-nota",
@@ -286,7 +286,7 @@ suite("Barra lateral: verificação", () => {
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste(mensagens, { registro });
     const interno = prepararVerificacao(provedor, 303);
-    const challengeIdAnterior = interno.desafioAtual!.challengeId;
+    const challengeIdAnterior = interno.tentativa.desafio!.challengeId;
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
       challengeId: challengeIdAnterior,
@@ -301,7 +301,7 @@ suite("Barra lateral: verificação", () => {
     interno.testarConexaoServidor = async () => undefined;
     await provedor.iniciarNovoDesafio();
     assert.notStrictEqual(
-      interno.desafioAtual?.challengeId,
+      interno.tentativa.desafio?.challengeId,
       challengeIdAnterior,
     );
 
@@ -314,7 +314,7 @@ suite("Barra lateral: verificação", () => {
     await verificacaoPendente;
 
     assert.strictEqual(
-      interno.avaliacaoAtual,
+      interno.tentativa.avaliacao,
       undefined,
       "Uma resposta atrasada não deve avaliar o novo desafio.",
     );

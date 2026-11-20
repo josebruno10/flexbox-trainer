@@ -41,8 +41,8 @@ suite("Barra lateral: mensagens e comandos", () => {
     assert.strictEqual(ultimaMensagem(barra.enviadas, "nivel")?.payload, "facil");
 
     await provedor.iniciarNovoDesafio();
-    assert.strictEqual(interno.desafioAtual!.nivel, "facil");
-    assert.strictEqual(valorDoCodigo(interno.desafioAtual!.codigo!) % 3, 0);
+    assert.strictEqual(interno.tentativa.desafio!.nivel, "facil");
+    assert.strictEqual(valorDoCodigo(interno.tentativa.desafio!.codigo!) % 3, 0);
 
     // Um nível que não existe é ignorado.
     barra.receber({ type: "definirNivel", nivel: "impossivel" });
@@ -74,7 +74,7 @@ suite("Barra lateral: mensagens e comandos", () => {
     const provedor = criarProvedorParaTeste([]);
     const interno = provedor as unknown as ProvedorInterno;
     interno.testarConexaoServidor = async () => undefined;
-    interno.desafioAtual = criarDesafioPorCodigo("MESA");
+    interno.tentativa.desafio = criarDesafioPorCodigo("MESA");
     const barra = criarBarraFalsa();
     provedor.resolveWebviewView(barra.vista);
 
@@ -127,7 +127,7 @@ suite("Barra lateral: mensagens e comandos", () => {
     });
 
     await prepararCodigo(provedor, registro, "MESA");
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.deepStrictEqual(progressos[progressos.length - 1], {
       autenticado: true,

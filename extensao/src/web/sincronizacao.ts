@@ -1,8 +1,9 @@
 import { chavesDoAluno } from "./services/historico";
+import { chaveDosProgressos } from "./services/progressosSalvos";
 
-// Com a Sincronização de Configurações do VS Code ligada, o histórico e o
-// gráfico da evolução do aluno vão com ele para os outros computadores,
-// junto com o nível escolhido.
+// Com a Sincronização de Configurações do VS Code ligada, o histórico, o
+// gráfico da evolução e a lista dos progressos salvos do aluno vão com ele
+// para os outros computadores, junto com o nível escolhido.
 // Só os do aluno da sessão: num laboratório, os dos outros ficam onde estão.
 // O guia de primeiros passos não vai: num computador novo, ele faria a
 // instalação parecer uma atualização.
@@ -17,7 +18,7 @@ type EstadoSincronizavel = {
 export function chavesSincronizadas(email?: string): string[] {
   return [
     CHAVE_NIVEL,
-    ...(email ? chavesDoAluno(email) : []),
+    ...(email ? [...chavesDoAluno(email), chaveDosProgressos(email)] : []),
   ];
 }
 

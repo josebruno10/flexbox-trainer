@@ -35,11 +35,11 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 202);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.deepStrictEqual(interno.avaliacaoAtual, {
+    assert.deepStrictEqual(interno.tentativa.avaliacao, {
       precision: 73.25,
       score: 73.25,
       source: "servidor",
@@ -66,7 +66,7 @@ suite("Barra lateral: gabarito no servidor", () => {
     assert.strictEqual(arquivo.type, "image/png");
     assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
     assert.ok(
       requisicoes.every((requisicao) => !requisicao.caminho.includes("gref")),
@@ -84,15 +84,15 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 204);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 88);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 88);
     assert.deepStrictEqual(
       requisicoes.map((requisicao) => requisicao.caminho),
       ["/tipo-dinamica/treino/corrigir-formas"],
@@ -117,11 +117,11 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 206);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 50);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 50);
     assert.deepStrictEqual(
       requisicoes.map((requisicao) => `${requisicao.metodo} ${requisicao.caminho}`),
       [
@@ -133,7 +133,7 @@ suite("Barra lateral: gabarito no servidor", () => {
     );
     assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
   });
 
@@ -151,14 +151,14 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 205);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 55);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 55);
     assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
       cod: 93,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
     assert.ok(
       requisicoes.some((requisicao) => requisicao.caminho.endsWith("/gabarito")),
@@ -183,11 +183,11 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 207);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 61);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 61);
     assert.ok(
       requisicoes.some(
         (requisicao) =>
@@ -213,14 +213,14 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 209);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.precision, 40);
+    assert.strictEqual(interno.tentativa.avaliacao?.precision, 40);
     assert.deepStrictEqual(registro.get(CHAVE_REGISTRO), {
       cod: 92,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
     assert.strictEqual(
       requisicoes.filter((requisicao) => requisicao.metodo === "PUT").length,
@@ -238,13 +238,13 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 208);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.source, "gabarito-error");
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "gabarito-error");
     assert.match(
-      interno.avaliacaoAtual?.error || "",
+      interno.tentativa.avaliacao?.error || "",
       /não foi criado por esta extensão/,
     );
     assert.deepStrictEqual(
@@ -263,12 +263,12 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 210);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.source, "gabarito-error");
-    assert.match(interno.avaliacaoAtual?.error || "", /identificar o tamanho/);
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "gabarito-error");
+    assert.match(interno.tentativa.avaliacao?.error || "", /identificar o tamanho/);
     assert.strictEqual(requisicoes.length, 1);
   });
 
@@ -284,12 +284,12 @@ suite("Barra lateral: gabarito no servidor", () => {
     const interno = prepararVerificacao(provedor, 212);
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.source, "config-missing");
-    assert.match(interno.avaliacaoAtual?.error || "", /eventoTreino/);
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "config-missing");
+    assert.match(interno.tentativa.avaliacao?.error || "", /eventoTreino/);
     assert.strictEqual(requisicoes.length, 0);
     assert.deepStrictEqual(perguntas, ["Você ainda não tem uma dinâmica de treino."]);
   });

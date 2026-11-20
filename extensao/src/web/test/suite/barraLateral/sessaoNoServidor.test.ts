@@ -55,16 +55,16 @@ suite("Barra lateral: sessão no servidor", () => {
     const interno = prepararVerificacao(provedor, 222);
     await registro.update(CHAVE_REGISTRO, {
       cod: 91,
-      challengeId: interno.desafioAtual!.challengeId,
+      challengeId: interno.tentativa.desafio!.challengeId,
     });
 
     await interno.verificarTentativaAtual(
-      interno.desafioAtual!.challengeId,
+      interno.tentativa.desafio!.challengeId,
       FORMAS,
     );
 
-    assert.strictEqual(interno.avaliacaoAtual?.source, "authentication-error");
-    assert.strictEqual(interno.avaliacaoAtual?.httpStatus, 401);
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "authentication-error");
+    assert.strictEqual(interno.tentativa.avaliacao?.httpStatus, 401);
     assert.deepStrictEqual(invalidacoes, [
       "O servidor recusou a sessão. Entre novamente.",
     ]);

@@ -7,6 +7,7 @@ import {
   ResumoWorkspace,
 } from "../../types";
 import { HistoricoNaBarra } from "./historicoDoAluno";
+import { EstadoBarraDeStatus } from "../barraDeStatus";
 
 /** O que o guia de primeiros passos precisa saber para marcar cada passo. */
 export type ProgressoGuia = {
@@ -63,4 +64,45 @@ export function mensagensDaBarra(
       ? [{ type: "resultadoAvaliacao", payload: estado.avaliacao }]
       : []),
   ];
+}
+
+/** O que o guia e a barra de status leem do desafio em andamento. */
+export type ResumoDaTentativa = {
+  autenticado: boolean;
+  extensoesIa: ExtensaoIa[];
+  desafio?: Desafio;
+  inicioMs: number;
+  fimMs?: number;
+  historicoNotas: number[];
+  jaVerificouAntes: boolean;
+  invalidado: boolean;
+};
+
+export function progressoDoGuia(
+  tentativa: ResumoDaTentativa,
+  pastaAberta: boolean,
+): ProgressoGuia {
+  return {
+    autenticado: tentativa.autenticado,
+    pastaAberta,
+    semExtensoesIa: tentativa.extensoesIa.length === 0,
+    temDesafio: tentativa.autenticado && Boolean(tentativa.desafio),
+    verificou: tentativa.historicoNotas.length > 0 || tentativa.jaVerificouAntes,
+  };
+}
+
+/** O cronômetro e a nota na barra de status; nada sem desafio. */
+export function estadoDaBarraDeStatus(
+  tentativa: ResumoDaTentativa,
+): EstadoBarraDeStatus | undefined {
+  if (!tentativa.autenticado || !tentativa.desafio) {
+    return undefined;
+  }
+  const notas = tentativa.historicoNotas;
+  return {
+    inicioMs: tentativa.inicioMs,
+    fimMs: tentativa.fimMs,
+    precisao: notas[notas.length - 1],
+    invalidado: tentativa.invalidado,
+  };
 }

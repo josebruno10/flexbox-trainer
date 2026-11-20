@@ -7,7 +7,7 @@ import {
 } from "./requisicao";
 
 // O index.html e o style.css do aluno guardados no servidor, na pasta dele
-// dentro da dinâmica de treino, pelas mesmas rotas da extensão oficial:
+// dentro de uma dinâmica, pelas mesmas rotas da extensão oficial:
 // criar-pasta dá o code_pasta, salvar-conteudo grava e obter-conteudo lê.
 // Assim o aluno continua o treino em outro computador.
 
@@ -17,14 +17,15 @@ export type ConteudoDoAluno = {
 };
 
 /**
- * O code_pasta do aluno na dinâmica de treino. A rota cria a pasta só na
- * primeira vez; depois devolve a mesma.
+ * O code_pasta do aluno na dinâmica. A rota cria a pasta só na primeira
+ * vez; depois devolve a mesma.
  */
 export async function obterPastaDoAluno(
   configuracao: ConfiguracaoServidor,
+  evento: string,
 ): Promise<string> {
   const caminho =
-    `/criar-pasta/${encodeURIComponent(configuracao.eventoTreino)}` +
+    `/criar-pasta/${encodeURIComponent(evento)}` +
     `/${configuracao.teamId}/${configuracao.userId}`;
   let dados: unknown;
   try {

@@ -2,14 +2,12 @@ import * as vscode from "vscode";
 import { AuthService } from "../../../auth/authService";
 import { BarraDeStatus } from "../../../provider/barraDeStatus";
 import { ProvedorBarraLateralFlexBox } from "../../../provider/provedorBarraLateral";
+import { Tentativa } from "../../../provider/barraLateral/tentativa";
 import { criarDesafioGerado, criarDesafioPorCodigo } from "../../../services/desafio";
 import {
   ConfiguracaoServidor,
-  Desafio,
   EstadoAutenticacao,
   FormaMedida,
-  GabaritoGerado,
-  ResultadoAvaliacao,
   ResumoWorkspace,
 } from "../../../types";
 
@@ -22,13 +20,9 @@ export type MensagemWebview = {
 };
 
 export type ProvedorInterno = {
-  visualizacaoWebview?: vscode.WebviewView;
-  desafioAtual?: Desafio;
+  vista: { visualizacao?: vscode.WebviewView };
+  tentativa: Tentativa;
   resumoWorkspaceAtual: ResumoWorkspace;
-  avaliacaoAtual?: ResultadoAvaliacao;
-  inicioTentativaMs: number;
-  fimTentativaMs?: number;
-  gabaritoAtual?: GabaritoGerado;
   enviarEstado(): void;
   encerrarDesafioAtual(): void;
   verificarTentativaAtual(
@@ -147,7 +141,7 @@ export function criarProvedorParaTeste(
   // teste. Os testes de criar os arquivos chamam criarArquivosDeTreino.
   interno.criarArquivosSeFaltarem = async () => undefined;
 
-  interno.visualizacaoWebview = {
+  interno.vista.visualizacao = {
     webview: {
       postMessage: async (mensagem: MensagemWebview) => {
         mensagens.push(mensagem);
@@ -222,7 +216,7 @@ export function prepararVerificacao(
   semente: number,
 ): ProvedorInterno {
   const interno = provedor as unknown as ProvedorInterno;
-  interno.desafioAtual = criarDesafioGerado({
+  interno.tentativa.desafio = criarDesafioGerado({
     aleatorio: criarAleatorioTeste(semente),
   });
   interno.resumoWorkspaceAtual = {
@@ -234,12 +228,12 @@ export function prepararVerificacao(
     temArquivoHtml: true,
     temArquivoCss: true,
   };
-  interno.gabaritoAtual = {
-    challengeId: interno.desafioAtual.challengeId,
+  interno.tentativa.gabarito = {
+    challengeId: interno.tentativa.desafio.challengeId,
     // Assinatura PNG: basta para montar o arquivo do formulário.
     imagemDataUrl: "data:image/png;base64,iVBORw0KGgo=",
-    width: interno.desafioAtual.width,
-    height: interno.desafioAtual.height,
+    width: interno.tentativa.desafio.width,
+    height: interno.tentativa.desafio.height,
   };
   return interno;
 }
@@ -334,14 +328,14 @@ export async function prepararCodigo(
   codigo: string,
 ): Promise<ProvedorInterno> {
   const interno = prepararVerificacao(provedor, 260);
-  interno.desafioAtual = criarDesafioPorCodigo(codigo);
-  interno.gabaritoAtual = {
-    ...interno.gabaritoAtual!,
-    challengeId: interno.desafioAtual.challengeId,
+  interno.tentativa.desafio = criarDesafioPorCodigo(codigo);
+  interno.tentativa.gabarito = {
+    ...interno.tentativa.gabarito!,
+    challengeId: interno.tentativa.desafio.challengeId,
   };
   await registro.update(CHAVE_REGISTRO, {
     cod: 91,
-    challengeId: interno.desafioAtual.challengeId,
+    challengeId: interno.tentativa.desafio.challengeId,
   });
   return interno;
 }

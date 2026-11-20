@@ -40,7 +40,7 @@ suite("Conteúdo do aluno no servidor", () => {
         : json({ code_pasta: "fb74_2/46_74" });
     };
 
-    assert.strictEqual(await obterPastaDoAluno(CONFIGURACAO), "fb74_2/46_74");
+    assert.strictEqual(await obterPastaDoAluno(CONFIGURACAO, "fb74"), "fb74_2/46_74");
     assert.deepStrictEqual(pedidos, [
       "POST /criar-pasta/fb74/46/74",
       "GET /criar-pasta/fb74/46/74",

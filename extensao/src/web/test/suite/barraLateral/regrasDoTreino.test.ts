@@ -29,12 +29,12 @@ suite("Barra lateral: regras do treino", () => {
     });
     const interno = prepararVerificacao(provedor, 240);
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.strictEqual(requisicoes.length, 0);
-    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "desafio-invalidado");
     assert.match(
-      interno.avaliacaoAtual?.error ?? "",
+      interno.tentativa.avaliacao?.error ?? "",
       /extensões de IA ficaram habilitadas durante ele \(Claude Code, Codex\)\./,
     );
     assert.deepStrictEqual(ultimaMensagem(mensagens, "extensoesIa")?.payload, [
@@ -57,7 +57,7 @@ suite("Barra lateral: regras do treino", () => {
 
     await provedor.iniciarNovoDesafio();
 
-    assert.strictEqual(interno.desafioAtual, undefined);
+    assert.strictEqual(interno.tentativa.desafio, undefined);
     assert.strictEqual(ultimaMensagem(mensagens, "dadosDesafio"), undefined);
     assert.match(
       avisos[0] ?? "",
@@ -76,12 +76,12 @@ suite("Barra lateral: regras do treino", () => {
     provedor.atualizarExtensoesIa();
     opcoes.extensoesIa = [];
     provedor.atualizarExtensoesIa();
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.strictEqual(requisicoes.length, 0);
-    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "desafio-invalidado");
     assert.match(
-      interno.avaliacaoAtual?.error ?? "",
+      interno.tentativa.avaliacao?.error ?? "",
       /uma extensão de IA ficou habilitada durante ele \(Claude Code\)\./,
     );
   });
@@ -102,21 +102,21 @@ suite("Barra lateral: regras do treino", () => {
     });
     await provedor.registrarAlteracaoExterna({
       uri: vscode.Uri.file("/projeto/style.css"),
-      instante: interno.inicioTentativaMs - 1,
+      instante: interno.tentativa.inicioMs - 1,
     });
-    const avaliacaoAntes = interno.avaliacaoAtual;
+    const avaliacaoAntes = interno.tentativa.avaliacao;
     assert.strictEqual(avaliacaoAntes, undefined);
 
     await provedor.registrarAlteracaoExterna({
       uri: vscode.Uri.file("/projeto/style.css"),
       instante: agora,
     });
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.strictEqual(requisicoes.length, 0);
-    assert.strictEqual(interno.avaliacaoAtual?.source, "desafio-invalidado");
+    assert.strictEqual(interno.tentativa.avaliacao?.source, "desafio-invalidado");
     assert.match(
-      interno.avaliacaoAtual?.error ?? "",
+      interno.tentativa.avaliacao?.error ?? "",
       /o style\.css foi alterado fora do editor\./,
     );
   });

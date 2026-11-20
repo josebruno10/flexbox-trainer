@@ -139,6 +139,10 @@
         "title": "FlexBox Trainer: Gerar Solução Exata do Desafio (teste)"
       },
       {
+        "command": "flexbox-trainer.testarProgressoServidor",
+        "title": "FlexBox Trainer: Testar Progresso no Servidor (teste)"
+      },
+      {
         "command": "flexbox-trainer.iniciar",
         "title": "FlexBox Trainer: Iniciar"
       }
@@ -147,6 +151,10 @@
       "commandPalette": [
         {
           "command": "flexbox-trainer.gerarSolucaoTeste",
+          "when": "config.flexboxTrainer.modoDesenvolvedor"
+        },
+        {
+          "command": "flexbox-trainer.testarProgressoServidor",
           "when": "config.flexboxTrainer.modoDesenvolvedor"
         },
         {
@@ -304,7 +312,7 @@
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Mostra ferramentas de teste, como o comando que gera a solução exata do desafio. Deixe desligado para alunos: a solução entrega a resposta."
+          "description": "Mostra ferramentas de teste: o comando que gera a solução exata do desafio e o que testa o progresso no servidor. Deixe desligado para alunos: a solução entrega a resposta."
         },
         "flexboxTrainer.temaCores": {
           "type": "string",

@@ -15,6 +15,7 @@ export function initializeLogger(context: vscode.ExtensionContext) {
 }
 
 export const log = {
+  mostrar: () => obterCanal().show(true),
   info: (mensagem: string, dados?: any) => {
     const c = obterCanal();
     const timestamp = new Date().toLocaleTimeString();

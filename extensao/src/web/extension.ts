@@ -15,6 +15,7 @@ import {
   usarDinamicaExistenteInterativa,
 } from "./services/dinamicaTreino";
 import { initializeLogger } from "./services/logger";
+import { testarProgressoInterativo } from "./services/testeDoProgresso";
 import {
   avisarAtualizacao,
   avisarVersaoNova,
@@ -221,6 +222,13 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("flexbox-trainer.usarDinamicaTreino", () =>
       usarDinamicaExistenteInterativa(authService),
+    ),
+    // Só no modo desenvolvedor: confere as rotas do progresso no servidor.
+    vscode.commands.registerCommand("flexbox-trainer.testarProgressoServidor", () =>
+      testarProgressoInterativo(
+        authService,
+        vscode.Uri.joinPath(context.globalStorageUri, "copias-do-progresso"),
+      ),
     ),
   );
 

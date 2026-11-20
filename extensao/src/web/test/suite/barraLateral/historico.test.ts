@@ -38,7 +38,7 @@ suite("Barra lateral: histórico", () => {
     const provedor = criarProvedorParaTeste(mensagens, { registro });
     const interno = await prepararCodigo(provedor, registro, "MESA");
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
 
     assert.deepStrictEqual(
       historicoEnviado(mensagens).registros.map(({ codigo, melhor }) => [codigo, melhor]),
@@ -52,7 +52,7 @@ suite("Barra lateral: histórico", () => {
     interno.enviarEstado();
     assert.strictEqual(historicoEnviado(mensagens).recorde, 42.5);
 
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, [
       { ...FORMAS[0], cor: "#123456" },
       FORMAS[1],
     ]);
@@ -73,16 +73,16 @@ suite("Barra lateral: histórico", () => {
     const registro = criarRegistroFalso();
     const provedor = criarProvedorParaTeste([], { registro });
     const interno = await prepararCodigo(provedor, registro, "MESA");
-    interno.inicioTentativaMs = 0;
+    interno.tentativa.inicioMs = 0;
     const outroDia = new Date(2026, 0, 1);
 
     assert.strictEqual(provedor.textoDoResultado(outroDia), undefined);
 
     Date.now = () => 754_000;
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
     // Uma nota pior depois não muda o resultado.
     Date.now = () => 900_000;
-    await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, [
+    await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, [
       { ...FORMAS[0], cor: "#123456" },
       FORMAS[1],
     ]);
@@ -94,7 +94,7 @@ suite("Barra lateral: histórico", () => {
 
     // O desafio do dia diz a data, para o grupo da turma saber qual é.
     const dia = new Date(2026, 9, 14, 10, 0);
-    interno.desafioAtual = { ...interno.desafioAtual!, codigo: codigoDoDia(dia) };
+    interno.tentativa.desafio = { ...interno.tentativa.desafio!, codigo: codigoDoDia(dia) };
     assert.strictEqual(
       provedor.textoDoResultado(dia),
       "Desafio do dia 14/10 (DHAG): 42,50% em 12:34",
@@ -120,7 +120,7 @@ suite("Barra lateral: histórico", () => {
     for (const [codigo, instante] of verificacoes) {
       const interno = await prepararCodigo(provedor, registro, codigo);
       Date.now = () => instante.getTime();
-      await interno.verificarTentativaAtual(interno.desafioAtual!.challengeId, FORMAS);
+      await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
     }
 
     // O gráfico é o do nível escolhido (o médio); o MESB é difícil.

@@ -2,6 +2,14 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [Não lançado]
+
+### Progresso
+- O progresso fica salvo por desafio, como o professor pediu: cada desafio tem a própria dinâmica no servidor, com o mesmo código (o `MESA` fica na dinâmica `mesa`), criada pela extensão no primeiro salvamento. Salvar um desafio não apaga o progresso dos outros.
+- A imagem do desafio vai como gabarito da dinâmica dele antes de salvar: sem gabarito, o servidor não guardava o HTML e o CSS. Uma dinâmica sua que tenha ficado sem gabarito recebe a imagem no próximo salvamento; um gabarito que já exista nunca é substituído.
+- **Puxar progresso** pergunta qual desafio: lista os que você salvou (a lista acompanha a Sincronização de Configurações) ou deixa digitar o código, e puxa o que está no servidor para ele.
+- A extensão só salva numa dinâmica que ela criou para o aluno: se já existir uma com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o salvamento é recusado.
+
 ## [0.7.0] - 2026-11-19
 
 ### Desafios

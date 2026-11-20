@@ -19,7 +19,7 @@ Treino de recriação de layouts em HTML e CSS, no formato do torneio Frontend T
 
 O guia de primeiros passos, que abre na primeira vez, mostra cada passo. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde. **Copiar resultado** copia a nota e o tempo, para mandar à turma.
 
-Para continuar em outro computador, use **Salvar progresso**: o desafio, o `index.html` e o `style.css` ficam no servidor. No outro computador, entre com a mesma conta e clique em **Puxar progresso**.
+Para continuar em outro computador, use **Salvar progresso**: o `index.html` e o `style.css` do desafio ficam no servidor, no código dele. No outro computador, entre com a mesma conta, clique em **Puxar progresso** e escolha o desafio.
 
 ## As regras, como no torneio
 
