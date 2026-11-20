@@ -2,7 +2,7 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não lançado]
+## [0.8.0] - 2026-11-20
 
 ### Barra lateral
 - **O que corrigir**, embaixo da nota: pela correção do servidor, os componentes que mais tiram pontos e o que está diferente em cada um (falta na página, cor, tamanho, lugar em px ou forma), além das formas a mais. Clicar num deles o destaca no gabarito. Nem a extensão oficial mostra isso: o servidor já mandava o detalhe de cada forma, e ele era ignorado.
