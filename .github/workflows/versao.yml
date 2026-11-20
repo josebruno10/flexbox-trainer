@@ -103,10 +103,14 @@ jobs:
           E2E_PASTA: ${{ runner.temp }}/ponta-a-ponta
         run: xvfb-run -a npm run test:e2e -- anterior/*.vsix "${ETIQUETA#v}"
 
-      - name: Fotos da falha
+      - name: Fotos e registros da falha
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: ponta-a-ponta
-          path: ${{ runner.temp }}/ponta-a-ponta/*.png
+          # Os registros do VS Code dizem quando a extensão ativou, e o
+          # "FlexBox Trainer Logs" de cada abertura, o que ela fez.
+          path: |
+            ${{ runner.temp }}/ponta-a-ponta/*.png
+            ${{ runner.temp }}/ponta-a-ponta/perfil/logs/
           retention-days: 30

@@ -89,13 +89,31 @@ export async function rodarComando(janela, titulo) {
   await janela.keyboard.press("Enter");
 }
 
-/** O aviso (notificação) que contém o texto, quando aparecer. */
+/**
+ * O aviso (notificação) que contém o texto, quando aparecer. Um aviso
+ * informativo some da tela depois de uns 10 segundos e fica só na central de
+ * notificações; se a extensão ativou logo ao abrir (com a barra lateral à
+ * vista), ele pode sumir antes de o roteiro olhar. Por isso a busca abre a
+ * central de tempos em tempos.
+ */
 export async function esperarAviso(janela, texto, tempoMs = 300_000) {
   const aviso = janela
-    .locator(".notification-toast", { hasText: texto })
+    .locator(".notification-toast, .notifications-center .notification-list-item", {
+      hasText: texto,
+    })
     .first();
-  await aviso.waitFor({ timeout: tempoMs });
-  return aviso;
+  const limite = Date.now() + tempoMs;
+  while (Date.now() < limite) {
+    try {
+      await aviso.waitFor({ timeout: Math.min(20_000, limite - Date.now()) });
+      return aviso;
+    } catch {
+      if (!(await janela.locator(".notifications-center.visible").count())) {
+        await rodarComando(janela, "Notifications: Show Notifications");
+      }
+    }
+  }
+  throw new Error(`o aviso "${texto}" não apareceu em ${tempoMs / 1000} segundos`);
 }
 
 export async function textoDoAviso(aviso) {
