@@ -10,6 +10,9 @@ As mudanças de cada versão do FlexBox Trainer.
 - **Puxar progresso** pergunta qual desafio: lista os que você salvou (a lista acompanha a Sincronização de Configurações) ou deixa digitar o código, e puxa o que está no servidor para ele.
 - A extensão só salva numa dinâmica que ela criou para o aluno: se já existir uma com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o salvamento é recusado.
 
+### Instalação
+- A extensão está na loja do VS Code: o README e o manual ensinam a instalar por lá, procurando **FlexBox Trainer** em **Extensões**. O `.vsix` das Releases continua como alternativa para quem não tem acesso à loja.
+
 ## [0.7.0] - 2026-11-19
 
 ### Desafios

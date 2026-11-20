@@ -36,7 +36,14 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 
 ## Instalar e abrir
 
-### Pelo arquivo `.vsix` (para treinar)
+### Pela loja do VS Code (para treinar)
+
+1. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), procure **FlexBox Trainer** e clique em **Instalar**. Ou, no terminal: `code --install-extension josebruno10.flexbox-trainer`. A página da extensão na loja é [esta](https://marketplace.visualstudio.com/items?itemName=josebruno10.flexbox-trainer).
+2. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
+
+Instalada pela loja, a extensão se atualiza sozinha, como as outras extensões do VS Code.
+
+### Pelo arquivo `.vsix` (sem acesso à loja)
 
 1. Baixe o arquivo `.vsix` da versão mais nova, em [Releases](https://github.com/josebruno10/flexbox-trainer/releases/latest) (em **Assets**).
 2. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), clique nos **⋯** do topo do painel e escolha **Instalar do VSIX...**. Ou, no terminal: `code --install-extension flexbox-trainer-0.7.0.vsix`.
@@ -307,6 +314,7 @@ Os testes simulam as respostas do servidor e não criam dados reais. O `npm test
 
 - **A cada envio ao `main`** (e em pull requests), o fluxo **Testes** confere tipos e estilo, roda as duas suítes e gera o `.vsix`. O selo no topo do README mostra se a última execução no `main` passou. Para testar uma mudança antes da versão, baixe o `.vsix` em **Actions → a execução → Artifacts**.
 - **Ao publicar uma versão** em Releases, o fluxo **Versão** confere que a etiqueta bate com a versão do `package.json` (por exemplo, `v0.5.0` e `0.5.0`), roda os testes e anexa o `.vsix` à versão. Basta criar a versão pelo site do GitHub; um `.vsix` anexado à mão é substituído. Depois, o teste de ponta a ponta instala a versão anterior num VS Code limpo e confere que ela avisa da nova, se atualiza com um clique e mostra o que mudou; se falhar, as fotos da tela ficam em **Artifacts**. Ele precisa da rede e da versão já publicada, por isso não roda a cada envio.
+- **Na loja do VS Code**, a versão nova não entra sozinha: depois de criar a versão em Releases, envie o mesmo `.vsix` em [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage), nos **⋯** da extensão, em **Update**. O publicador é `josebruno10`.
 
 O gerador, em `services/desafio.ts`, é a porta do script do Vitor (commit `271c492`). Os níveis tiram os componentes menores (75% no fácil, 30% no médio; o script do Vitor tira 50% no fácil, mas assim o fácil parecia um médio), um padrão inteiro por vez (uma sequência ou uma fileira de círculos nunca fica pela metade), e nunca deixam menos de 8. O nível vem do código: as 4 letras são lidas como um número de base 26 (`AAAA` é 0, `AAAB` é 1, `ZZZZ` é 456.975), e o resto da divisão dele por 3 dá o nível (0 é fácil, 1 é médio, 2 é difícil).
 

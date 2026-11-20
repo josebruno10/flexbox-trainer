@@ -12,10 +12,11 @@ Treino de recriação de layouts em HTML e CSS, no formato do torneio Frontend T
 
 ## Como começar
 
-1. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser vazia: a extensão cria o `index.html` e o `style.css`.
-2. Clique no ícone do **FlexBox Trainer**, na barra de atividades, e entre com **Google**, **GitHub** ou **Microsoft**, usando a conta cujo e-mail está cadastrado no torneio.
-3. Escolha o nível (fácil, médio ou difícil), clique em **Gerar novo desafio** e recrie a imagem. Para treinar o mesmo desafio que a turma, use **Desafio do dia**, igual para todos na mesma data, ou **Abrir por código**, com o código de 4 letras que o professor passar. Clique num componente do gabarito para ver as medidas e a cor; **Abrir em uma aba** mostra todos de uma vez.
-4. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`) para receber a precisão. Na primeira vez, a extensão pede para criar a sua dinâmica de treino no servidor.
+1. Instale a extensão: no VS Code, abra **Extensões** (`Ctrl+Shift+X`), procure **FlexBox Trainer** e clique em **Instalar**. Ela também está na [loja do VS Code](https://marketplace.visualstudio.com/items?itemName=josebruno10.flexbox-trainer).
+2. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser vazia: a extensão cria o `index.html` e o `style.css`.
+3. Clique no ícone do **FlexBox Trainer**, na barra de atividades, e entre com **Google**, **GitHub** ou **Microsoft**, usando a conta cujo e-mail está cadastrado no torneio.
+4. Escolha o nível (fácil, médio ou difícil), clique em **Gerar novo desafio** e recrie a imagem. Para treinar o mesmo desafio que a turma, use **Desafio do dia**, igual para todos na mesma data, ou **Abrir por código**, com o código de 4 letras que o professor passar. Clique num componente do gabarito para ver as medidas e a cor; **Abrir em uma aba** mostra todos de uma vez.
+5. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`) para receber a precisão. Na primeira vez, a extensão pede para criar a sua dinâmica de treino no servidor.
 
 O guia de primeiros passos, que abre na primeira vez, mostra cada passo. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde. **Copiar resultado** copia a nota e o tempo, para mandar à turma.
 
@@ -35,6 +36,6 @@ Para continuar em outro computador, use **Salvar progresso**: o `index.html` e o
 ## Mais
 
 - [Manual completo](docs/MANUAL.md): a barra lateral, a aba do gabarito, os comandos, as configurações e os problemas comuns.
-- [Versões para instalar](https://github.com/josebruno10/flexbox-trainer/releases/latest) e [o que mudou em cada uma](CHANGELOG.md). A extensão avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
+- [O que mudou em cada versão](CHANGELOG.md). Instalada pela loja, a extensão se atualiza sozinha, como as outras. Sem acesso à loja, baixe o `.vsix` da [versão mais nova](https://github.com/josebruno10/flexbox-trainer/releases/latest).
 
 Desenvolvido por José Bruno, Kevyn Willian e Vitor Costa. Licença MIT.
