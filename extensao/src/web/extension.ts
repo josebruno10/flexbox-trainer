@@ -20,6 +20,7 @@ import {
   avisarAtualizacao,
   avisarVersaoNova,
   pastaDeDownload,
+  veioDaLoja,
 } from "./services/versaoNova";
 import { escolherTemaCores } from "./telas/temas";
 import {
@@ -356,6 +357,7 @@ export async function activate(context: vscode.ExtensionContext) {
       armazenamento: context.globalState,
       versaoAtual,
       pastaDownload: pastaDeDownload(context.globalStorageUri),
+      instaladaPelaLoja: veioDaLoja(context.extension.packageJSON),
     });
   }
 

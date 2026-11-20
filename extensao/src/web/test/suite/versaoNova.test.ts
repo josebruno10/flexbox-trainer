@@ -7,6 +7,7 @@ import {
   buscarUltimaVersao,
   ehMaisNova,
   pastaDeDownload,
+  veioDaLoja,
 } from "../../services/versaoNova";
 
 const DOWNLOADS = "https://github.com/josebruno10/flexbox-trainer/releases/download";
@@ -271,6 +272,30 @@ suite("Aviso de versão nova", () => {
       buscar: github("v0.4.0").buscar,
     });
 
+    assert.deepStrictEqual(avisos, []);
+  });
+
+  test("reconhece a instalação pela loja pelo identificador da loja", () => {
+    assert.strictEqual(
+      veioDaLoja({ version: "0.7.0", uuid: "2d0a4e47-21a7-412b-88b3-22a3dcd70ca1" }),
+      true,
+    );
+    assert.strictEqual(veioDaLoja({ version: "0.7.0" }), false);
+    assert.strictEqual(veioDaLoja({ version: "0.7.0", uuid: "" }), false);
+    assert.strictEqual(veioDaLoja(undefined), false);
+  });
+
+  test("instalada pela loja, não consulta o GitHub nem avisa", async () => {
+    const { buscar, pedidos } = github("v0.8.0");
+    await avisarVersaoNova({
+      armazenamento: armazenamentoFalso(),
+      versaoAtual: "0.7.0",
+      pastaDownload: PASTA,
+      buscar,
+      instaladaPelaLoja: true,
+    });
+
+    assert.deepStrictEqual(pedidos, []);
     assert.deepStrictEqual(avisos, []);
   });
 

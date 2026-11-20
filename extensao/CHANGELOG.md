@@ -12,6 +12,7 @@ As mudanças de cada versão do FlexBox Trainer.
 
 ### Instalação
 - A extensão está na loja do VS Code: o README e o manual ensinam a instalar por lá, procurando **FlexBox Trainer** em **Extensões**. O `.vsix` das Releases continua como alternativa para quem não tem acesso à loja.
+- Instalada pela loja, a extensão não confere mais as versões no GitHub nem mostra o aviso de versão nova: o próprio VS Code a atualiza. Antes, quem instalava pela loja podia receber dois avisos da mesma versão. Instalada pelo `.vsix`, tudo continua como antes.
 
 ## [0.7.0] - 2026-11-19
 

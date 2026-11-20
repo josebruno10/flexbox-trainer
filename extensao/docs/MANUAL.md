@@ -26,7 +26,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Salva o progresso de cada desafio no servidor (o `index.html` e o `style.css`), para você continuar em outro computador pelo código do desafio.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
 - Mostra a sua evolução, com a melhor nota de cada dia num gráfico.
-- Avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
+- Instalada pela loja, se atualiza sozinha. Instalada pelo `.vsix`, avisa quando sai uma versão nova e, no VS Code desktop, se atualiza com um clique.
 
 ## Requisitos
 
@@ -41,7 +41,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 1. No VS Code, abra **Extensões** (`Ctrl+Shift+X`), procure **FlexBox Trainer** e clique em **Instalar**. Ou, no terminal: `code --install-extension josebruno10.flexbox-trainer`. A página da extensão na loja é [esta](https://marketplace.visualstudio.com/items?itemName=josebruno10.flexbox-trainer).
 2. Abra uma pasta para treinar (**Arquivo → Abrir Pasta**). Pode ser uma pasta vazia: a extensão cria o `index.html` e o `style.css`.
 
-Instalada pela loja, a extensão se atualiza sozinha, como as outras extensões do VS Code.
+Instalada pela loja, a extensão se atualiza sozinha, como as outras extensões do VS Code, e não mostra o aviso de versão nova do `.vsix`.
 
 ### Pelo arquivo `.vsix` (sem acesso à loja)
 

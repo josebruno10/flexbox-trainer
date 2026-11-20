@@ -3,7 +3,8 @@ import { log } from "./logger";
 
 // O .vsix não se atualiza sozinho: uma vez por dia, a extensão confere no
 // GitHub se saiu uma versão nova e avisa o aluno. No VS Code desktop, ela
-// mesma baixa o .vsix e o instala. O pedido não leva nada do aluno.
+// mesma baixa o .vsix e o instala. O pedido não leva nada do aluno. Instalada
+// pela loja, quem atualiza é o próprio VS Code, e ela não confere nada.
 const REPOSITORIO = "josebruno10/flexbox-trainer";
 const ULTIMA_VERSAO =
   `https://api.github.com/repos/${REPOSITORIO}/releases/latest`;
@@ -42,7 +43,20 @@ export type OpcoesVersaoNova = {
   pastaDownload?: vscode.Uri;
   buscar?: typeof fetch;
   arquivos?: ArquivosLocais;
+  // Instalada pela loja, o VS Code a atualiza sozinho, e o aviso só repetiria
+  // a atualização.
+  instaladaPelaLoja?: boolean;
 };
+
+/**
+ * Se a extensão veio da loja do VS Code. O VS Code põe no packageJSON o
+ * identificador da loja (uuid) só nas extensões instaladas por ela; num .vsix
+ * instalado à mão, ele não vem, e o VS Code não o atualiza sozinho.
+ */
+export function veioDaLoja(packageJSON: unknown): boolean {
+  const uuid = (packageJSON as { uuid?: unknown } | null)?.uuid;
+  return typeof uuid === "string" && uuid.length > 0;
+}
 
 /**
  * Onde baixar o .vsix de uma atualização, a partir da pasta da extensão. Só o
@@ -119,10 +133,13 @@ export async function buscarUltimaVersao(
 /**
  * Avisa quando há no GitHub uma versão mais nova que a instalada. Consulta
  * no máximo uma vez por dia; sem conexão, tenta de novo na próxima vez que a
- * extensão abrir.
+ * extensão abrir. Instalada pela loja, não consulta.
  */
 export async function avisarVersaoNova(opcoes: OpcoesVersaoNova): Promise<void> {
   const { armazenamento, versaoAtual } = opcoes;
+  if (opcoes.instaladaPelaLoja) {
+    return;
+  }
   const agora = Date.now();
   if (agora - armazenamento.get<number>(CHAVE_ULTIMA_CONSULTA, 0) < UM_DIA_MS) {
     return;
