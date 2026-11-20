@@ -9,6 +9,9 @@ export const canvasDestaque = elemento<HTMLCanvasElement>("canvasDestaque");
 export const superficie = elemento<HTMLDivElement>("superficieAluno");
 export const semPagina = elemento<HTMLDivElement>("semPagina");
 export const palco = elemento<HTMLDivElement>("palco");
+export const botaoVerificar = elemento<HTMLButtonElement>("botaoVerificarAba");
+export const notaAba = elemento<HTMLElement>("notaAba");
+export const linhaComparacao = elemento<HTMLDivElement>("linhaComparacao");
 export const telas = [
   elemento<HTMLDivElement>("telaGabarito"),
   elemento<HTMLDivElement>("telaAluno"),

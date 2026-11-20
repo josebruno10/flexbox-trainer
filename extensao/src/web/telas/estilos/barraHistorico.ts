@@ -4,26 +4,48 @@ export const ESTILOS_BARRA_HISTORICO = `
       margin-top: 10px;
     }
 
-    /* O código parece texto, mas é um botão: copia ao clicar. */
-    button.valor-codigo {
+    /* O código, a cor e as medidas parecem texto, mas são botões: copiam ao
+       clicar. */
+    button.valor-codigo,
+    button.valor-copiavel {
       min-height: 0;
       padding: 0;
       border: 0;
       font-size: 12px;
       letter-spacing: 0.04em;
+      text-transform: none;
       color: var(--texto);
       background: transparent;
       cursor: copy;
     }
 
-    button.valor-codigo:hover:not(:disabled) {
+    button.valor-codigo:hover:not(:disabled),
+    button.valor-copiavel:hover:not(:disabled) {
       box-shadow: none;
       transform: none;
       color: var(--acento);
     }
 
-    button.valor-codigo.copiado {
+    button.valor-codigo.copiado,
+    button.valor-copiavel.copiado {
       color: var(--acento);
+    }
+
+    button.valor-codigo:disabled,
+    button.valor-copiavel:disabled {
+      cursor: default;
+    }
+
+    /* Continuar e Ver todos, à direita do título do Histórico. */
+    .acoes-cabecalho {
+      display: flex;
+      gap: 2px;
+    }
+
+    .historico-vazio {
+      margin: 0;
+      font-size: 12px;
+      color: var(--texto-suave);
     }
 
     .lista-historico {
@@ -95,7 +117,7 @@ export const ESTILOS_BARRA_HISTORICO = `
 
     .lista-historico li {
       display: grid;
-      grid-template-columns: 1fr auto auto auto;
+      grid-template-columns: 1fr auto auto auto auto;
       align-items: center;
       gap: 10px;
       padding: 4px 0 4px 8px;
@@ -119,9 +141,15 @@ export const ESTILOS_BARRA_HISTORICO = `
       font-size: 10.5px;
     }
 
-    .lista-historico button {
+    .lista-historico .acao {
       padding: 2px 6px;
       font-size: 13px;
+    }
+
+    /* Sem progresso salvo, o lugar do Continuar fica vazio e as colunas
+       continuam alinhadas. */
+    .lista-historico .sem-acao {
+      width: 26px;
     }
 
     .historico .atual {

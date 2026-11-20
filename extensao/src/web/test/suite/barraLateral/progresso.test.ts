@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
+import { HistoricoDoAluno } from "../../../provider/barraLateral/historicoDoAluno";
 import {
   lerMarcaDoDesafio,
   marcarDesafio,
@@ -16,8 +17,10 @@ import {
   json,
   mockarConfiguracaoServidorValida,
   mockarServidor,
+  MensagemWebview,
   ProvedorInterno,
   restaurarAoFim,
+  ultimaMensagem,
 } from "./auxiliares";
 
 const ALUNO = "aluno@teste.com";
@@ -106,18 +109,19 @@ suite("Barra lateral: progresso no servidor", () => {
     const registro = criarRegistroFalso();
     const progressos = new ProgressosSalvos(registro);
     void registro.update(chaveDosProgressos(ALUNO), opcoes.salvos ?? []);
-    const provedor = criarProvedorParaTeste([], { teamId: opcoes.teamId, registro });
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, { teamId: opcoes.teamId, registro });
     const interno = provedor as unknown as ProvedorInterno;
     const gravados: { html: string; css: string }[] = [];
     interno.testarConexaoServidor = async () => undefined;
     interno.lerArquivosDoAluno = async () => resumo;
     interno.limparArquivosDoAluno = async () => {
-      throw new Error("Puxar o progresso não deve limpar os arquivos.");
+      throw new Error("Continuar um desafio não deve limpar os arquivos.");
     };
     interno.escreverArquivosDoAluno = async (conteudo) => {
       gravados.push(conteudo);
     };
-    return { provedor, interno, gravados, progressos };
+    return { provedor, interno, gravados, progressos, mensagens };
   }
 
   test("o código do desafio vai na primeira linha do HTML e sai ao puxar", () => {
@@ -293,7 +297,7 @@ suite("Barra lateral: progresso no servidor", () => {
       opcoesDaLista = itens.map((item) => item.label);
       return itens.find((item) => item.label === "MESA");
     }) as unknown as typeof vscode.window.showQuickPick;
-    respostaDoAviso = "Puxar";
+    respostaDoAviso = "Continuar";
     const { provedor, interno, gravados } = provedorComArquivos(
       arquivos("<p>outro trabalho</p>", ""),
       { salvos: ["KTBW", "MESA"] },
@@ -303,7 +307,7 @@ suite("Barra lateral: progresso no servidor", () => {
 
     assert.deepStrictEqual(opcoesDaLista, ["KTBW", "MESA", "Digitar outro código…"]);
     // O aluno tinha outro trabalho na pasta: confirmou antes da troca.
-    assert.deepStrictEqual(avisos, ["Puxar o progresso do desafio MESA?"]);
+    assert.deepStrictEqual(avisos, ["Continuar o desafio MESA?"]);
     assert.strictEqual(interno.tentativa.desafio?.codigo, "MESA");
     assert.deepStrictEqual(interno.tentativa.desafio?.blocks, criarDesafioPorCodigo("MESA").blocks);
     assert.deepStrictEqual(gravados, [
@@ -372,7 +376,119 @@ suite("Barra lateral: progresso no servidor", () => {
     const { provedor, gravados } = provedorComArquivos(arquivos("", ""));
     await provedor.puxarProgresso();
     assert.strictEqual(erros.length, 1);
-    assert.match(erros[0], /^Não foi possível puxar o progresso: .*Permission denied/);
+    assert.match(erros[0], /^Não foi possível continuar o desafio: .*Permission denied/);
     assert.deepStrictEqual(gravados, []);
+  });
+  test("o ⤓ do histórico puxa direto o desafio dele, sem perguntar o código", async () => {
+    mockarServidor({
+      [BUSCAR]: EXISTE,
+      [CRIAR_PASTA]: () => json({ code_pasta: PASTA }),
+      [OBTER_CONTEUDO]: () => json(SALVO_PELA_EXTENSAO),
+    });
+    let perguntou = false;
+    vscode.window.showQuickPick = (async () => {
+      perguntou = true;
+      return undefined;
+    }) as unknown as typeof vscode.window.showQuickPick;
+    vscode.window.showInputBox = (async () => {
+      perguntou = true;
+      return undefined;
+    }) as typeof vscode.window.showInputBox;
+    const { provedor, interno, gravados } = provedorComArquivos(arquivos("", ""), {
+      salvos: ["KTBW", "MESA"],
+    });
+
+    await provedor.puxarProgresso("MESA");
+
+    assert.strictEqual(perguntou, false);
+    assert.strictEqual(interno.tentativa.desafio?.codigo, "MESA");
+    assert.deepStrictEqual(gravados, [
+      { html: "<main></main>", css: "main { display: grid; }" },
+    ]);
+  });
+
+  test("depois da nota, salva sozinho e mostra embaixo do Verificar, sem avisos", async () => {
+    const requisicoes = mockarServidor({
+      [BUSCAR]: EXISTE,
+      [GABARITOS]: COM_GABARITO,
+      [CRIAR_PASTA]: () => json({ code_pasta: PASTA }),
+      "POST /salvar-conteudo": () => json({}),
+    });
+    const { provedor, interno, mensagens } = provedorComArquivos(
+      arquivos("<main></main>", ""),
+      { salvos: ["MESA"] },
+    );
+    abrirDesafio(interno, "MESA");
+    Date.now = () => 1_000;
+
+    const salvando = provedor.salvarSozinho();
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "salvamento")?.payload, {
+      torneio: true,
+      estado: "salvando",
+    });
+    assert.strictEqual(await salvando, "salvo");
+
+    assert.deepStrictEqual(rotas(requisicoes).slice(-1), ["POST /salvar-conteudo"]);
+    assert.deepStrictEqual([informacoes, avisos, erros], [[], [], []]);
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "salvamento")?.payload, {
+      torneio: true,
+      estado: "salvo",
+      instante: 1_000,
+    });
+  });
+
+  test("salvar sozinho numa dinâmica alheia não avisa nem tenta de novo", async () => {
+    const requisicoes = mockarServidor({ [BUSCAR]: EXISTE });
+    const { provedor, interno, progressos, mensagens } = provedorComArquivos(
+      arquivos("<main></main>", ""),
+    );
+    abrirDesafio(interno, "MESA");
+
+    assert.strictEqual(await provedor.salvarSozinho(), "recusado");
+    assert.strictEqual(await provedor.salvarSozinho(), "ignorado");
+    // Embaixo do Verificar, o aluno vê que não salvou.
+    assert.deepStrictEqual(ultimaMensagem(mensagens, "salvamento")?.payload, {
+      torneio: true,
+      estado: "falhou",
+    });
+
+    // Uma consulta só: a segunda nota nem chega ao servidor.
+    assert.deepStrictEqual(rotas(requisicoes), [BUSCAR]);
+    assert.deepStrictEqual([informacoes, avisos, erros], [[], [], []]);
+    assert.deepStrictEqual(progressos.listar(ALUNO), []);
+  });
+
+  test("um erro do servidor ao salvar sozinho fica no log, sem aviso", async () => {
+    mockarServidor({ [BUSCAR]: () => json({ detail: "fora do ar" }, 503) });
+    const { provedor, interno } = provedorComArquivos(arquivos("<main></main>", ""), {
+      salvos: ["MESA"],
+    });
+    abrirDesafio(interno, "MESA");
+
+    assert.strictEqual(await provedor.salvarSozinho(), "falhou");
+    assert.strictEqual(await provedor.salvarSozinho(), "ignorado");
+    assert.deepStrictEqual([informacoes, avisos, erros], [[], [], []]);
+  });
+
+  test("fora do torneio, não salva sozinho nem fala nada", async () => {
+    const requisicoes = mockarServidor({});
+    const { provedor, interno } = provedorComArquivos(arquivos("<main></main>", ""), {
+      teamId: 0,
+    });
+    abrirDesafio(interno, "MESA");
+
+    assert.strictEqual(await provedor.salvarSozinho(), "ignorado");
+    assert.deepStrictEqual(requisicoes, []);
+    assert.deepStrictEqual([informacoes, avisos, erros], [[], [], []]);
+  });
+
+  test("o histórico da barra marca os salvos só para quem está no torneio", () => {
+    const historico = new HistoricoDoAluno(criarRegistroFalso(), () => ALUNO);
+
+    const noTorneio = historico.naBarra(undefined, "medio", { salvos: ["MESA"], torneio: true });
+    assert.deepStrictEqual([noTorneio.salvos, noTorneio.torneio], [["MESA"], true]);
+
+    const fora = historico.naBarra(undefined, "medio", { salvos: ["MESA"], torneio: false });
+    assert.deepStrictEqual([fora.salvos, fora.torneio], [[], false]);
   });
 });

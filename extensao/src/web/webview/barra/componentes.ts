@@ -4,6 +4,7 @@ import {
   formatarMedida,
   normalizarHex,
 } from "../desenhoGabarito";
+import { criarValorCopiavel } from "./copiar";
 import { canvasAnotacoes, detalheComponente } from "./elementos";
 import { estado } from "./estado";
 import type { BlocoRecebido } from "./tipos";
@@ -52,11 +53,15 @@ function selecionarComponenteNoCanvas(evento: MouseEvent): void {
     return;
   }
 
-  const bloco = componenteSobPonteiro(evento);
-  componenteSelecionadoId = bloco?.id;
-  destacadoId = bloco?.id;
+  selecionarComponente(componenteSobPonteiro(evento)?.id);
+}
+
+/** Destaca o componente no gabarito e mostra as medidas dele. */
+export function selecionarComponente(id: number | undefined): void {
+  componenteSelecionadoId = id;
+  destacadoId = id;
   window.clearTimeout(limpezaDestaque);
-  if (bloco) {
+  if (id !== undefined) {
     limpezaDestaque = window.setTimeout(() => {
       destacadoId = undefined;
       desenharDestaques();
@@ -124,13 +129,22 @@ export function renderizarDetalheComponente(): void {
   const amostra = criarAmostra(bloco.color);
   amostra.classList.toggle("circulo", circulo);
   // Círculos também em largura e altura: o aluno os faz com border-radius.
+  // Cada medida e a cor se copiam com um clique, já com a unidade.
+  const largura = formatarMedida(bloco.width);
+  const altura = formatarMedida(bloco.height);
+  const cor = normalizarHex(bloco.color);
+  const medidas = criarMedida("");
+  medidas.replaceChildren(
+    criarValorCopiavel([largura], `${largura}px`, "Copiar a largura"),
+    " × ",
+    criarValorCopiavel([altura], `${altura}px`, "Copiar a altura"),
+    " px",
+  );
   detalheComponente.replaceChildren(
     amostra,
     nome,
-    criarMedida(
-      `${formatarMedida(bloco.width)} × ${formatarMedida(bloco.height)} px`,
-    ),
-    criarMedida(normalizarHex(bloco.color)),
+    medidas,
+    criarValorCopiavel([cor], cor, "Copiar a cor"),
   );
 }
 

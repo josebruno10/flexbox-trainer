@@ -6,7 +6,7 @@ import {
   RegistroHistorico,
 } from "../../services/historico";
 import { Desafio, Nivel } from "../../types";
-import { formatarTempo } from "../barraDeStatus";
+import { formatarTempo } from "../../telas/comum";
 import { formatarPorcentagem } from "./resultado";
 
 // Na barra lateral cabem os desafios mais recentes; o resto fica no comando
@@ -21,6 +21,11 @@ export type HistoricoNaBarra = {
   total: number;
   recorde: number | null;
   evolucao: NotaDoDia[];
+  // Os códigos com progresso salvo no servidor: no histórico, esses
+  // ganham o ⤓ Continuar.
+  salvos: string[];
+  // Só quem está no torneio salva e puxa o progresso.
+  torneio: boolean;
 };
 
 /**
@@ -63,10 +68,16 @@ export class HistoricoDoAluno {
   }
 
   /** O gráfico mostra o nível escolhido: misturar níveis esconderia o progresso. */
-  public naBarra(desafio: Desafio | undefined, nivel: Nivel): HistoricoNaBarra {
+  public naBarra(
+    desafio: Desafio | undefined,
+    nivel: Nivel,
+    progresso: { salvos: string[]; torneio: boolean } = { salvos: [], torneio: false },
+  ): HistoricoNaBarra {
     const email = this.emailDaSessao();
     const registros = this.registros();
     return {
+      salvos: progresso.torneio ? progresso.salvos : [],
+      torneio: progresso.torneio,
       registros: registros.slice(0, HISTORICO_NA_BARRA),
       total: registros.length,
       recorde: recordeDoDesafio(registros, desafio) ?? null,

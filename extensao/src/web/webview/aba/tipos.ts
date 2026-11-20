@@ -1,4 +1,4 @@
-import type { Desafio } from "../../types";
+import type { Desafio, ResultadoNaAba } from "../../types";
 
 // O que a extensão manda para a aba do gabarito.
 
@@ -13,8 +13,14 @@ export type GabaritoRecebido = Pick<
   | "blocks"
 >;
 
-export type Modo = "gabarito" | "sobreposto" | "lado";
+export type Modo = "gabarito" | "sobreposto" | "comparar" | "lado";
+
+export type VerificacaoRecebida = { andamento: boolean; etapa?: string };
 
 export type MensagemDaExtensao =
   | { type: "desafio"; payload: GabaritoRecebido | null }
-  | { type: "paginaAluno"; payload: string | null };
+  | { type: "paginaAluno"; payload: string | null }
+  | {
+      type: "resultado";
+      payload: { resultado: ResultadoNaAba | null; verificacao: VerificacaoRecebida };
+    };

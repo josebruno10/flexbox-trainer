@@ -1,9 +1,9 @@
-import { codigoDoDia } from "../../services/codigoDesafio";
 import { ExtensaoIa } from "../../services/extensoesIa";
 import {
   Desafio,
   Nivel,
   ResultadoAvaliacao,
+  ResultadoNaAba,
   ResumoWorkspace,
 } from "../../types";
 import { HistoricoNaBarra } from "./historicoDoAluno";
@@ -20,6 +20,16 @@ export type ProgressoGuia = {
   verificou: boolean;
 };
 
+/**
+ * O aviso embaixo do Verificar: quem está no torneio fica sabendo que cada
+ * verificação salva o progresso no servidor, e quando salvou.
+ */
+export type EstadoDoSalvamento = {
+  torneio: boolean;
+  estado: "aguardando" | "salvando" | "salvo" | "falhou";
+  instante?: number;
+};
+
 /** Tudo o que a barra lateral mostra de quem está na sessão. */
 export type EstadoDaBarra = {
   extensoesIa: ExtensaoIa[];
@@ -30,6 +40,7 @@ export type EstadoDaBarra = {
   resumoWorkspace: ResumoWorkspace;
   historicoNotas: number[];
   historico: HistoricoNaBarra;
+  salvamento?: EstadoDoSalvamento;
   avaliacao?: ResultadoAvaliacao;
 };
 
@@ -52,7 +63,6 @@ export function mensagensDaBarra(
               ...desafio,
               tempoAtualMs: (estado.fimMs ?? agora) - estado.inicioMs,
               encerrado: estado.fimMs !== undefined,
-              doDia: desafio.codigo === codigoDoDia(),
             },
           },
         ]
@@ -60,6 +70,7 @@ export function mensagensDaBarra(
     { type: "dadosWorkspace", payload: estado.resumoWorkspace },
     { type: "historicoNotas", payload: estado.historicoNotas },
     { type: "historicoDesafios", payload: estado.historico },
+    ...(estado.salvamento ? [{ type: "salvamento", payload: estado.salvamento }] : []),
     ...(estado.avaliacao
       ? [{ type: "resultadoAvaliacao", payload: estado.avaliacao }]
       : []),
@@ -104,5 +115,27 @@ export function estadoDaBarraDeStatus(
     fimMs: tentativa.fimMs,
     precisao: notas[notas.length - 1],
     invalidado: tentativa.invalidado,
+  };
+}
+
+export function resultadoDaAba(
+  tentativa: ResumoDaTentativa,
+  avaliacao?: ResultadoAvaliacao,
+): ResultadoNaAba {
+  const notas = tentativa.historicoNotas;
+  const doServidor = avaliacao?.source === "servidor";
+  return {
+    precisao: notas[notas.length - 1],
+    melhor: notas.length > 0 ? Math.max(...notas) : undefined,
+    verificacoes: notas.length,
+    invalidado: tentativa.invalidado,
+    aviso: !avaliacao
+      ? undefined
+      : !doServidor
+        ? avaliacao.error || "Não foi possível verificar."
+        : avaliacao.repetida
+          ? "A página não mudou desde a última verificação: a nota é a mesma."
+          : undefined,
+    detalhes: doServidor ? avaliacao.detalhes : undefined,
   };
 }

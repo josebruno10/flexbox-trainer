@@ -42,16 +42,14 @@ export function criarControlador(partes: PartesDoControlador): ControladorDaBarr
       void provedor.iniciarNovoDesafio();
       void provedor.atualizarPreviewWorkspace();
     },
-    desafioDoDia: () => void provedor.abrirDesafioDoDia(),
     definirNivel: (nivel) => void provedor.definirNivel(nivel),
-    copiarResultado: () => void provedor.copiarResultado(),
     abrirPorCodigo: () => void provedor.abrirDesafioPorCodigo(),
     refazer: (codigo) => void provedor.refazerDesafio(codigo),
     verHistorico: () => void provedor.verHistorico(),
     verAtalhos: () => void vscode.commands.executeCommand("flexbox-trainer.verAtalhos"),
     copiarCodigo: () => void provedor.copiarCodigo(),
-    salvarProgresso: () => void provedor.salvarProgresso(),
-    puxarProgresso: () => void provedor.puxarProgresso(),
+    copiar: (texto) => void vscode.env.clipboard.writeText(texto),
+    puxarProgresso: (codigo) => void provedor.puxarProgresso(codigo),
     abrirPainelGabarito: () => provedor.abrirPainelGabarito(),
     verExtensoesIa: () => void provedor.verExtensoesIa(),
     criarArquivos: () => void provedor.criarArquivosDeTreino(),

@@ -97,6 +97,31 @@ export const ESTILOS_PAINEL_GABARITO = `
       accent-color: var(--acento);
     }
 
+    /* O Verificar e a nota, como na barra lateral, sem trocar de tela. */
+    .verificacao-aba {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 14px;
+      margin-bottom: 12px;
+    }
+
+    .verificacao-aba button {
+      flex: 0 0 auto;
+      min-width: 132px;
+    }
+
+    .nota-aba {
+      font-family: var(--fonte-mono);
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+
+    .nota-aba strong {
+      color: var(--texto);
+      font-weight: 500;
+    }
+
     .palco {
       display: flex;
       align-items: flex-start;
@@ -127,6 +152,91 @@ export const ESTILOS_PAINEL_GABARITO = `
 
     .palco[data-modo="sobreposto"] #canvasGabarito {
       opacity: var(--opacidade-gabarito, 0.5);
+    }
+
+    /* Comparar: os dois quadros na mesma célula, o gabarito por cima,
+       recortado à esquerda da linha. A linha se arrasta de qualquer ponto. */
+    .palco[data-modo="comparar"] {
+      position: relative;
+      display: grid;
+      width: fit-content;
+      cursor: ew-resize;
+      touch-action: none;
+    }
+
+    .palco[data-modo="comparar"] .quadro {
+      grid-area: 1 / 1;
+      pointer-events: none;
+    }
+
+    .palco[data-modo="comparar"] #quadroGabarito {
+      position: relative;
+      z-index: 1;
+      clip-path: inset(0 calc(100% - var(--corte, 50%)) 0 0);
+    }
+
+    .palco:not([data-modo="comparar"]) .linha-comparacao,
+    .palco:not([data-modo="comparar"]) .lado-comparacao {
+      display: none;
+    }
+
+    .linha-comparacao {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: var(--corte, 50%);
+      z-index: 2;
+      width: 2px;
+      margin-left: -1px;
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(21, 18, 24, 0.55);
+      outline: none;
+    }
+
+    /* A alça no meio da linha, para mostrar que ela se arrasta. */
+    .linha-comparacao::after {
+      content: "⇔";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(21, 18, 24, 0.55), 0 2px 6px rgba(21, 18, 24, 0.3);
+      color: #151218;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .linha-comparacao:focus-visible::after {
+      box-shadow: 0 0 0 2px var(--foco), 0 2px 6px rgba(21, 18, 24, 0.3);
+    }
+
+    /* De que lado fica cada imagem. */
+    .lado-comparacao {
+      position: absolute;
+      bottom: 6px;
+      z-index: 2;
+      padding: 2px 6px;
+      background: rgba(21, 18, 24, 0.7);
+      color: #fff;
+      font-family: var(--fonte-mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    .lado-comparacao.esquerda {
+      left: 6px;
+    }
+
+    .lado-comparacao.direita {
+      right: 6px;
     }
 
     .quadro {

@@ -3,6 +3,7 @@ import {
   FormaMedida,
   ResultadoAvaliacao,
 } from "../../types";
+import { lerDetalhesDoServidor } from "../detalhesDaNota";
 import { log } from "../logger";
 import {
   ehRegistro,
@@ -58,7 +59,12 @@ export async function corrigirFormas(
     };
   }
 
-  return { precision: nota, score: nota, source: "servidor" };
+  return {
+    precision: nota,
+    score: nota,
+    source: "servidor",
+    detalhesDoServidor: lerDetalhesDoServidor(dados, formas),
+  };
 }
 
 /**

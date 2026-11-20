@@ -31,22 +31,6 @@ export function normalizarCodigo(texto: string): string | undefined {
     : undefined;
 }
 
-/**
- * O desafio do dia: o mesmo código para todos na mesma data, a do
- * computador, sempre no nível médio. Assim a turma treina o mesmo layout sem
- * o professor passar um.
- */
-export function codigoDoDia(data: Date = new Date()): string {
-  const sorteado =
-    semente(`flexbox-trainer:dia:${diaLocal(data)}`) % TOTAL_CODIGOS;
-  // O código médio mais próximo (resto 1 na divisão por 3).
-  let valor = sorteado - (sorteado % 3) + 1;
-  if (valor >= TOTAL_CODIGOS) {
-    valor -= 3;
-  }
-  return codigoDoValor(valor);
-}
-
 /** A data do computador, como "2026-10-14". */
 export function diaLocal(data: Date): string {
   return [

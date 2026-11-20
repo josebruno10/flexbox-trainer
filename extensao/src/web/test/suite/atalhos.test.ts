@@ -23,12 +23,17 @@ function botao(html: string, id: string): string {
 suite("Atalhos e dicas de digitação", () => {
   test("os atalhos do package.json são os da lista da extensão", () => {
     const pacote = vscode.extensions.getExtension("josebruno10.flexbox-trainer")?.packageJSON;
-    const atalhos = pacote?.contributes.keybindings as { command: string; key: string; when: string }[];
+    const atalhos = pacote?.contributes.keybindings as { command: string; key: string; when?: string }[];
 
     assert.deepStrictEqual(
-      atalhos.map(({ command, key, when }) => [command, key, when]),
-      ATALHOS_DA_EXTENSAO.map(({ comando, teclas, quando }) => [comando, teclas, quando]),
+      atalhos.map(({ command, key }) => [command, key]),
+      ATALHOS_DA_EXTENSAO.map(({ comando, teclas }) => [comando, teclas]),
     );
+    // Sem "when": antes de a extensão ativar, as chaves de contexto dela não
+    // existem, e o atalho não chegaria a ativá-la.
+    assert.ok(atalhos.every((atalho) => atalho.when === undefined));
+    // No Xfce, Ctrl+Alt+D é do sistema (mostrar a área de trabalho).
+    assert.ok(!atalhos.some((atalho) => atalho.key === "ctrl+alt+d"));
     const comandos = (pacote?.contributes.commands as { command: string }[]).map(
       (item) => item.command,
     );
@@ -36,7 +41,7 @@ suite("Atalhos e dicas de digitação", () => {
   });
 
   test("as teclas aparecem como em cada sistema", () => {
-    assert.strictEqual(teclasDaExtensao("ctrl+alt+d", "linux"), "Ctrl+Alt+D");
+    assert.strictEqual(teclasDaExtensao("ctrl+alt+g", "linux"), "Ctrl+Alt+G");
     assert.strictEqual(teclasDaExtensao("ctrl+alt+shift+v", "windows"), "Ctrl+Alt+Shift+V");
     assert.strictEqual(teclasDaExtensao("ctrl+alt+shift+v", "mac"), "⌃⌥⇧V");
     assert.strictEqual(plataformaDe("darwin"), "mac");
@@ -50,13 +55,8 @@ suite("Atalhos e dicas de digitação", () => {
   test("cada botão com atalho o mostra embaixo do texto", () => {
     const html = obterHtmlWebview(webview, raiz, "Aluno", "floresta", "linux");
     const esperados: Record<string, string> = {
-      botaoNovoDesafio: "Ctrl+Alt+D",
-      botaoDesafioDia: "Ctrl+Alt+Shift+D",
-      botaoAbrirAba: "Ctrl+Alt+A",
-      botaoRefazer: "Ctrl+Alt+Shift+N",
+      botaoNovoDesafio: "Ctrl+Alt+G",
       botaoVerificar: "Ctrl+Alt+V",
-      botaoCopiarResultado: "Ctrl+Alt+Shift+V",
-      botaoVerHistorico: "Ctrl+Alt+H",
     };
     for (const [id, teclas] of Object.entries(esperados)) {
       const conteudo = botao(html, id);
@@ -67,8 +67,18 @@ suite("Atalhos e dicas de digitação", () => {
     // À vista, o atalho não precisa se repetir na dica do mouse.
     assert.ok(!html.includes("(Ctrl+Alt"));
 
+    // Nos botões pequenos, o atalho vai na dica do mouse.
+    const naDica: Record<string, string> = {
+      botaoAbrirAba: "Ctrl+Alt+A",
+      botaoRefazer: "Ctrl+Alt+Shift+N",
+      botaoVerHistorico: "Ctrl+Alt+H",
+    };
+    for (const [id, teclas] of Object.entries(naDica)) {
+      assert.match(botao(html, id), new RegExp(`title="[^"]* · ${teclas.replace(/\+/g, "\\+")}"`), id);
+    }
+
     const doMac = obterHtmlWebview(webview, raiz, "Aluno", "floresta", "mac");
-    assert.ok(botao(doMac, "botaoNovoDesafio").includes('<small class="atalho">⌃⌥D</small>'));
+    assert.ok(botao(doMac, "botaoNovoDesafio").includes('<small class="atalho">⌃⌥G</small>'));
   });
 
   test("a barra lateral recebe as dicas, com as teclas do sistema", () => {

@@ -159,7 +159,8 @@ export class RetornoLocal {
       const nonce = hexAleatorio(16);
       resposta.setHeader(
         "Content-Security-Policy",
-        `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; ` +
+        // img-src data: deixa o ícone da extensão aparecer na aba.
+        `default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'nonce-${nonce}'; ` +
           "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       );
       enviar(resposta, 200, "text/html", paginaDoRetorno(nonce));

@@ -1,14 +1,15 @@
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
 import { vscode } from "../api";
+import { criarValorCopiavel } from "./copiar";
 import {
-  botaoCopiarResultado,
+  botaoPuxarProgresso,
   botaoVerHistorico,
   historicoNotas,
+  historicoVazio,
   linhaMelhor,
   linhaRecorde,
   linhaTentativas,
   listaHistorico,
-  secaoHistorico,
   textoDoBotao,
   valorMelhor,
   valorRecorde,
@@ -16,7 +17,8 @@ import {
 } from "./elementos";
 import { estado } from "./estado";
 import { renderizarEvolucao } from "./evolucao";
-import { formatarPorcentagem, formatarTempo } from "./formatos";
+import { formatarTempo } from "../../telas/comum";
+import { formatarPorcentagem } from "./formatos";
 import type { HistoricoDesafiosRecebido } from "./tipos";
 
 // O recorde do código em andamento, quando o aluno já o fez antes.
@@ -29,8 +31,6 @@ const TENTATIVAS_NO_HISTORICO = 3;
 // está errado.
 export function renderizarHistorico(notas: number[]): void {
   notasAtuais = notas;
-  // Só há o que copiar depois da primeira nota deste desafio.
-  botaoCopiarResultado.hidden = notas.length === 0;
   const comTentativas = notas.length >= 2;
   linhaTentativas.hidden = !comTentativas;
   linhaMelhor.hidden = !comTentativas;
@@ -56,15 +56,20 @@ export function renderizarHistorico(notas: number[]): void {
   valorMelhor.textContent = `${formatarPorcentagem(Math.max(...notas))}%`;
 }
 
-// Os desafios mais recentes do aluno, com a melhor nota e o tempo dela; cada
-// um pode ser refeito. O recorde do desafio em andamento vai para o Resultado.
+// Os desafios mais recentes do aluno, com a melhor nota e o tempo dela. O
+// código se copia com um clique; um desafio com progresso salvo pode
+// continuar de onde parou (⤓), e todos podem ser refeitos do zero (↻). O
+// recorde do desafio em andamento vai para o Resultado.
 export function renderizarHistoricoDesafios(
   historico: HistoricoDesafiosRecebido,
 ): void {
   recordeAtual = historico.recorde ?? undefined;
   renderizarHistorico(notasAtuais);
 
-  secaoHistorico.hidden = historico.registros.length === 0;
+  // A seção fica à vista mesmo vazia: dela também se puxa o progresso.
+  historicoVazio.hidden = historico.registros.length > 0;
+  const salvos = new Set(historico.salvos ?? []);
+  botaoPuxarProgresso.hidden = !historico.torneio;
   renderizarEvolucao(historico.evolucao ?? []);
   botaoVerHistorico.hidden = historico.total <= historico.registros.length;
   textoDoBotao(botaoVerHistorico).textContent = `Ver todos (${historico.total})`;
@@ -77,23 +82,55 @@ export function renderizarHistoricoDesafios(
       const nivel = document.createElement("span");
       nivel.className = "nivel";
       nivel.textContent = nomeDoNivel;
-      codigo.append(registro.codigo, " ", nivel);
+      const copiar = criarValorCopiavel(
+        [registro.codigo],
+        registro.codigo,
+        "Copiar o código: com ele, outra pessoa abre este mesmo desafio",
+      );
+      copiar.classList.replace("valor-copiavel", "valor-codigo");
+      codigo.append(copiar, " ", nivel);
       const nota = document.createElement("span");
       nota.textContent = `${formatarPorcentagem(registro.melhor)}%`;
       const tempo = document.createElement("span");
       tempo.className = "tempo";
       tempo.textContent = formatarTempo(registro.tempoMelhorMs);
-      const refazer = document.createElement("button");
-      refazer.type = "button";
-      refazer.className = "discreto";
-      refazer.textContent = "↻";
-      refazer.title = `Refazer o desafio ${registro.codigo} (${nomeDoNivel})`;
-      refazer.setAttribute("aria-label", refazer.title);
-      refazer.addEventListener("click", () => {
-        vscode.postMessage({ type: "refazer", codigo: registro.codigo });
-      });
-      item.append(codigo, nota, tempo, refazer);
+      const continuar = salvos.has(registro.codigo)
+        ? criarAcao(
+            "⤓",
+            `Continuar o desafio ${registro.codigo}: traz o index.html e o style.css que você salvou`,
+            () => vscode.postMessage({ type: "puxarProgresso", codigo: registro.codigo }),
+          )
+        : semAcao();
+      const refazer = criarAcao(
+        "↻",
+        `Refazer o desafio ${registro.codigo} (${nomeDoNivel}) do zero, com os arquivos limpos`,
+        () => vscode.postMessage({ type: "refazer", codigo: registro.codigo }),
+      );
+      item.append(codigo, nota, tempo, continuar, refazer);
       return item;
     }),
   );
+}
+
+function criarAcao(
+  simbolo: string,
+  dica: string,
+  acao: () => void,
+): HTMLButtonElement {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "discreto acao";
+  botao.textContent = simbolo;
+  botao.title = dica;
+  botao.setAttribute("aria-label", dica);
+  botao.addEventListener("click", acao);
+  return botao;
+}
+
+// O lugar do Continuar, vazio, para as colunas ficarem alinhadas.
+function semAcao(): HTMLSpanElement {
+  const vazio = document.createElement("span");
+  vazio.className = "sem-acao";
+  vazio.setAttribute("aria-hidden", "true");
+  return vazio;
 }

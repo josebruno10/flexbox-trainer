@@ -1,4 +1,6 @@
 import { NOME_DO_NIVEL } from "../../niveis";
+import type { ComponenteCorrigido } from "../../types";
+import { descreverProblema, marcaDoProblema } from "../correcoes";
 import { formatarMedida, normalizarHex } from "../desenhoGabarito";
 import { passarMouse, selecionar } from "./destaques";
 import { lista, resumo } from "./elementos";
@@ -27,15 +29,46 @@ export function renderizarResumo(atual: GabaritoRecebido): void {
   const corFundo = normalizarHex(atual.backgroundColor);
   const dados = document.createElement("dl");
   dados.className = "dados";
-  dados.append(
-    criarDado(
-      "Fundo",
-      criarAmostra(atual.backgroundColor),
-      criarValor(corFundo, corFundo, "Copiar a cor do fundo"),
-    ),
-    criarDado("Componentes", String(atual.blocks.length)),
+  const fundo = criarDado(
+    "Fundo",
+    criarAmostra(atual.backgroundColor),
+    criarValor(corFundo, corFundo, "Copiar a cor do fundo"),
   );
+  fundo.dataset.id = "fundo";
+  dados.append(fundo, criarDado("Componentes", String(atual.blocks.length)));
   resumo.replaceChildren(cabecalho, dados);
+  marcarCorrecoes();
+}
+
+/**
+ * Marca em cada componente (e no fundo) o que corrigir, pela última nota:
+ * ✓, ou a primeira coisa a acertar, com tudo na dica do mouse.
+ */
+export function marcarCorrecoes(): void {
+  const porComponente = new Map<string, ComponenteCorrigido>(
+    (estado.detalhes?.componentes ?? []).map((item) => [String(item.componente), item]),
+  );
+  const alvos = [
+    ...Array.from(lista.querySelectorAll<HTMLElement>(".componente")),
+    ...Array.from(resumo.querySelectorAll<HTMLElement>('[data-id="fundo"] dd')),
+  ];
+  for (const alvo of alvos) {
+    const id = alvo.dataset.id ?? alvo.closest<HTMLElement>("[data-id]")?.dataset.id ?? "";
+    alvo.querySelector(".correcao")?.remove();
+    const item = porComponente.get(id);
+    if (!item) {
+      continue;
+    }
+    const marca = document.createElement("span");
+    marca.className = "correcao";
+    const problema = item.problemas[0];
+    marca.dataset.tipo = problema?.tipo ?? "certo";
+    marca.textContent = problema ? marcaDoProblema(problema) : "✓";
+    marca.title = problema
+      ? item.problemas.map(descreverProblema).join("; ")
+      : "Certo na última verificação";
+    alvo.append(marca);
+  }
 }
 
 export function renderizarLista(atual: GabaritoRecebido): void {
@@ -81,4 +114,5 @@ export function renderizarLista(atual: GabaritoRecebido): void {
       return item;
     }),
   );
+  marcarCorrecoes();
 }

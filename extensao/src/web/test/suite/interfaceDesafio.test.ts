@@ -63,6 +63,20 @@ suite("Interface do desafio", () => {
     assert.ok(html.includes("Encerrar desafio"));
   });
 
+  test("diz, embaixo do Verificar, que cada verificação salva no servidor", () => {
+    const webview = {
+      cspSource: "vscode-webview://teste",
+      asWebviewUri: (uri: vscode.Uri) => uri,
+    } as unknown as vscode.Webview;
+    const html = obterHtmlWebview(webview, vscode.Uri.parse("file:///extensao"), "Aluno");
+
+    assert.ok(html.indexOf('id="botaoVerificar"') < html.indexOf('id="avisoSalvamento"'));
+    assert.ok(html.includes("Cada verificação salva o seu progresso no servidor."));
+    // Sem o desafio do dia: o mesmo desafio para todos é só passar o código.
+    assert.ok(!html.includes("botaoDesafioDia"));
+    assert.ok(html.includes("⤓ Continuar…"));
+  });
+
   test("traz os créditos no pé da barra lateral e da tela de entrada", () => {
     const webview = {
       cspSource: "vscode-webview://teste",

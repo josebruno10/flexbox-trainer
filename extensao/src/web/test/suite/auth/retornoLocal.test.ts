@@ -53,6 +53,9 @@ suite("Servidor local do login", function () {
     )?.[1];
     assert.ok(nonce && pagina.corpo.includes(`<script nonce="${nonce}">`));
     assert.match(pagina.corpo, /history\.replaceState/);
+    // O ícone da extensão na aba, embutido e liberado pela CSP.
+    assert.match(pagina.corpo, /<link rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,/);
+    assert.match(String(pagina.cabecalhos["content-security-policy"]), /img-src data:;/);
 
     const fim = postarRetorno(retorno.enderecoDeRetorno, {
       consulta: "a=1",

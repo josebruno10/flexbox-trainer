@@ -7,7 +7,7 @@ import {
 } from "../../services/servidor/configuracao";
 import { extrairPercentualCorrecao } from "../../services/servidor/correcao";
 import { extrairCodGabarito } from "../../services/servidor/gabaritos";
-import { resumirCabecalhosParaLog } from "../../services/servidor/requisicao";
+import { descreverPedido } from "../../services/servidor/requisicao";
 
 function criarConfiguracao(
   overrides: Partial<ConfiguracaoServidor> = {},
@@ -46,15 +46,18 @@ suite("Servidor Service Test Suite", () => {
     }
   });
 
-  test("Deve ocultar o token ao resumir cabeçalhos para o log", () => {
-    const resumo = resumirCabecalhosParaLog({
+  test("Deve ocultar o token ao descrever o pedido para o log", () => {
+    const comToken = descreverPedido("GET", "https://api.teste.com/api/auth/me", {
       Accept: "application/json",
       Authorization: "Bearer token-secreto",
     });
-    const textoLog = JSON.stringify(resumo);
 
-    assert.ok(textoLog.includes("Bearer [PROTEGIDO]"));
-    assert.ok(!textoLog.includes("token-secreto"));
+    assert.strictEqual(comToken, "GET https://api.teste.com/api/auth/me (com token)");
+    assert.ok(!comToken.includes("token-secreto"));
+    assert.strictEqual(
+      descreverPedido("POST", "https://api.teste.com/api/login", {}),
+      "POST https://api.teste.com/api/login (sem token)",
+    );
   });
 
   test("Deve ler o código do gabarito nos formatos da listagem oficial", () => {

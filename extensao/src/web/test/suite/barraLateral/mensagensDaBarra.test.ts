@@ -50,6 +50,46 @@ suite("Barra lateral: mensagens e comandos", () => {
     assert.strictEqual(provedor.nivelEscolhido(), "facil");
   });
 
+  test("copia o que a barra pede e puxa pelo código do histórico", async () => {
+    const copiados: string[] = [];
+    const clipboardOriginal = Object.getOwnPropertyDescriptor(vscode.env, "clipboard");
+    Object.defineProperty(vscode.env, "clipboard", {
+      configurable: true,
+      value: {
+        readText: async () => "",
+        writeText: async (texto: string) => {
+          copiados.push(texto);
+        },
+      },
+    });
+    const provedor = criarProvedorParaTeste([]);
+    const puxados: Array<string | undefined> = [];
+    provedor.puxarProgresso = async (codigo?: string) => {
+      puxados.push(codigo);
+    };
+    const barra = criarBarraFalsa();
+    provedor.resolveWebviewView(barra.vista);
+
+    try {
+      barra.receber({ type: "copiar", texto: "#1f6feb" });
+      barra.receber({ type: "copiar", texto: "" });
+      barra.receber({ type: "copiar", texto: 42 });
+      barra.receber({ type: "copiar", texto: "x".repeat(65) });
+      barra.receber({ type: "puxarProgresso", codigo: "mesa" });
+      barra.receber({ type: "puxarProgresso", codigo: "nada disso" });
+      barra.receber({ type: "puxarProgresso" });
+      await new Promise((pronto) => setTimeout(pronto, 0));
+
+      assert.deepStrictEqual(copiados, ["#1f6feb"]);
+      // Um código inválido é ignorado; sem código, a extensão pergunta qual.
+      assert.deepStrictEqual(puxados, ["MESA", undefined]);
+    } finally {
+      if (clipboardOriginal) {
+        Object.defineProperty(vscode.env, "clipboard", clipboardOriginal);
+      }
+    }
+  });
+
   test("o link Ver atalhos da dica abre a aba Atalhos", async () => {
     const comandos: string[] = [];
     vscode.commands.executeCommand = (async (comando: string) => {
@@ -103,6 +143,26 @@ suite("Barra lateral: mensagens e comandos", () => {
     await provedor.iniciarNovoDesafio("MESA");
     barra.mudarVisibilidade(true);
     assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 3);
+  });
+
+  test("o Verificar da aba e do atalho continua valendo depois de a barra ser redesenhada igual", async () => {
+    vscode.commands.executeCommand = (async () => undefined) as typeof vscode.commands.executeCommand;
+    const provedor = criarProvedorParaTeste([]);
+    const interno = provedor as unknown as ProvedorInterno & {
+      renderizarWebviewAtual(): void;
+    };
+    interno.testarConexaoServidor = async () => undefined;
+    interno.tentativa.desafio = criarDesafioPorCodigo("MESA");
+    const barra = criarBarraFalsa();
+    provedor.resolveWebviewView(barra.vista);
+    barra.receber({ type: "pronto" });
+
+    // A sessão revalidada ao abrir o VS Code redesenha a barra com o mesmo
+    // HTML; o VS Code não recarrega a página, e o script não avisa de novo.
+    interno.renderizarWebviewAtual();
+    await provedor.pedirVerificacao();
+
+    assert.strictEqual(barra.enviadas.filter((m) => m.type === "verificar").length, 1);
   });
 
   test("avisa o guia do que o aluno já fez", async () => {

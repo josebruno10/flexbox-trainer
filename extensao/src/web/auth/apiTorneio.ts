@@ -1,10 +1,8 @@
 import { log } from "../services/logger";
+import { ErroHttp, extrairDetalhe, fetchComTimeout } from "../services/http";
 import {
-  ErroApiAutenticacao,
   TIMEOUT_AUTENTICACAO_MS,
   TIMEOUT_PERFIL_MS,
-  extrairDetalheResposta,
-  fetchComTimeout,
   lerJSONObrigatorio,
   lerUrlBaseApiAutenticacao,
   respostaDeInexistente,
@@ -54,8 +52,8 @@ export async function trocarTokenProvedorPorTokenServidor(
   );
 
   if (!resposta.ok) {
-    const detalhe = await extrairDetalheResposta(resposta);
-    throw new ErroApiAutenticacao(
+    const detalhe = await extrairDetalhe(resposta);
+    throw new ErroHttp(
       `Falha ao validar o login no servidor (HTTP ${resposta.status}): ${detalhe}`,
       resposta.status,
     );
@@ -89,8 +87,8 @@ export async function buscarPerfilAutenticado(
   );
 
   if (!resposta.ok) {
-    const detalhe = await extrairDetalheResposta(resposta);
-    throw new ErroApiAutenticacao(
+    const detalhe = await extrairDetalhe(resposta);
+    throw new ErroHttp(
       `Não foi possível validar a sessão (HTTP ${resposta.status}): ${detalhe}`,
       resposta.status,
     );

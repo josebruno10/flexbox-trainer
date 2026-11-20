@@ -40,7 +40,9 @@ export const valorTempo = document.getElementById("valorTempo") as HTMLElement;
 export const botaoCodigo = document.getElementById(
   "botaoCodigo",
 ) as HTMLButtonElement;
-export const valorFundo = document.getElementById("valorFundo") as HTMLElement;
+export const valorFundo = document.getElementById(
+  "valorFundo",
+) as HTMLButtonElement;
 export const valorComponentes = document.getElementById(
   "valorComponentes",
 ) as HTMLElement;
@@ -67,14 +69,8 @@ export const botaoRefazer = document.getElementById(
 export const botaoPorCodigo = document.getElementById(
   "botaoPorCodigo",
 ) as HTMLButtonElement;
-export const botaoDesafioDia = document.getElementById(
-  "botaoDesafioDia",
-) as HTMLButtonElement;
 export const botaoAbrirAba = document.getElementById(
   "botaoAbrirAba",
-) as HTMLButtonElement;
-export const botaoSalvarProgresso = document.getElementById(
-  "botaoSalvarProgresso",
 ) as HTMLButtonElement;
 export const botaoPuxarProgresso = document.getElementById(
   "botaoPuxarProgresso",
@@ -107,20 +103,32 @@ export const botaoAtualizarPreview = document.getElementById(
 export const botaoVerificar = document.getElementById(
   "botaoVerificar",
 ) as HTMLButtonElement;
+export const avisoSalvamento = document.getElementById(
+  "avisoSalvamento",
+) as HTMLParagraphElement;
 export const simboloVerificar = document.getElementById(
   "simboloVerificar",
 ) as HTMLSpanElement;
 export const caixaResultado = document.getElementById(
   "caixaResultado",
 ) as HTMLDivElement;
+export const caixaCorrecoes = document.getElementById(
+  "caixaCorrecoes",
+) as HTMLDivElement;
+export const resumoCorrecoes = document.getElementById(
+  "resumoCorrecoes",
+) as HTMLElement;
+export const listaCorrecoes = document.getElementById(
+  "listaCorrecoes",
+) as HTMLUListElement;
+export const botaoTodasCorrecoes = document.getElementById(
+  "botaoTodasCorrecoes",
+) as HTMLButtonElement;
 export const notaResultado = document.getElementById(
   "notaResultado",
 ) as HTMLDivElement;
 export const valorNota = document.getElementById("valorNota") as HTMLElement;
 export const barraNota = document.getElementById("barraNota") as HTMLSpanElement;
-export const botaoCopiarResultado = document.getElementById(
-  "botaoCopiarResultado",
-) as HTMLButtonElement;
 
 // As tentativas e o histórico.
 export const historicoNotas = document.getElementById(
@@ -140,15 +148,15 @@ export const linhaRecorde = document.getElementById(
 export const valorRecorde = document.getElementById(
   "valorRecorde",
 ) as HTMLElement;
-export const secaoHistorico = document.getElementById(
-  "secaoHistorico",
-) as HTMLElement;
 export const listaHistorico = document.getElementById(
   "listaHistorico",
 ) as HTMLElement;
 export const botaoVerHistorico = document.getElementById(
   "botaoVerHistorico",
 ) as HTMLButtonElement;
+export const historicoVazio = document.getElementById(
+  "historicoVazio",
+) as HTMLElement;
 
 // O gráfico da evolução.
 export const tituloEvolucao = document.getElementById(

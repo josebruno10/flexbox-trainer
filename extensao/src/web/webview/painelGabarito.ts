@@ -3,6 +3,7 @@
 import { desenharGabarito } from "./desenhoGabarito";
 import { montarPaginaAluno } from "./paginaAluno";
 import { vscode } from "./api";
+import { ligarLinhaComparacao } from "./aba/linhaComparacao";
 import { renderizarLista, renderizarResumo } from "./aba/componentes";
 import {
   blocoSobPonteiro,
@@ -17,13 +18,17 @@ import {
   canvas,
   canvasDestaque,
   conteudo,
+  linhaComparacao,
   lista,
   opacidade,
+  palco,
   semPagina,
   superficie,
+  telas,
   vazio,
 } from "./aba/elementos";
 import { estado } from "./aba/estado";
+import { ligarVerificacao, mostrarResultado } from "./aba/verificacao";
 import {
   ajustarTamanho,
   aplicarOpacidade,
@@ -49,13 +54,26 @@ window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) =>
     estado.htmlAluno = mensagem.payload ?? undefined;
     renderizarPagina();
   }
+
+  if (mensagem?.type === "resultado") {
+    mostrarResultado(mensagem.payload.resultado, mensagem.payload.verificacao);
+  }
 });
+
+ligarVerificacao();
 
 for (const botao of botoesModo) {
   botao.addEventListener("click", () => definirModo(botao.dataset.modo as Modo));
 }
 
 opacidade.addEventListener("input", aplicarOpacidade);
+
+ligarLinhaComparacao({
+  palco,
+  linha: linhaComparacao,
+  area: () => telas[0],
+  ativa: () => estado.modo === "comparar",
+});
 
 botaoLista.addEventListener("click", () => mostrarLista(!estado.listaVisivel));
 

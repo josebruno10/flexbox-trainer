@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { criarResumoWorkspaceVazio } from "../../services/workspace";
-import { Desafio, ResumoWorkspace } from "../../types";
-import { PainelGabarito } from "../painelGabarito";
+import { Desafio, ResultadoNaAba, ResumoWorkspace } from "../../types";
+import { PainelGabarito, VerificacaoNaAba } from "../painelGabarito";
 
 // Espera depois da última tecla antes de redesenhar a página do aluno.
 const ESPERA_DIGITACAO_MS = 500;
@@ -17,6 +17,9 @@ export class PaginaDoAluno {
   private painel?: PainelGabarito;
 
   private agendada?: ReturnType<typeof setTimeout>;
+
+  // A nota mais recente, para a aba já abrir com ela.
+  private resultado?: ResultadoNaAba;
 
   public constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -34,7 +37,17 @@ export class PaginaDoAluno {
 
   public abrirAba(desafio: Desafio | undefined): void {
     this.painel ??= new PainelGabarito(this.extensionUri);
+    this.painel.atualizarResultado(this.resultado);
     this.painel.mostrar(desafio, this.html());
+  }
+
+  public mostrarResultado(resultado: ResultadoNaAba | undefined): void {
+    this.resultado = resultado;
+    this.painel?.atualizarResultado(resultado);
+  }
+
+  public avisarVerificacao(verificacao: VerificacaoNaAba): void {
+    this.painel?.avisarVerificacao(verificacao);
   }
 
   public mostrarDesafio(desafio: Desafio | undefined): void {

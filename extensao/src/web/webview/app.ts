@@ -13,6 +13,7 @@ import {
   renderizarMetaDesafio,
 } from "./barra/quadro";
 import { mostrarMensagem } from "./barra/resultado";
+import { renderizarSalvamento } from "./barra/salvamento";
 import { renderizarWorkspace } from "./barra/suaPagina";
 import type { MensagemDaExtensao } from "./barra/tipos";
 import {
@@ -44,6 +45,9 @@ function receber(mensagem: MensagemDaExtensao): void {
       break;
     case "historicoNotas":
       receberHistorico(mensagem.payload);
+      break;
+    case "salvamento":
+      renderizarSalvamento(mensagem.payload);
       break;
     case "resultadoAvaliacao":
       receberResultado(mensagem.payload);

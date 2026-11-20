@@ -35,9 +35,17 @@ export class VistaDaBarra {
     if (!this.visualizacao) {
       return;
     }
-    this.pronta = false;
     const webview = this.visualizacao.webview;
-    webview.html = html(webview);
+    const novo = html(webview);
+    // Com o mesmo HTML, o VS Code não recarrega a barra: o script continua
+    // carregado e não avisa de novo. Marcar a barra como não pronta aqui
+    // prendia para sempre o Verificar do atalho e da aba do gabarito (a
+    // sessão revalidada ao abrir redesenha a barra com o mesmo HTML).
+    if (webview.html === novo) {
+      return;
+    }
+    this.pronta = false;
+    webview.html = novo;
   }
 
   /** O script da barra carregou: daqui em diante ela já pode medir. */

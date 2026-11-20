@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { codigoDoDia } from "../../../services/codigoDesafio";
 import {
   criarProvedorParaTeste,
   criarRegistroFalso,
@@ -74,9 +73,8 @@ suite("Barra lateral: histórico", () => {
     const provedor = criarProvedorParaTeste([], { registro });
     const interno = await prepararCodigo(provedor, registro, "MESA");
     interno.tentativa.inicioMs = 0;
-    const outroDia = new Date(2026, 0, 1);
 
-    assert.strictEqual(provedor.textoDoResultado(outroDia), undefined);
+    assert.strictEqual(provedor.textoDoResultado(), undefined);
 
     Date.now = () => 754_000;
     await interno.verificarTentativaAtual(interno.tentativa.desafio!.challengeId, FORMAS);
@@ -88,16 +86,8 @@ suite("Barra lateral: histórico", () => {
     ]);
 
     assert.strictEqual(
-      provedor.textoDoResultado(outroDia),
+      provedor.textoDoResultado(),
       "Desafio médio MESA: 42,50% em 12:34",
-    );
-
-    // O desafio do dia diz a data, para o grupo da turma saber qual é.
-    const dia = new Date(2026, 9, 14, 10, 0);
-    interno.tentativa.desafio = { ...interno.tentativa.desafio!, codigo: codigoDoDia(dia) };
-    assert.strictEqual(
-      provedor.textoDoResultado(dia),
-      "Desafio do dia 14/10 (DHAG): 42,50% em 12:34",
     );
   });
 

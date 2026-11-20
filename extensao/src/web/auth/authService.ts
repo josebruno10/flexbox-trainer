@@ -8,7 +8,7 @@ import {
   trocarTokenProvedorPorTokenServidor,
 } from "./apiTorneio";
 import { EstadoOAuth } from "./estadoOAuth";
-import { ErroApiAutenticacao, validarUrlHttps } from "./http";
+import { ErroHttp, validarUrlHttps } from "../services/http";
 import { lerBooleano } from "./leitura";
 import {
   abrirNoNavegador,
@@ -173,7 +173,7 @@ export class AuthService implements vscode.Disposable {
       );
     }
 
-    const url = validarUrlHttps(urlSite, "site de autenticação");
+    const url = validarUrlHttps(urlSite, "do site de autenticação");
     const { callback, retornoLocal } = await prepararVolta(
       this.context.extension.id,
       this.abrirRetornoLocal,
@@ -461,7 +461,7 @@ export class AuthService implements vscode.Disposable {
       }
 
       if (
-        error instanceof ErroApiAutenticacao &&
+        error instanceof ErroHttp &&
         (error.status === 401 || error.status === 403)
       ) {
         await this.encerrarSessao(

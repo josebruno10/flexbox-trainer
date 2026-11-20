@@ -1,6 +1,5 @@
 import { NOME_DO_NIVEL, nivelDoCodigo } from "../../niveis";
-import { codigoDoDia } from "../../services/codigoDesafio";
-import { formatarTempo } from "../barraDeStatus";
+import { formatarTempo } from "../../telas/comum";
 
 export type MelhorDaTentativa = { precisao: number; tempoMs: number };
 
@@ -8,12 +7,8 @@ export type MelhorDaTentativa = { precisao: number; tempoMs: number };
 export function textoDoResultado(
   codigo: string,
   melhor: MelhorDaTentativa,
-  agora: Date,
 ): string {
-  const nome =
-    codigo === codigoDoDia(agora)
-      ? `Desafio do dia ${agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} (${codigo})`
-      : `Desafio ${NOME_DO_NIVEL[nivelDoCodigo(codigo)]} ${codigo}`;
+  const nome = `Desafio ${NOME_DO_NIVEL[nivelDoCodigo(codigo)]} ${codigo}`;
   return `${nome}: ${formatarPorcentagem(melhor.precisao)}% em ${formatarTempo(melhor.tempoMs)}`;
 }
 

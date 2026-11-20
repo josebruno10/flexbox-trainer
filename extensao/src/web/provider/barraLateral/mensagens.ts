@@ -1,4 +1,5 @@
 import { ehNivel } from "../../niveis";
+import { normalizarCodigo } from "../../services/codigoDesafio";
 import {
   Desafio,
   FormaMedida,
@@ -7,6 +8,9 @@ import {
   Nivel,
 } from "../../types";
 import { sanitizarFormas } from "./formas";
+
+// Um código, uma cor ou uma medida cabem folgados.
+const TAMANHO_MAXIMO_COPIADO = 64;
 
 /** O que a barra lateral pode pedir à extensão. */
 export type ControladorDaBarra = {
@@ -20,16 +24,15 @@ export type ControladorDaBarra = {
   sair(): void;
   receberGabarito(gabarito: GabaritoGerado): void;
   novoDesafio(): void;
-  desafioDoDia(): void;
   definirNivel(nivel: Nivel): void;
-  copiarResultado(): void;
   abrirPorCodigo(): void;
   refazer(codigo?: string): void;
   verHistorico(): void;
   verAtalhos(): void;
   copiarCodigo(): void;
-  salvarProgresso(): void;
-  puxarProgresso(): void;
+  copiar(texto: string): void;
+  // Com o código, puxa aquele desafio; sem, pergunta qual.
+  puxarProgresso(codigo?: string): void;
   abrirPainelGabarito(): void;
   verExtensoesIa(): void;
   criarArquivos(): void;
@@ -81,16 +84,10 @@ export function rotearMensagem(
     case "novoDesafio":
       barra.novoDesafio();
       return;
-    case "desafioDoDia":
-      barra.desafioDoDia();
-      return;
     case "definirNivel":
       if (ehNivel(mensagem.nivel)) {
         barra.definirNivel(mensagem.nivel);
       }
-      return;
-    case "copiarResultado":
-      barra.copiarResultado();
       return;
     case "abrirPorCodigo":
       barra.abrirPorCodigo();
@@ -107,11 +104,25 @@ export function rotearMensagem(
     case "copiarCodigo":
       barra.copiarCodigo();
       return;
-    case "salvarProgresso":
-      barra.salvarProgresso();
+    case "copiar":
+      // Só o que a barra mostra: um código, uma cor ou uma medida.
+      if (
+        typeof mensagem.texto === "string" &&
+        mensagem.texto.length > 0 &&
+        mensagem.texto.length <= TAMANHO_MAXIMO_COPIADO
+      ) {
+        barra.copiar(mensagem.texto);
+      }
       return;
     case "puxarProgresso":
-      barra.puxarProgresso();
+      if (mensagem.codigo === undefined) {
+        barra.puxarProgresso();
+      } else if (typeof mensagem.codigo === "string") {
+        const codigo = normalizarCodigo(mensagem.codigo);
+        if (codigo) {
+          barra.puxarProgresso(codigo);
+        }
+      }
       return;
     case "abrirPainelGabarito":
       barra.abrirPainelGabarito();

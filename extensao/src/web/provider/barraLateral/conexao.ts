@@ -4,7 +4,7 @@ import {
   lerConfiguracaoServidor,
   verificarConexaoServidor,
 } from "../../services/servidor/configuracao";
-import { ErroHttpServidor } from "../../services/servidor/requisicao";
+import { ErroHttp } from "../../services/http";
 import { ConfiguracaoServidor, StatusConexaoServidor } from "../../types";
 
 // A sessão no servidor: o teste de conexão, a configuração com o aluno e o
@@ -22,7 +22,7 @@ export async function testarConexao(
         ok: false,
         mensagem: error instanceof Error ? error.message : "Erro desconhecido",
       },
-      httpStatus: error instanceof ErroHttpServidor ? error.status : undefined,
+      httpStatus: error instanceof ErroHttp ? error.status : undefined,
     };
   }
 }

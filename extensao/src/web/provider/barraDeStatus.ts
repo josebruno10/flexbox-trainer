@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { formatarTempo } from "../telas/comum";
 
 // O tempo e a última precisão ficam na barra de status, à vista enquanto o
 // aluno escreve o CSS com a barra lateral fechada.
@@ -102,18 +103,4 @@ export class BarraDeStatus implements vscode.Disposable {
       : undefined;
     this.item.show();
   }
-}
-
-export function formatarTempo(tempoMs: number): string {
-  const totalSegundos = Math.max(0, Math.floor(tempoMs / 1000));
-  const horas = Math.floor(totalSegundos / 3600);
-  const minutos = Math.floor((totalSegundos % 3600) / 60);
-  const segundos = totalSegundos % 60;
-  const partes = [minutos, segundos].map((parte) =>
-    parte.toString().padStart(2, "0"),
-  );
-  if (horas > 0) {
-    partes.unshift(horas.toString().padStart(2, "0"));
-  }
-  return partes.join(":");
 }

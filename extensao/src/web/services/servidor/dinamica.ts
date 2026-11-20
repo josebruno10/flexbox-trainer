@@ -1,5 +1,6 @@
 import { ConfiguracaoServidor } from "../../types";
-import { ehNaoEncontrado, ehRegistro, requisitarApi } from "./requisicao";
+import { ehNaoEncontrado } from "../http";
+import { ehRegistro, requisitarApi } from "./requisicao";
 
 // A dinâmica de treino: o evento do servidor onde ficam os gabaritos e as
 // correções do treino.

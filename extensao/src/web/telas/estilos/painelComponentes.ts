@@ -42,6 +42,35 @@ export const ESTILOS_PAINEL_COMPONENTES = `
       height: 16px;
     }
 
+    /* O que corrigir em cada componente, pela última nota. */
+    .correcao {
+      margin-left: auto;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-family: var(--fonte-mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      /* Contorno na cor do aviso: legível no tema claro e no escuro. */
+      color: var(--aviso);
+      border: 1px solid currentColor;
+    }
+
+    .correcao[data-tipo="certo"] {
+      color: var(--acento);
+      border-color: transparent;
+      font-size: 12px;
+    }
+
+    .correcao[data-tipo="faltando"] {
+      color: var(--erro);
+    }
+
+    dd .correcao {
+      margin-left: 8px;
+    }
+
     .componente .numero-componente {
       min-width: 3.2ch;
       font-family: var(--fonte-mono);

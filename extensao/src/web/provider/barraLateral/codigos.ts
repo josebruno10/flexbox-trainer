@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { codigoDoDia, normalizarCodigo } from "../../services/codigoDesafio";
+import { normalizarCodigo } from "../../services/codigoDesafio";
 import { HistoricoDoAluno } from "./historicoDoAluno";
 import { MelhorDaTentativa, textoDoResultado } from "./resultado";
 
@@ -31,15 +31,6 @@ export type ContextoDosCodigos = {
   historico: HistoricoDoAluno;
   abrir: (codigo: string) => Promise<void>;
 };
-
-/** O desafio do dia: o mesmo para todos na mesma data. */
-export async function abrirDesafioDoDia(contexto: ContextoDosCodigos): Promise<void> {
-  if (!contexto.autenticado()) {
-    void vscode.window.showWarningMessage("Entre antes de abrir um desafio.");
-    return;
-  }
-  await contexto.abrir(codigoDoDia());
-}
 
 /** Pede um código (o que o professor ou um colega passou) e abre o desafio. */
 export async function abrirDesafioPorCodigo(contexto: ContextoDosCodigos): Promise<void> {
@@ -87,11 +78,10 @@ export async function copiarCodigo(contexto: ContextoDosCodigos): Promise<void> 
 /** "Desafio médio MESA: 87,42% em 12:34", para colar no grupo da turma. */
 export function textoDoResultadoAtual(
   contexto: ContextoDosCodigos,
-  agora = new Date(),
 ): string | undefined {
   const codigo = contexto.codigoAtual();
   const melhor = contexto.melhorDaTentativa();
-  return codigo && melhor ? textoDoResultado(codigo, melhor, agora) : undefined;
+  return codigo && melhor ? textoDoResultado(codigo, melhor) : undefined;
 }
 
 export async function copiarResultado(contexto: ContextoDosCodigos): Promise<void> {

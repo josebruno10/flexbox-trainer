@@ -1,10 +1,6 @@
 import { ConfiguracaoServidor } from "../../types";
-import {
-  ehNaoEncontrado,
-  ehRegistro,
-  ErroHttpServidor,
-  requisitarApi,
-} from "./requisicao";
+import { ErroHttp, ehNaoEncontrado } from "../http";
+import { ehRegistro, requisitarApi } from "./requisicao";
 
 // O index.html e o style.css do aluno guardados no servidor, na pasta dele
 // dentro de uma dinâmica, pelas mesmas rotas da extensão oficial:
@@ -38,7 +34,7 @@ export async function obterPastaDoAluno(
     );
   } catch (error) {
     // A extensão oficial tenta GET quando o servidor não aceita POST.
-    if (!(error instanceof ErroHttpServidor && error.status === 405)) {
+    if (!(error instanceof ErroHttp && error.status === 405)) {
       throw error;
     }
     dados = await requisitarApi(
@@ -89,7 +85,7 @@ export async function obterConteudo(
       "GET",
       `/obter-conteudo?${consulta.toString()}`,
       undefined,
-      "puxar o seu progresso",
+      "buscar o seu progresso salvo",
     );
   } catch (error) {
     if (ehNaoEncontrado(error)) {

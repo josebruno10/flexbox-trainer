@@ -4,23 +4,23 @@ import {
   botaoAbrirAba,
   botaoAtualizarPreview,
   botaoCodigo,
-  botaoCopiarResultado,
   botaoCriarArquivos,
-  botaoDesafioDia,
   botaoEncerrarDesafio,
   botaoNovoDesafio,
   botaoPorCodigo,
   botaoPuxarProgresso,
   botaoRefazer,
-  botaoSalvarProgresso,
   botaoSair,
   botaoVerExtensoesIa,
   botaoVerHistorico,
   botaoVerificar,
   botoesNivel,
   botoesVista,
-  textoDoBotao,
+  valorFundo,
 } from "./elementos";
+import { selecionarComponente } from "./componentes";
+import { copiarAoClicar } from "./copiar";
+import { ligarCorrecoes } from "./correcoes";
 import { estado } from "./estado";
 import { definirVista, marcarNivel } from "./quadro";
 import { solicitarVerificacao } from "./verificacao";
@@ -35,24 +35,8 @@ export function ligarAcoes(): void {
     vscode.postMessage({ type: "abrirPorCodigo" });
   });
 
-  botaoDesafioDia.addEventListener("click", () => {
-    vscode.postMessage({ type: "desafioDoDia" });
-  });
-
-  botaoSalvarProgresso.addEventListener("click", () => {
-    vscode.postMessage({ type: "salvarProgresso" });
-  });
-
   botaoPuxarProgresso.addEventListener("click", () => {
     vscode.postMessage({ type: "puxarProgresso" });
-  });
-
-  botaoCopiarResultado.addEventListener("click", () => {
-    vscode.postMessage({ type: "copiarResultado" });
-    textoDoBotao(botaoCopiarResultado).textContent = "Copiado";
-    window.setTimeout(() => {
-      textoDoBotao(botaoCopiarResultado).textContent = "Copiar resultado";
-    }, 1500);
   });
 
   botaoRefazer.addEventListener("click", () => {
@@ -71,6 +55,8 @@ export function ligarAcoes(): void {
     botaoCodigo.classList.add("copiado");
     window.setTimeout(() => botaoCodigo.classList.remove("copiado"), 900);
   });
+
+  copiarAoClicar(valorFundo, () => valorFundo.dataset.copiar);
 
   botaoEncerrarDesafio?.addEventListener("click", () => {
     botaoEncerrarDesafio.disabled = true;
@@ -106,6 +92,12 @@ export function ligarAcoes(): void {
       definirVista(botao.dataset.vista === "pagina" ? "pagina" : "gabarito"),
     );
   }
+
+  // Um item do que corrigir aparece destacado no gabarito.
+  ligarCorrecoes((componente) => {
+    definirVista("gabarito");
+    selecionarComponente(componente);
+  });
 
   // O nível vale para os desafios novos; a extensão guarda a escolha.
   for (const botao of botoesNivel) {

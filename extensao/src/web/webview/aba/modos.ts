@@ -15,7 +15,7 @@ import {
 import { estado } from "./estado";
 import type { Modo } from "./tipos";
 
-// Os modos da aba (Gabarito, Sobrepor e Lado a lado), a lista que aparece ou
+// Os modos da aba (Gabarito, Sobrepor, Comparar e Lado a lado), a lista que aparece ou
 // some e o tamanho das imagens no espaço livre.
 
 // Espaço reservado para a lista ao lado da imagem; abaixo da largura de uma
@@ -24,9 +24,10 @@ const LARGURA_LISTA = 300;
 const LARGURA_UMA_COLUNA = 680;
 const ESPACO = 16;
 
-// Só o modo Gabarito tem uma linha de ajuda; nos outros, ela some.
+// Só os modos Gabarito e Comparar têm uma linha de ajuda; nos outros, ela some.
 const AJUDA: Partial<Record<Modo, string>> = {
   gabarito: "Clique num componente para destacá-lo e num valor para copiá-lo.",
+  comparar: "Arraste a linha, ou use as setas do teclado: à esquerda o gabarito, à direita a sua página.",
 };
 
 export function definirModo(novo: Modo): void {

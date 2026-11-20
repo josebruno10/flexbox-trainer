@@ -1,3 +1,4 @@
+import { escapeHtml } from "../../telas/comum";
 import {
   avatarFallback,
   avatarUsuario,
@@ -80,11 +81,3 @@ function ehUrlAvatarPermitida(url: string): boolean {
   return /^https?:\/\//i.test(url) || /^data:image\//i.test(url);
 }
 
-function escapeHtml(texto: string): string {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}

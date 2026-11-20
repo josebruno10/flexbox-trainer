@@ -6,7 +6,7 @@ import {
 } from "../types";
 import { corrigirFormas } from "./servidor/correcao";
 import { dataUrlParaPng, enviarGabaritoDeTreino } from "./servidor/gabaritos";
-import { ErroHttpServidor } from "./servidor/requisicao";
+import { ErroHttp } from "./http";
 
 // Gabarito que esta instalação criou no evento de treino e o desafio que ele
 // representa agora.
@@ -86,7 +86,7 @@ export async function avaliarTentativa(
           registrado?.cod,
         );
       } catch (error) {
-        if (error instanceof ErroHttpServidor) {
+        if (error instanceof ErroHttp) {
           throw error;
         }
 
@@ -117,13 +117,13 @@ export async function avaliarTentativa(
       precision: 0,
       score: 0,
       source:
-        error instanceof ErroHttpServidor &&
+        error instanceof ErroHttp &&
         (error.status === 401 || error.status === 403)
           ? "authentication-error"
           : "api-error",
       error: message,
       httpStatus:
-        error instanceof ErroHttpServidor ? error.status : undefined,
+        error instanceof ErroHttp ? error.status : undefined,
     };
   }
 }

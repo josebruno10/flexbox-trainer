@@ -101,12 +101,27 @@ export const ESTILOS_BARRA_DESAFIO = `
       display: flex;
     }
 
-    /* A página já atualiza enquanto o aluno digita; o botão é para quando
-       demorar. */
-    button.atualizar {
+    /* Os botões-ícone ao lado de Gabarito / Sua página: abrir o gabarito
+       numa aba e atualizar a página (que já atualiza enquanto o aluno
+       digita; o botão é para quando demorar). */
+    button.icone {
       flex: 0 0 32px;
       padding: 0;
       font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    /* Encerrar e Refazer ficam junto do cronômetro, que é o que eles mudam. */
+    .tempo-desafio {
+      gap: 8px;
+    }
+
+    /* Só o símbolo: ⏹ encerra, ↻ refaz. A dica do mouse diz o que fazem. */
+    button.pequeno {
+      min-height: 0;
+      padding: 0 4px;
+      font-size: 13px;
+      line-height: 1;
       letter-spacing: 0;
     }
 

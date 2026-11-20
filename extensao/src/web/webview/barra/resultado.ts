@@ -6,6 +6,7 @@ import {
   simboloVerificar,
   valorNota,
 } from "./elementos";
+import { renderizarCorrecoes } from "./correcoes";
 import { estado } from "./estado";
 import { formatarPorcentagem } from "./formatos";
 import type { ResultadoAvaliacaoRecebido } from "./tipos";
@@ -40,6 +41,7 @@ export function renderizarResultado(
 
   if (resultado.source === "servidor") {
     mostrarPrecisao(resultado.precision, Boolean(resultado.repetida));
+    renderizarCorrecoes(resultado.detalhes);
     return;
   }
 
@@ -64,6 +66,9 @@ export function renderizarResultado(
 export function mostrarMensagem(texto: string): void {
   notaResultado.hidden = true;
   caixaResultado.textContent = texto;
+  // Uma mensagem no lugar da nota (verificando, erro, desafio novo) tira
+  // também o que corrigir, que era da nota anterior.
+  renderizarCorrecoes(undefined);
 }
 
 function mostrarPrecisao(precisao: number, repetida: boolean): void {

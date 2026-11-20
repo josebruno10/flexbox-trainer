@@ -16,7 +16,6 @@ import {
   botaoEncerrarDesafio,
   botaoNovoDesafio,
   botaoRefazer,
-  botaoSalvarProgresso,
   botaoVerificar,
   botoesNivel,
   botoesVista,
@@ -35,7 +34,7 @@ import {
   vistas,
 } from "./elementos";
 import { ALTURA_PADRAO, LARGURA_PADRAO, estado } from "./estado";
-import { formatarTempo } from "./formatos";
+import { formatarTempo } from "../../telas/comum";
 import { mostrarMensagem } from "./resultado";
 import { desenharMensagemPreview } from "./suaPagina";
 import type { DesafioRecebido } from "./tipos";
@@ -112,14 +111,15 @@ export function desenharDesafio(desafio: DesafioRecebido): void {
   desenharDestaques();
   renderizarDetalheComponente();
   tituloDesafio.textContent =
-    (desafio.doDia ? "Desafio do dia" : "Desafio") +
+    "Desafio" +
     (desafio.nivel ? ` · ${NOME_DO_NIVEL[desafio.nivel]}` : "");
   botaoCodigo.textContent = desafio.codigo ?? "--";
   botaoCodigo.disabled = !desafio.codigo;
-  valorFundo.replaceChildren(
-    criarAmostra(desafio.backgroundColor),
-    normalizarHex(desafio.backgroundColor),
-  );
+  const corFundo = normalizarHex(desafio.backgroundColor);
+  valorFundo.replaceChildren(criarAmostra(desafio.backgroundColor), corFundo);
+  valorFundo.dataset.copiar = corFundo;
+  valorFundo.title = `Copiar a cor do fundo: ${corFundo}`;
+  valorFundo.disabled = false;
   valorComponentes.textContent = String(desafio.blocks.length);
 
   if (ultimoGabaritoEnviado !== desafio.challengeId) {
@@ -191,7 +191,6 @@ function mostrarItensDoDesafio(visiveis: boolean): void {
     detalheComponente,
     metaDesafio,
     botaoAbrirAba,
-    botaoSalvarProgresso,
     botaoEncerrarDesafio,
   ]) {
     item.hidden = !visiveis;

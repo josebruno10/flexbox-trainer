@@ -1,6 +1,7 @@
 import { ConfiguracaoServidor } from "../../types";
 import { log } from "../logger";
-import { ehNaoEncontrado, requisitarApi } from "./requisicao";
+import { ehNaoEncontrado } from "../http";
+import { requisitarApi } from "./requisicao";
 
 /**
  * Garante que a imagem do desafio esteja cadastrada como gabarito no evento de

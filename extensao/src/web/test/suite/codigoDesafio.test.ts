@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import {
   aleatorioDoCodigo,
-  codigoDoDia,
   normalizarCodigo,
   sortearCodigo,
 } from "../../services/codigoDesafio";
@@ -77,23 +76,6 @@ suite("Código do desafio", () => {
       criarDesafioPorCodigo(desafio.codigo).blocks,
       desafio.blocks,
     );
-  });
-
-  test("o desafio do dia é o mesmo o dia inteiro e muda no dia seguinte", () => {
-    const manha = codigoDoDia(new Date(2026, 9, 14, 0, 1));
-    const noite = codigoDoDia(new Date(2026, 9, 14, 23, 59));
-    const amanha = codigoDoDia(new Date(2026, 9, 15, 0, 1));
-
-    assert.match(manha, /^[A-Z]{4}$/);
-    assert.strictEqual(noite, manha);
-    assert.notStrictEqual(amanha, manha);
-    // Alunos com versões diferentes da extensão precisam ter o mesmo desafio
-    // do dia: se este valor mudar, a conta do código do dia mudou.
-    assert.strictEqual(manha, "DHAG");
-    // O desafio do dia é sempre médio.
-    for (let dia = 1; dia <= 60; dia++) {
-      assert.strictEqual(nivelDoCodigo(codigoDoDia(new Date(2026, 9, dia))), "medio");
-    }
   });
 
   // Códigos já passados à turma precisam continuar gerando os mesmos

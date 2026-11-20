@@ -2,7 +2,6 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { criarDesafioGerado, criarDesafioPorCodigo } from "../../../services/desafio";
 import { modeloCss, modeloHtml } from "../../../services/workspace";
-import { codigoDoDia } from "../../../services/codigoDesafio";
 import { ResumoWorkspace } from "../../../types";
 import {
   criarAleatorioTeste,
@@ -10,11 +9,10 @@ import {
   MensagemWebview,
   ProvedorInterno,
   restaurarAoFim,
-  ultimaMensagem,
   ultimoEstadoDesafio,
 } from "./auxiliares";
 
-// Começar um desafio: novo, por código, o do dia, e os arquivos de antes.
+// Começar um desafio: novo, por código, e os arquivos de antes.
 suite("Barra lateral: desafio novo", () => {
   restaurarAoFim();
 
@@ -94,19 +92,6 @@ suite("Barra lateral: desafio novo", () => {
     await provedor.refazerDesafio("482917");
 
     assert.strictEqual(interno.tentativa.desafio, undefined);
-  });
-
-  test("abre o desafio do dia e avisa a barra lateral que ele é o do dia", async () => {
-    const mensagens: MensagemWebview[] = [];
-    const provedor = criarProvedorParaTeste(mensagens);
-    const interno = provedor as unknown as ProvedorInterno;
-    interno.testarConexaoServidor = async () => undefined;
-
-    await provedor.abrirDesafioDoDia();
-
-    assert.strictEqual(interno.tentativa.desafio!.codigo, codigoDoDia());
-    const dados = ultimaMensagem(mensagens, "dadosDesafio")?.payload as { doDia: boolean };
-    assert.strictEqual(dados.doDia, true);
   });
 
   test("oferece abrir uma pasta quando não há onde criar index.html e style.css", async function () {

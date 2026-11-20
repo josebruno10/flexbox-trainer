@@ -11,7 +11,7 @@ import {
 } from "./servidor/conteudo";
 
 // Ferramenta de teste (modo desenvolvedor): confere no servidor de verdade
-// as rotas do Salvar e do Puxar progresso, na pasta do aluno dentro da
+// as rotas do Salvar e do Continuar, na pasta do aluno dentro da
 // dinâmica de treino dele. Só cria a pasta (se faltar), grava e lê: nada é
 // excluído. O que já estava salvo é copiado para o computador antes do teste
 // e regravado depois.

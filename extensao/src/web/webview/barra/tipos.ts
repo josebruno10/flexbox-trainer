@@ -1,4 +1,4 @@
-import type { Nivel } from "../../types";
+import type { Bloco, DetalhesDaNota, Nivel } from "../../types";
 
 // O que a extensão manda para a barra lateral.
 
@@ -7,22 +7,11 @@ export type DesafioRecebido = {
   width: number;
   height: number;
   backgroundColor: string;
-  blocks: Array<{
-    id: number;
-    parentId?: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: string;
-    borderRadius?: number;
-    shape?: "rectangle" | "circle";
-  }>;
+  blocks: Bloco[];
   tempoAtualMs?: number;
   encerrado?: boolean;
   codigo?: string;
   nivel?: Nivel;
-  doDia?: boolean;
 };
 
 export type BlocoRecebido = DesafioRecebido["blocks"][number];
@@ -43,6 +32,16 @@ export type HistoricoDesafiosRecebido = {
   total: number;
   recorde: number | null;
   evolucao: NotaDoDiaRecebida[];
+  // Os códigos com progresso salvo no servidor: esses podem continuar.
+  salvos?: string[];
+  // Só quem está no torneio salva e puxa o progresso.
+  torneio?: boolean;
+};
+
+export type SalvamentoRecebido = {
+  torneio: boolean;
+  estado: "aguardando" | "salvando" | "salvo" | "falhou";
+  instante?: number;
 };
 
 export type ResumoWorkspaceRecebido = {
@@ -62,6 +61,8 @@ export type ResultadoAvaliacaoRecebido = {
   error?: string;
   // A página não mudou desde a última correção e não foi reenviada.
   repetida?: boolean;
+  // O que corrigir em cada componente.
+  detalhes?: DetalhesDaNota;
 };
 
 export type VerificacaoRecebida = { id?: number; mensagem?: string };
@@ -91,6 +92,7 @@ export type MensagemDaExtensao =
   | { type: "extensoesIa"; payload: ExtensaoIaRecebida[] }
   | { type: "historicoNotas"; payload: number[] }
   | { type: "historicoDesafios"; payload: HistoricoDesafiosRecebido }
+  | { type: "salvamento"; payload: SalvamentoRecebido }
   | { type: "verificar" }
   | { type: "nivel"; payload: Nivel }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }

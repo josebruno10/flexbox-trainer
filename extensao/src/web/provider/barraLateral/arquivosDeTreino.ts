@@ -13,7 +13,8 @@ export async function confirmarLimpeza(): Promise<boolean> {
       detail:
         "Como no torneio, cada desafio começa do zero: ficam só o HTML " +
         "básico e o reset do CSS (box-sizing, margin e padding). Assim o " +
-        "tempo conta o desafio inteiro.",
+        "tempo conta o desafio inteiro. O que você escreveu fica numa cópia " +
+        "de segurança: FlexBox Trainer: Restaurar Cópia de Segurança.",
     },
     LIMPAR_E_GERAR,
   );

@@ -1,10 +1,14 @@
 import * as vscode from "vscode";
-import { Desafio } from "../types";
+import { Desafio, ResultadoNaAba } from "../types";
 import { obterHtmlPainelGabarito } from "../telas/painelGabarito";
 
 type MensagemDoPainel =
   | { type: "pronto" }
-  | { type: "copiar"; texto: unknown };
+  | { type: "copiar"; texto: unknown }
+  | { type: "verificar" };
+
+/** A verificação em andamento, com a etapa que a barra lateral mostra. */
+export type VerificacaoNaAba = { andamento: boolean; etapa?: string };
 
 // Aba do editor com o gabarito e as medidas de todos os componentes, uma
 // alternativa a clicar em cada componente na barra lateral estreita.
@@ -18,10 +22,18 @@ export class PainelGabarito implements vscode.Disposable {
   // HTML da página do aluno, para comparar com o gabarito.
   private htmlAluno?: string;
 
+  private resultado?: ResultadoNaAba;
+
+  private verificacao: VerificacaoNaAba = { andamento: false };
+
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly copiar: (texto: string) => Thenable<void> = (texto) =>
       vscode.env.clipboard.writeText(texto),
+    // A medição é feita na barra lateral: o comando a abre e pede a
+    // verificação a ela, como o atalho.
+    private readonly verificar: () => Thenable<unknown> = () =>
+      vscode.commands.executeCommand("flexbox-trainer.verificar"),
   ) {}
 
   public mostrar(desafio: Desafio | undefined, htmlAluno?: string): void {
@@ -32,6 +44,7 @@ export class PainelGabarito implements vscode.Disposable {
       this.painel.reveal(this.painel.viewColumn ?? vscode.ViewColumn.Beside);
       this.enviarDesafio();
       this.enviarPagina();
+      this.enviarResultado();
       return;
     }
 
@@ -63,6 +76,12 @@ export class PainelGabarito implements vscode.Disposable {
       if (mensagem.type === "pronto") {
         this.enviarDesafio();
         this.enviarPagina();
+        this.enviarResultado();
+        return;
+      }
+
+      if (mensagem.type === "verificar") {
+        void this.verificar();
         return;
       }
 
@@ -108,6 +127,18 @@ export class PainelGabarito implements vscode.Disposable {
     this.enviarPagina();
   }
 
+  /** A nota do desafio mudou (ou o desafio). */
+  public atualizarResultado(resultado: ResultadoNaAba | undefined): void {
+    this.resultado = resultado;
+    this.enviarResultado();
+  }
+
+  /** As etapas da verificação, como na barra lateral. */
+  public avisarVerificacao(verificacao: VerificacaoNaAba): void {
+    this.verificacao = verificacao;
+    this.enviarResultado();
+  }
+
   public dispose(): void {
     this.painel?.dispose();
   }
@@ -116,6 +147,13 @@ export class PainelGabarito implements vscode.Disposable {
     void this.painel?.webview.postMessage({
       type: "paginaAluno",
       payload: this.htmlAluno ?? null,
+    });
+  }
+
+  private enviarResultado(): void {
+    void this.painel?.webview.postMessage({
+      type: "resultado",
+      payload: { resultado: this.resultado ?? null, verificacao: this.verificacao },
     });
   }
 

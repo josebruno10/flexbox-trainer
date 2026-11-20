@@ -59,6 +59,68 @@ export type ResultadoAvaliacao = {
     | "gabarito-error";
   error?: string;
   httpStatus?: number;
+  // O que o servidor disse de cada forma, como veio (veja
+  // services/detalhesDaNota.ts); a extensão o liga aos componentes.
+  detalhesDoServidor?: DetalhesDoServidor;
+  // Cada componente do desafio, com o que falta acertar nele.
+  detalhes?: DetalhesDaNota;
+};
+
+/** Uma forma como a rota corrigir-formas descreve: x e y são o centro. */
+export type FormaDoServidor = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  cor: string;
+};
+
+/** Um par da correção: a forma do gabarito e a da página que o servidor ligou. */
+export type ParDoServidor = {
+  // De 0 a 1, e as partes da nota: tamanho, distância e cor.
+  pontos: number;
+  tamanho?: number;
+  distancia?: number;
+  cor?: number;
+  formaCorreta?: boolean;
+  gabarito: FormaDoServidor;
+  pagina: FormaDoServidor;
+};
+
+export type DetalhesDoServidor = {
+  pares: ParDoServidor[];
+  // Formas da página que não correspondem a nada do gabarito.
+  aMais: FormaDoServidor[];
+  // Quantas formas do gabarito não apareceram na página.
+  naoEncontradas: number;
+};
+
+/** O que falta acertar num componente, com os valores para comparar. */
+export type ProblemaDoComponente =
+  | { tipo: "faltando" }
+  | { tipo: "forma"; esperada: "circulo" | "retangulo" }
+  | { tipo: "cor"; sua: string; esperada: string }
+  | {
+      tipo: "tamanho";
+      sua: { width: number; height: number };
+      esperada: { width: number; height: number };
+    }
+  // dx e dy: quanto o centro da forma da página está à direita e abaixo do
+  // centro do componente (negativos: à esquerda e acima).
+  | { tipo: "posicao"; dx: number; dy: number };
+
+export type ComponenteCorrigido = {
+  // O id do bloco, ou "fundo".
+  componente: number | "fundo";
+  // De 0 a 1; faltando, 0.
+  pontos: number;
+  problemas: ProblemaDoComponente[];
+};
+
+export type DetalhesDaNota = {
+  // O fundo primeiro, depois os blocos, na ordem do desafio.
+  componentes: ComponenteCorrigido[];
+  aMais: FormaDoServidor[];
 };
 
 export type EstadoAutenticacao = {
@@ -135,13 +197,22 @@ export type MensagemRecebidaBarraLateral =
   | { type: "verExtensoesIa" }
   | { type: "criarArquivos" }
   | { type: "abrirPorCodigo" }
-  | { type: "desafioDoDia" }
   | { type: "definirNivel"; nivel?: unknown }
-  | { type: "copiarResultado" }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }
   | { type: "verAtalhos" }
   | { type: "copiarCodigo" }
-  | { type: "salvarProgresso" }
-  | { type: "puxarProgresso" }
+  | { type: "copiar"; texto?: unknown }
+  | { type: "puxarProgresso"; codigo?: unknown }
   | { type: "logout" };
+
+/** A nota do desafio atual, mostrada na aba do gabarito ao lado do Verificar. */
+export type ResultadoNaAba = {
+  precisao?: number;
+  melhor?: number;
+  verificacoes: number;
+  invalidado: boolean;
+  // A última verificação não deu nota nova: o motivo, ou a página repetida.
+  aviso?: string;
+  detalhes?: DetalhesDaNota;
+};

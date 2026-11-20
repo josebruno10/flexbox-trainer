@@ -22,7 +22,7 @@ import {
   dataUrlParaPng,
   garantirGabaritoDaDinamica,
 } from "../../services/servidor/gabaritos";
-import { ErroHttpServidor } from "../../services/servidor/requisicao";
+import { ErroHttp } from "../../services/http";
 import { temTrabalhoDoAluno } from "../../services/workspace";
 import {
   ConfiguracaoServidor,
@@ -46,7 +46,7 @@ import { pedirCodigo } from "./codigos";
 // linha do HTML salvo leva o código do desafio; ao puxar, ela mostra que a
 // pasta foi gravada pela extensão e sai do arquivo.
 
-const PUXAR = "Puxar";
+const CONTINUAR = "Continuar";
 const DIGITAR_CODIGO = "Digitar outro código…";
 
 /** O que salvar e puxar leem e fazem no provedor da barra lateral. */
@@ -70,46 +70,78 @@ export type ContextoDoProgresso = {
 export async function salvarProgresso(
   contexto: ContextoDoProgresso,
 ): Promise<boolean> {
+  return (await salvarNoServidor(contexto, false)) === "salvo";
+}
+
+/**
+ * Como o Salvar progresso, mas sem perguntar nem avisar: a cada Verificar,
+ * para quem está no torneio. A barra lateral mostra embaixo do Verificar
+ * quando salvou. "recusado" e "falhou" dizem ao provedor para não tentar de novo
+ * neste desafio, e não incomodar o aluno a cada verificação.
+ */
+export function salvarProgressoAutomatico(
+  contexto: ContextoDoProgresso,
+): Promise<ResultadoDoSalvamento> {
+  return salvarNoServidor(contexto, true);
+}
+
+export type ResultadoDoSalvamento =
+  // Gravou no servidor.
+  | "salvo"
+  // Faltava algo da vez (sessão, desafio, imagem, arquivos, torneio).
+  | "ignorado"
+  // A dinâmica com o código não foi criada pela extensão para o aluno.
+  | "recusado"
+  // O servidor deu erro.
+  | "falhou";
+
+async function salvarNoServidor(
+  contexto: ContextoDoProgresso,
+  silencioso: boolean,
+): Promise<ResultadoDoSalvamento> {
+  const avisar = (mensagem: string) => {
+    if (!silencioso) {
+      void vscode.window.showInformationMessage(mensagem);
+    }
+  };
   if (!contexto.autenticado()) {
-    void vscode.window.showWarningMessage("Entre antes de salvar o progresso.");
-    return false;
+    if (!silencioso) {
+      void vscode.window.showWarningMessage("Entre antes de salvar o progresso.");
+    }
+    return "ignorado";
   }
 
   const desafio = contexto.desafio();
   const codigo = desafio?.codigo;
   if (!codigo) {
-    void vscode.window.showInformationMessage(
-      "Gere ou abra um desafio antes de salvar o progresso.",
-    );
-    return false;
+    avisar("Gere ou abra um desafio antes de salvar o progresso.");
+    return "ignorado";
   }
 
   const gabarito = contexto.gabarito();
   if (gabarito?.challengeId !== desafio.challengeId) {
-    void vscode.window.showInformationMessage(
+    avisar(
       "A imagem do desafio ainda não ficou pronta. Abra a barra lateral do " +
         "FlexBox Trainer e tente salvar de novo.",
     );
-    return false;
+    return "ignorado";
   }
 
   const resumo = await contexto.lerArquivos();
   if (!resumo.temArquivoHtml && !resumo.temArquivoCss) {
-    void vscode.window.showInformationMessage(
-      "Não há index.html nem style.css para salvar.",
-    );
-    return false;
+    avisar("Não há index.html nem style.css para salvar.");
+    return "ignorado";
   }
 
-  const configuracao = configuracaoDoTorneio(contexto, "salvar");
+  const configuracao = configuracaoDoTorneio(contexto, "salvar", silencioso);
   if (!configuracao) {
-    return false;
+    return "ignorado";
   }
 
   const evento = dinamicaDoDesafio(codigo);
   let salvou = false;
   try {
-    salvou = await comProgresso("Salvando o progresso no servidor…", async () => {
+    const salvar = async () => {
       if (!(await prepararDinamica(contexto, configuracao, codigo))) {
         return false;
       }
@@ -126,47 +158,66 @@ export async function salvarProgresso(
       await contexto.progressos.registrar(contexto.dono(), codigo);
       log.info(`Progresso do desafio ${codigo} salvo em ${codePasta}.`);
       return true;
-    });
+    };
+    salvou = silencioso
+      ? await salvar()
+      : await comProgresso("Salvando o progresso no servidor…", salvar);
   } catch (error) {
-    await mostrarFalha(contexto, "Não foi possível salvar o progresso", error);
-    return false;
+    if (silencioso) {
+      log.error(`Não foi possível salvar o progresso do desafio ${codigo} sozinho`, error);
+      await contexto.recusarSessaoSePreciso(
+        error instanceof ErroHttp ? error.status : undefined,
+      );
+    } else {
+      await mostrarFalha(contexto, "Não foi possível salvar o progresso", error);
+    }
+    return "falhou";
   }
 
   if (!salvou) {
-    void vscode.window.showWarningMessage(
+    const recusa =
       `Já existe no servidor uma dinâmica "${evento}", que não foi criada ` +
-        "por você pela extensão. Ela pode ser do torneio, então o progresso " +
-        `do desafio ${codigo} não foi salvo.`,
-    );
-    return false;
+      "por você pela extensão. Ela pode ser do torneio, então o progresso " +
+      `do desafio ${codigo} não foi salvo.`;
+    if (silencioso) {
+      log.info(recusa);
+    } else {
+      void vscode.window.showWarningMessage(recusa);
+    }
+    return "recusado";
   }
 
-  void vscode.window.showInformationMessage(
-    `Progresso do desafio ${codigo} salvo no servidor. Para continuar em ` +
-      "outro computador, entre com a mesma conta, clique em Puxar progresso " +
-      `e escolha ${codigo}.`,
-  );
-  return true;
+  // Sozinho, quem avisa é a barra lateral, embaixo do Verificar.
+  if (!silencioso) {
+    void vscode.window.showInformationMessage(
+      `Progresso do desafio ${codigo} salvo no servidor. Para continuar em ` +
+        `outro computador, entre com a mesma conta e clique em ⤓ ao lado de ${codigo}, no Histórico.`,
+    );
+  }
+  return "salvo";
 }
 
 /**
- * Pede o código do desafio e traz o que está salvo no servidor para ele:
- * abre o mesmo desafio com os arquivos salvos.
+ * Traz o que está salvo no servidor para um desafio: abre o mesmo desafio
+ * com os arquivos salvos. Sem o código (o ⤓ do histórico manda o dele),
+ * pergunta qual.
  */
 export async function puxarProgresso(
   contexto: ContextoDoProgresso,
+  codigoEscolhido?: string,
 ): Promise<void> {
   if (!contexto.autenticado()) {
-    void vscode.window.showWarningMessage("Entre antes de puxar o progresso.");
+    void vscode.window.showWarningMessage("Entre antes de continuar um desafio salvo.");
     return;
   }
 
-  const configuracao = configuracaoDoTorneio(contexto, "puxar");
+  const configuracao = configuracaoDoTorneio(contexto, "continuar");
   if (!configuracao) {
     return;
   }
 
-  const codigo = await escolherCodigo(contexto.progressos.listar(contexto.dono()));
+  const codigo =
+    codigoEscolhido ?? (await escolherCodigo(contexto.progressos.listar(contexto.dono())));
   if (!codigo) {
     return;
   }
@@ -181,7 +232,7 @@ export async function puxarProgresso(
         : obterConteudo(configuracao, await obterPastaDoAluno(configuracao, evento)),
     );
   } catch (error) {
-    await mostrarFalha(contexto, "Não foi possível puxar o progresso", error);
+    await mostrarFalha(contexto, "Não foi possível continuar o desafio", error);
     return;
   }
 
@@ -194,7 +245,7 @@ export async function puxarProgresso(
 
   const marca = lerMarcaDoDesafio(salvo.html);
   const temTrabalho = temTrabalhoDoAluno(await contexto.lerArquivos());
-  if (temTrabalho && !(await confirmarPuxar(codigo))) {
+  if (temTrabalho && !(await confirmarContinuar(codigo))) {
     return;
   }
 
@@ -252,22 +303,32 @@ async function prepararDinamica(
 // A pasta do aluno precisa do ID dele e do time no servidor.
 function configuracaoDoTorneio(
   contexto: ContextoDoProgresso,
-  acao: "salvar" | "puxar",
+  acao: "salvar" | "continuar",
+  silencioso = false,
 ): ConfiguracaoServidor | undefined {
   const configuracao = contexto.configuracao();
-  if (configuracao.userId <= 0 || configuracao.teamId <= 0) {
-    void vscode.window.showWarningMessage(
-      `Só quem está no torneio consegue ${acao} o progresso no servidor.`,
-    );
+  if (!estaNoTorneio(configuracao)) {
+    if (!silencioso) {
+      void vscode.window.showWarningMessage(
+        acao === "salvar"
+          ? "Só quem está no torneio salva o progresso no servidor."
+          : "Só quem está no torneio continua desafios salvos no servidor.",
+      );
+    }
     return undefined;
   }
   return configuracao;
 }
 
+/** Salvar e continuar precisam do ID do aluno e do time no servidor. */
+export function estaNoTorneio(configuracao: ConfiguracaoServidor): boolean {
+  return configuracao.userId > 0 && configuracao.teamId > 0;
+}
+
 // Os desafios salvos, do mais recente ao mais antigo, ou outro código.
 async function escolherCodigo(salvos: string[]): Promise<string | undefined> {
   const digitar = () =>
-    pedirCodigo("Puxar progresso", "O código de 4 letras do desafio que você salvou.");
+    pedirCodigo("Continuar desafio", "O código de 4 letras do desafio salvo.");
   if (salvos.length === 0) {
     return digitar();
   }
@@ -281,25 +342,26 @@ async function escolherCodigo(salvos: string[]): Promise<string | undefined> {
       { label: DIGITAR_CODIGO },
     ],
     {
-      title: "Puxar progresso",
+      title: "Continuar desafio",
       placeHolder: "Escolha o desafio que você quer continuar",
     },
   );
   return escolha?.label === DIGITAR_CODIGO ? digitar() : escolha?.label;
 }
 
-async function confirmarPuxar(codigo: string): Promise<boolean> {
+async function confirmarContinuar(codigo: string): Promise<boolean> {
   const escolha = await vscode.window.showWarningMessage(
-    `Puxar o progresso do desafio ${codigo}?`,
+    `Continuar o desafio ${codigo}?`,
     {
       modal: true,
       detail:
         "O index.html e o style.css desta pasta serão substituídos pelo que " +
-        "você salvou nesse desafio. O cronômetro recomeça.",
+        "você salvou nesse desafio. O cronômetro recomeça. Os arquivos de " +
+        "agora ficam numa cópia de segurança.",
     },
-    PUXAR,
+    CONTINUAR,
   );
-  return escolha === PUXAR;
+  return escolha === CONTINUAR;
 }
 
 function comProgresso<T>(titulo: string, tarefa: () => Promise<T>): Promise<T> {
@@ -320,6 +382,6 @@ async function mostrarFalha(
   const mensagem = error instanceof Error ? error.message : "Erro desconhecido.";
   void vscode.window.showErrorMessage(`${titulo}: ${mensagem}`);
   await contexto.recusarSessaoSePreciso(
-    error instanceof ErroHttpServidor ? error.status : undefined,
+    error instanceof ErroHttp ? error.status : undefined,
   );
 }

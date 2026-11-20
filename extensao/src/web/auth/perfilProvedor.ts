@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { TIMEOUT_PERFIL_MS, fetchComTimeout, lerJSONObrigatorio } from "./http";
+import { fetchComTimeout } from "../services/http";
+import { TIMEOUT_PERFIL_MS, lerJSONObrigatorio } from "./http";
 import {
   comoObjeto,
   extrairEmailDeTexto,

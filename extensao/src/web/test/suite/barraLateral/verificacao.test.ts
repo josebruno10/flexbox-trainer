@@ -137,6 +137,57 @@ suite("Barra lateral: verificação", () => {
     assert.strictEqual(estadosBarra[estadosBarra.length - 1]?.precisao, undefined);
   });
 
+  test("manda à barra e à aba o que corrigir em cada componente, junto com a nota", async () => {
+    mockarConfiguracaoServidorValida();
+    const registro = criarRegistroFalso();
+    const mensagens: MensagemWebview[] = [];
+    const provedor = criarProvedorParaTeste(mensagens, { registro });
+    const interno = prepararVerificacao(provedor, 233);
+    const desafio = interno.tentativa.desafio!;
+    const { width, height, backgroundColor } = desafio;
+    mockarServidor({
+      "POST /tipo-dinamica/treino/corrigir-formas": () =>
+        json({
+          pontuacao: 30,
+          detalhes: [
+            {
+              pares: [
+                {
+                  pontos: 0.8,
+                  status: "0.80 pts (tam:1.00, dist:1.00, cor:0.00)",
+                  forma_correta: true,
+                  gabarito_forma: { x: width / 2, y: height / 2, width, height, cor: backgroundColor },
+                  cliente_forma: { x: width / 2, y: height / 2, width, height, cor: "#ffffff" },
+                },
+              ],
+              extras: [],
+              nao_encontradas: desafio.blocks.map((_, indice) => indice + 1),
+            },
+          ],
+        }),
+    });
+    await registro.update(CHAVE_REGISTRO, { cod: 91, challengeId: desafio.challengeId });
+
+    await interno.verificarTentativaAtual(desafio.challengeId, FORMAS);
+
+    const resultado = ultimaMensagem(mensagens, "resultadoAvaliacao")?.payload as {
+      detalhes?: { componentes: { componente: unknown; problemas: unknown[] }[] };
+      detalhesDoServidor?: unknown;
+    };
+    assert.strictEqual(resultado.detalhesDoServidor, undefined);
+    assert.strictEqual(resultado.detalhes?.componentes.length, desafio.blocks.length + 1);
+    assert.deepStrictEqual(resultado.detalhes?.componentes[0], {
+      componente: "fundo",
+      pontos: 0.8,
+      problemas: [{ tipo: "cor", sua: "#ffffff", esperada: backgroundColor }],
+    });
+    assert.ok(
+      resultado.detalhes?.componentes
+        .slice(1)
+        .every((item) => JSON.stringify(item.problemas) === '[{"tipo":"faltando"}]'),
+    );
+  });
+
   test("junta as teclas seguidas numa só atualização da página do aluno", async () => {
     const provedor = criarProvedorParaTeste([]);
     let atualizacoes = 0;

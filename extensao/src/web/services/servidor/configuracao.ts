@@ -1,12 +1,8 @@
 import * as vscode from "vscode";
 import { ConfiguracaoServidor } from "../../types";
 import { log } from "../logger";
-import {
-  ErroHttpServidor,
-  extrairDetalheDeErro,
-  montarCabecalhos,
-  normalizarApiBaseUrl,
-} from "./requisicao";
+import { ErroHttp, extrairDetalhe, fetchComTimeout } from "../http";
+import { montarCabecalhos, normalizarApiBaseUrl } from "./requisicao";
 
 // Onde fica o servidor (das configurações) e o teste de conexão com ele.
 
@@ -46,34 +42,23 @@ export async function verificarConexaoServidor(
 
   const apiBaseUrl = normalizarApiBaseUrl(configuracao.apiBaseUrl);
   const rotaPerfil = `${apiBaseUrl}/auth/me`;
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 10000);
 
   log.info(`Testando sessão com o servidor: ${rotaPerfil}`);
 
-  const resposta = await fetch(rotaPerfil, {
-    method: "GET",
-    mode: "cors",
-    headers: montarCabecalhos(configuracao),
-    signal: abortController.signal,
-  })
-    .catch((erro: unknown) => {
-      const mensagem =
-        erro instanceof Error ? erro.message : "Erro de rede desconhecido";
-      const detalhe =
-        erro instanceof Error && erro.name === "AbortError"
-          ? "Tempo limite de 10 segundos excedido."
-          : mensagem;
-
-      throw new Error(`Não foi possível conectar ao servidor: ${detalhe}`);
-    })
-    .finally(() => {
-      clearTimeout(timeoutId);
-    });
+  const resposta = await fetchComTimeout(
+    rotaPerfil,
+    { method: "GET", mode: "cors", headers: montarCabecalhos(configuracao) },
+    10_000,
+    "testar a sessão",
+  ).catch((erro: unknown) => {
+    const detalhe =
+      erro instanceof Error ? erro.message : "Erro de rede desconhecido";
+    throw new Error(`Não foi possível conectar ao servidor: ${detalhe}`);
+  });
 
   if (!resposta.ok) {
-    const detalhe = await extrairDetalheDeErro(resposta);
-    throw new ErroHttpServidor(
+    const detalhe = await extrairDetalhe(resposta);
+    throw new ErroHttp(
       `Servidor respondeu com erro (HTTP ${resposta.status}): ${detalhe}`,
       resposta.status,
     );

@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { teclasDoComando } from "../atalhos/extensao";
+import { Plataforma, plataformaAtual, teclasDaExtensao } from "../atalhos/plataforma";
 import { lerTemaCores, NomeTema } from "./temas";
 import { estilosBase } from "./estilos/base";
 import { ESTILOS_PAINEL_COMPONENTES } from "./estilos/painelComponentes";
@@ -10,7 +12,12 @@ export function obterHtmlPainelGabarito(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   tema: NomeTema = lerTemaCores(),
+  plataforma: Plataforma = plataformaAtual(),
 ): string {
+  const atalhoVerificar = teclasDaExtensao(
+    teclasDoComando("flexbox-trainer.verificar"),
+    plataforma,
+  );
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "painelGabarito.js"),
   );
@@ -32,10 +39,15 @@ export function obterHtmlPainelGabarito(
   <div class="conteudo" id="conteudo" hidden>
     <section class="imagem">
       <div class="resumo" id="resumo"></div>
+      <div class="verificacao-aba">
+        <button type="button" id="botaoVerificarAba" class="principal" title="Verificar a sua página, como o botão da barra lateral · ${atalhoVerificar}">Verificar</button>
+        <span class="nota-aba" id="notaAba" aria-live="polite">Nenhuma verificação.</span>
+      </div>
       <div class="barra">
         <div class="modos" role="group" aria-label="Modo de exibição">
           <button type="button" class="modo" data-modo="gabarito" aria-pressed="true">Gabarito</button>
           <button type="button" class="modo" data-modo="sobreposto" aria-pressed="false">Sobrepor à sua página</button>
+          <button type="button" class="modo" data-modo="comparar" aria-pressed="false" title="O gabarito e a sua página na mesma imagem, divididos por uma linha: arraste a linha para comparar">Comparar</button>
           <button type="button" class="modo" data-modo="lado" aria-pressed="false">Lado a lado</button>
         </div>
         <button type="button" class="botao-lista" id="botaoLista" aria-expanded="true" aria-controls="listaComponentes"><span class="icone-lista" aria-hidden="true">☰</span><span id="textoBotaoLista">Esconder componentes</span></button>
@@ -61,6 +73,9 @@ export function obterHtmlPainelGabarito(
             <div class="sem-pagina" id="semPagina" hidden>Sem index.html e style.css.</div>
           </div>
         </figure>
+        <div class="linha-comparacao" id="linhaComparacao" role="slider" tabindex="0" aria-label="Linha da comparação: à esquerda o gabarito, à direita a sua página" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div>
+        <span class="lado-comparacao esquerda" aria-hidden="true">Gabarito</span>
+        <span class="lado-comparacao direita" aria-hidden="true">Sua página</span>
       </div>
       <div class="ajuda" id="ajuda"></div>
     </section>

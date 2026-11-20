@@ -153,6 +153,42 @@ suite("Aba do gabarito", () => {
     assert.strictEqual(paineis.length, 2);
   });
 
+  test("o Verificar da aba pede a verificação e a aba mostra as etapas e a nota", () => {
+    let verificacoes = 0;
+    const painel = new PainelGabarito(
+      vscode.Uri.parse("file:///extensao"),
+      async () => undefined,
+      async () => {
+        verificacoes++;
+      },
+    );
+    painel.atualizarResultado({ precisao: 80, melhor: 80, verificacoes: 1, invalidado: false });
+    painel.mostrar(criarDesafioGerado());
+    paineis[0].receber({ type: "pronto" });
+
+    // A aba abre já com a nota.
+    assert.deepStrictEqual(ultimaMensagem(paineis[0], "resultado").payload, {
+      resultado: { precisao: 80, melhor: 80, verificacoes: 1, invalidado: false },
+      verificacao: { andamento: false },
+    });
+
+    paineis[0].receber({ type: "verificar" });
+    assert.strictEqual(verificacoes, 1);
+
+    painel.avisarVerificacao({ andamento: true, etapa: "Enviando ao servidor" });
+    assert.deepStrictEqual(ultimaMensagem(paineis[0], "resultado").payload.verificacao, {
+      andamento: true,
+      etapa: "Enviando ao servidor",
+    });
+
+    painel.atualizarResultado({ precisao: 92.5, melhor: 92.5, verificacoes: 2, invalidado: false });
+    painel.avisarVerificacao({ andamento: false });
+    assert.deepStrictEqual(ultimaMensagem(paineis[0], "resultado").payload, {
+      resultado: { precisao: 92.5, melhor: 92.5, verificacoes: 2, invalidado: false },
+      verificacao: { andamento: false },
+    });
+  });
+
   test("copia só valores curtos enviados pela aba", () => {
     const painel = new PainelGabarito(
       vscode.Uri.parse("file:///extensao"),
@@ -167,6 +203,39 @@ suite("Aba do gabarito", () => {
     paineis[0].receber({ type: "copiar", texto: "x".repeat(200) });
 
     assert.deepStrictEqual(copiados, ["#17DAB2"]);
+  });
+
+  test("o modo Comparar divide o gabarito e a sua página por uma linha", () => {
+    const html = obterHtmlPainelGabarito(
+      {
+        cspSource: "vscode-webview://teste",
+        asWebviewUri: (uri: vscode.Uri) => uri,
+      } as unknown as vscode.Webview,
+      vscode.Uri.parse("file:///extensao"),
+    );
+    const palco = html.indexOf('id="palco"');
+    const linha = html.indexOf('id="linhaComparacao"');
+
+    // Os modos que já existiam continuam, e o Comparar vem depois do Sobrepor.
+    const modos = [...html.matchAll(/class="modo" data-modo="([a-z]+)"/g)].map((m) => m[1]);
+    assert.deepStrictEqual(modos, ["gabarito", "sobreposto", "comparar", "lado"]);
+    assert.ok(palco >= 0 && linha > palco, "a linha fica dentro do palco");
+    assert.match(html, /id="linhaComparacao" role="slider" tabindex="0"/);
+  });
+
+  test("tem o Verificar, com o atalho dele, e o lugar da nota", () => {
+    const html = obterHtmlPainelGabarito(
+      {
+        cspSource: "vscode-webview://teste",
+        asWebviewUri: (uri: vscode.Uri) => uri,
+      } as unknown as vscode.Webview,
+      vscode.Uri.parse("file:///extensao"),
+      "floresta",
+      "linux",
+    );
+
+    assert.match(html, /id="botaoVerificarAba" class="principal" title="[^"]*Ctrl\+Alt\+V"/);
+    assert.match(html, /id="notaAba" aria-live="polite"/);
   });
 
   test("a aba só carrega o próprio script, sem script embutido", () => {

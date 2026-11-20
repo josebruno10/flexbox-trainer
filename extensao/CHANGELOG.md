@@ -4,10 +4,33 @@ As mudanças de cada versão do FlexBox Trainer.
 
 ## [Não lançado]
 
+### Barra lateral
+- **O que corrigir**, embaixo da nota: pela correção do servidor, os componentes que mais tiram pontos e o que está diferente em cada um (falta na página, cor, tamanho, lugar em px ou forma), além das formas a mais. Clicar num deles o destaca no gabarito. Nem a extensão oficial mostra isso: o servidor já mandava o detalhe de cada forma, e ele era ignorado.
+- Menos botões embaixo de **Gerar novo desafio**: fica só **Abrir por código**; **Abrir em uma aba** virou o **⧉** ao lado de **Sua página**; **Encerrar** e **Refazer** viraram **⏹** e **↻**, ao lado do tempo; **Salvar progresso** saiu (agora é automático) e **Puxar progresso** virou **⤓ Continuar** no Histórico.
+- **Copiar resultado** saiu da barra lateral e do menu **⋯**, e perdeu o atalho `Ctrl+Alt+Shift+V`. O comando continua na paleta.
+- Clique para copiar: o código no Histórico, a cor do fundo e a largura, a altura e a cor de cada componente (as medidas já com `px`).
+- O Histórico aparece desde o começo e tem, em cada linha, **⤓** para continuar o desafio com os arquivos salvos e **↻** para refazê-lo do zero. **⤓ Continuar…**, no topo dele, continua um desafio que não está na lista. "Puxar" virou "Continuar" em todo lugar, inclusive no comando **FlexBox Trainer: Continuar Desafio Salvo**.
+- O **Desafio do dia** saiu, com o comando e o atalho `Ctrl+Alt+Shift+D`: para treinar o mesmo desafio que outra pessoa, basta abrir o código dela.
+
+### Aba do gabarito
+- Cada componente da lista, e o fundo, ganha uma marca pela última verificação: **✓** ou o que falta acertar (**falta**, **cor**, **tamanho**, **lugar**, **forma**), com os valores na dica do mouse.
+- **Verificar** no topo da aba (`Ctrl+Alt+V`), com a última nota, a melhor e quantas verificações você fez, como na extensão oficial do torneio. A barra lateral, onde a página é medida, se abre se estiver fechada, e a aba mostra as etapas até a nota chegar.
+- Modo **Comparar**, como na extensão oficial do torneio, ao lado de **Sobrepor à sua página**: o gabarito e a sua página na mesma imagem, divididos por uma linha. Arraste a linha, de qualquer ponto da imagem, ou use as setas do teclado (com `Shift`, ela anda mais rápido).
+- O código do desafio aparece inteiro no topo da aba (`MESA`), e não mais separado como `MES A`, uma sobra dos códigos de 6 dígitos.
+
+### Correções
+- O `Ctrl+Alt+V` parava de verificar logo depois de abrir o VS Code, quando o servidor confirmava a sessão: a barra lateral era redesenhada com o mesmo HTML, o VS Code não a recarregava, e a extensão ficava esperando um aviso de "carregada" que nunca vinha. O botão da barra continuava funcionando. O mesmo prendia o **Verificar** da aba do gabarito.
+
+### Atalhos
+- Os atalhos funcionam mesmo antes de a extensão ativar (por exemplo, com a barra lateral fechada ao abrir o VS Code): antes, eles só valiam depois de a barra lateral carregar. Sem sessão ou sem desafio, o comando diz o que falta.
+- **Gerar novo desafio** passou de `Ctrl+Alt+D` para `Ctrl+Alt+G`: no Xfce (Xubuntu, Mint Xfce), `Ctrl+Alt+D` mostra a área de trabalho, e o VS Code nem recebia a tecla.
+
 ### Progresso
+- Cópias de segurança, como o "Restaurar Backup Local Seguro" da extensão oficial: antes de apagar ou substituir o `index.html` e o `style.css` (num desafio novo, ao continuar um desafio salvo ou ao restaurar uma cópia), a extensão guarda o que você tinha escrito. **FlexBox Trainer: Restaurar Cópia de Segurança**, também no menu **⋯**, abre o desafio da cópia com os arquivos dela. Ficam as 10 mais recentes, neste computador e separadas por aluno.
+- Para quem está no torneio, cada **Verificar** também salva o progresso do desafio no servidor, sem perguntar; a linha embaixo do botão diz que salva e mostra quando salvou ("Salvo no servidor às 14:32."). Se não der para salvar, a extensão não insiste naquele desafio. **Salvar Progresso no Servidor**, no menu **⋯**, continua salvando na hora.
 - O progresso fica salvo por desafio, como o professor pediu: cada desafio tem a própria dinâmica no servidor, com o mesmo código (o `MESA` fica na dinâmica `mesa`), criada pela extensão no primeiro salvamento. Salvar um desafio não apaga o progresso dos outros.
 - A imagem do desafio vai como gabarito da dinâmica dele antes de salvar: sem gabarito, o servidor não guardava o HTML e o CSS. Uma dinâmica sua que tenha ficado sem gabarito recebe a imagem no próximo salvamento; um gabarito que já exista nunca é substituído.
-- **Puxar progresso** pergunta qual desafio: lista os que você salvou (a lista acompanha a Sincronização de Configurações) ou deixa digitar o código, e puxa o que está no servidor para ele.
+- **Continuar** pergunta qual desafio: lista os que você salvou (a lista acompanha a Sincronização de Configurações) ou deixa digitar o código, e puxa o que está no servidor para ele.
 - A extensão só salva numa dinâmica que ela criou para o aluno: se já existir uma com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o salvamento é recusado.
 
 ### Instalação

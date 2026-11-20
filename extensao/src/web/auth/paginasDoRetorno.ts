@@ -1,9 +1,23 @@
+import { escapeHtml } from "../telas/comum";
 import type { RespostaDaPagina } from "./retornoLocal";
 
 // As páginas do servidor local do login (retornoLocal.ts), no visual da
 // extensão: o resultado do login e os avisos de endereços que não valem.
 
 type Textos = { titulo: string; texto: string; classe: "" | "ok" | "erro" };
+
+// O ícone da extensão (resources/icone.svg) na aba do navegador, embutido:
+// o servidor local não serve arquivos.
+const ICONE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">' +
+  '<defs><linearGradient id="d" x1="0" y1="0" x2="1" y2="0.35">' +
+  '<stop offset="0" stop-color="#65a30d"/><stop offset="0.45" stop-color="#16a34a"/>' +
+  '<stop offset="1" stop-color="#059669"/></linearGradient></defs>' +
+  '<rect width="256" height="256" rx="44" fill="#151218"/>' +
+  '<rect x="40" y="40" width="176" height="64" rx="4" fill="#fffaf7"/>' +
+  '<rect x="40" y="120" width="80" height="96" rx="4" fill="url(#d)"/>' +
+  '<circle cx="176" cy="168" r="40" fill="#dc2626"/></svg>';
+export const ICONE_DA_ABA = `data:image/svg+xml,${encodeURIComponent(ICONE_SVG)}`;
 
 const ESTILO = `
   :root { color-scheme: light dark; --fundo: #f7f7f5; --texto: #1c1c1c; --suave: #5f6368; --linha: #d9d9d4; --acento: #15803d; --erro: #b42318; }
@@ -59,13 +73,14 @@ function documento(textos: Textos, script = ""): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
   <title>Entrar | FlexBox Trainer</title>
+  <link rel="icon" type="image/svg+xml" href="${ICONE_DA_ABA}">
   <style>${ESTILO}</style>
 </head>
 <body class="${textos.classe}">
   <main>
     <p class="rotulo">FlexBox Trainer</p>
-    <h1 id="titulo">${escaparHtml(textos.titulo)}</h1>
-    <p id="texto">${escaparHtml(textos.texto)}</p>
+    <h1 id="titulo">${escapeHtml(textos.titulo)}</h1>
+    <p id="texto">${escapeHtml(textos.texto)}</p>
   </main>
   ${script}
 </body>
@@ -119,10 +134,3 @@ function comPonto(texto: string): string {
   return /[.!?…]$/.test(texto) ? texto : `${texto}.`;
 }
 
-function escaparHtml(texto: string): string {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}

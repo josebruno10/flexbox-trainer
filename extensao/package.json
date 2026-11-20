@@ -69,10 +69,6 @@
         "title": "FlexBox Trainer: Abrir Desafio por Código"
       },
       {
-        "command": "flexbox-trainer.desafioDoDia",
-        "title": "FlexBox Trainer: Desafio do Dia"
-      },
-      {
         "command": "flexbox-trainer.verificar",
         "title": "FlexBox Trainer: Verificar"
       },
@@ -132,7 +128,11 @@
       },
       {
         "command": "flexbox-trainer.puxarProgresso",
-        "title": "FlexBox Trainer: Puxar Progresso do Servidor"
+        "title": "FlexBox Trainer: Continuar Desafio Salvo"
+      },
+      {
+        "command": "flexbox-trainer.restaurarCopia",
+        "title": "FlexBox Trainer: Restaurar Cópia de Segurança"
       },
       {
         "command": "flexbox-trainer.gerarSolucaoTeste",
@@ -181,11 +181,6 @@
           "group": "navigation"
         },
         {
-          "command": "flexbox-trainer.desafioDoDia",
-          "when": "view == flexbox-trainer.sidebar",
-          "group": "1_desafio@0"
-        },
-        {
           "command": "flexbox-trainer.abrirPorCodigo",
           "when": "view == flexbox-trainer.sidebar",
           "group": "1_desafio@1"
@@ -201,11 +196,6 @@
           "group": "1_desafio@3"
         },
         {
-          "command": "flexbox-trainer.copiarResultado",
-          "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
-          "group": "1_desafio@4"
-        },
-        {
           "command": "flexbox-trainer.salvarProgresso",
           "when": "view == flexbox-trainer.sidebar && flexboxTrainer.temDesafio",
           "group": "1_desafio@5"
@@ -214,6 +204,11 @@
           "command": "flexbox-trainer.puxarProgresso",
           "when": "view == flexbox-trainer.sidebar",
           "group": "1_desafio@6"
+        },
+        {
+          "command": "flexbox-trainer.restaurarCopia",
+          "when": "view == flexbox-trainer.sidebar",
+          "group": "1_desafio@7"
         },
         {
           "command": "flexbox-trainer.abrirGuia",
@@ -235,38 +230,23 @@
     "keybindings": [
       {
         "command": "flexbox-trainer.verificar",
-        "key": "ctrl+alt+v",
-        "when": "flexboxTrainer.temDesafio"
+        "key": "ctrl+alt+v"
       },
       {
         "command": "flexbox-trainer.novoDesafio",
-        "key": "ctrl+alt+d",
-        "when": "flexboxTrainer.autenticado"
-      },
-      {
-        "command": "flexbox-trainer.desafioDoDia",
-        "key": "ctrl+alt+shift+d",
-        "when": "flexboxTrainer.autenticado"
-      },
-      {
-        "command": "flexbox-trainer.copiarResultado",
-        "key": "ctrl+alt+shift+v",
-        "when": "flexboxTrainer.temDesafio"
+        "key": "ctrl+alt+g"
       },
       {
         "command": "flexbox-trainer.abrirGabarito",
-        "key": "ctrl+alt+a",
-        "when": "flexboxTrainer.temDesafio"
+        "key": "ctrl+alt+a"
       },
       {
         "command": "flexbox-trainer.refazerDesafio",
-        "key": "ctrl+alt+shift+n",
-        "when": "flexboxTrainer.temDesafio"
+        "key": "ctrl+alt+shift+n"
       },
       {
         "command": "flexbox-trainer.verHistorico",
-        "key": "ctrl+alt+h",
-        "when": "flexboxTrainer.autenticado"
+        "key": "ctrl+alt+h"
       }
     ],
     "configuration": {
@@ -432,7 +412,7 @@
           {
             "id": "codigo",
             "title": "Treine com a turma",
-            "description": "Cada desafio tem um código de 4 letras: com o mesmo código, todos treinam o mesmo layout. O desafio do dia é o mesmo para todos na mesma data. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para refazer um desafio para bater o recorde.\n[Desafio do dia](command:flexbox-trainer.desafioDoDia)\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
+            "description": "Cada desafio tem um código de 4 letras: com o mesmo código, todos treinam o mesmo layout. Clique no código para copiar e mandar à turma. O histórico guarda a sua melhor nota em cada desafio e mostra a sua evolução; dá para continuar um desafio de onde parou (⤓) ou refazê-lo do zero (↻).\n[Abrir desafio por código](command:flexbox-trainer.abrirPorCodigo)",
             "media": {
               "image": {
                 "dark": "media/guia/codigo-escuro.png",

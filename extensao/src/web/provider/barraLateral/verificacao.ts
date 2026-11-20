@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
+import { ligarAosComponentes } from "../../services/detalhesDaNota";
 import { ExtensaoIa } from "../../services/extensoesIa";
-import { ErroHttpServidor } from "../../services/servidor/requisicao";
+import { ErroHttp } from "../../services/http";
 import { lerResumoWorkspace } from "../../services/workspace";
 import {
   Desafio,
@@ -120,7 +121,14 @@ async function executarVerificacao(
       return;
     }
 
-    tentativa.guardarResultado(resultado);
+    // O detalhe de cada forma vira o que corrigir em cada componente.
+    const { detalhesDoServidor, ...semDetalhesBrutos } = resultado;
+    const desafio = tentativa.desafio();
+    tentativa.guardarResultado(
+      detalhesDoServidor && desafio
+        ? { ...semDetalhesBrutos, detalhes: ligarAosComponentes(desafio, detalhesDoServidor) }
+        : semDetalhesBrutos,
+    );
     if (resultado.source === "servidor" && !resultado.repetida) {
       await tentativa.registrarNota(resultado.precision);
     }
@@ -137,7 +145,7 @@ async function executarVerificacao(
     mostrarResultado(
       falha("api-error", error instanceof Error ? error.message : "Erro desconhecido"),
     );
-    if (error instanceof ErroHttpServidor) {
+    if (error instanceof ErroHttp) {
       await tentativa.recusarSessaoSePreciso(error.status);
     }
   }

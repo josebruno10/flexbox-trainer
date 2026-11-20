@@ -22,7 +22,7 @@ Tudo sobre a extensão: instalação, uso, regras, comandos, configurações, pr
 - Como a extensão oficial do torneio, não aceita IA durante o desafio: não deixa começar nem corrigir com extensões de IA habilitadas (Copilot, Claude Code, Codex, Continue, Cline e outras) e invalida o desafio se uma delas for habilitada ou se o código for alterado fora do editor (veja [As regras do desafio](#as-regras-do-desafio)).
 - Cria o `index.html` e o `style.css` quando a pasta ainda não os tem.
 - Marca o tempo de cada tentativa.
-- Dá a cada desafio um código de 4 letras: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode refazer um desafio. O desafio do dia é o mesmo para todos na mesma data.
+- Dá a cada desafio um código de 4 letras: com o mesmo código, a turma toda treina o mesmo layout, e o aluno pode continuar ou refazer um desafio.
 - Salva o progresso de cada desafio no servidor (o `index.html` e o `style.css`), para você continuar em outro computador pelo código do desafio.
 - Guarda um histórico com a melhor nota e o tempo de cada desafio, e copia o resultado para você mandar à turma.
 - Mostra a sua evolução, com a melhor nota de cada dia num gráfico.
@@ -83,46 +83,49 @@ Na primeira vez que a extensão roda, ela abre o **guia de primeiros passos**, q
 
 ## Como treinar
 
-1. Escolha o nível logo acima de **Gerar novo desafio**: **Fácil**, **Médio** ou **Difícil**. Nos mais fáceis saem os componentes menores, que dão mais trabalho (75% deles no fácil, sem nunca ficar com menos de 8, e 30% no médio); o difícil tem todos. A escolha fica guardada. **Gerar novo desafio** (`Ctrl+Alt+D`) cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código** e digite as 4 letras; **Desafio do dia** abre o de hoje, o mesmo para todos.
+1. Escolha o nível logo acima de **Gerar novo desafio**: **Fácil**, **Médio** ou **Difícil**. Nos mais fáceis saem os componentes menores, que dão mais trabalho (75% deles no fácil, sem nunca ficar com menos de 8, e 30% no médio); o difícil tem todos. A escolha fica guardada. **Gerar novo desafio** (`Ctrl+Alt+G`) cria uma imagem nova e deixa o `index.html` e o `style.css` só com a base. Gere quantas quiser até achar um desafio para treinar; o cronômetro recomeça a cada desafio. Para treinar um desafio que alguém passou, use **Abrir por código**, logo embaixo, e digite as 4 letras.
 2. Recrie a imagem em `index.html` e `style.css`. Pode usar flexbox, grid ou `position`: o que conta é o resultado na tela. A sua página é desenhada numa área do tamanho do gabarito (800 × 800 px), como no torneio: o `html` e o `body` já têm esse tamanho, e o que passar dele fica de fora. Não precisa definir o tamanho da página; basta preencher essa área (por exemplo, com `height: 100%` no elemento que envolve o layout).
-3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral, ou use **Abrir em uma aba** para ver todos de uma vez.
-4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem.
-5. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`, mesmo com a barra lateral fechada). A barra lateral mostra as etapas e, no fim, a precisão medida pelo servidor do torneio.
-6. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
-7. **Encerrar desafio** congela o cronômetro quando você terminar. Depois, **↻ Refazer** começa o mesmo desafio de novo, do zero.
+3. Para consultar medidas e cores, clique em um componente do gabarito na barra lateral: clique na largura, na altura ou na cor para copiar (já com `px`). O **⧉**, ao lado de **Sua página**, abre todos numa aba. A cor do **Fundo**, nos dados do desafio, também se copia com um clique.
+4. A pré-visualização e a comparação acompanham o que você digita, sem precisar salvar. Na barra lateral, **Gabarito | Sua página** alterna os dois no mesmo quadro, o que deixa à vista onde eles diferem. Para comparar de perto, use o modo **Comparar** da aba do gabarito (veja abaixo).
+5. Clique em **Verificar** (ou aperte `Ctrl+Alt+V`, mesmo com a barra lateral fechada). A barra lateral mostra as etapas e, no fim, a precisão medida pelo servidor do torneio. Cada verificação também salva o seu progresso no servidor: a linha embaixo do botão diz quando salvou (veja [Continuar em outro computador](#continuar-em-outro-computador)).
+6. Embaixo da nota, **O que corrigir** mostra, pela correção do servidor, os componentes que mais tiram pontos e o que está diferente em cada um: "não aparece na sua página", a cor ("cor #FFFFFF em vez de #1930F8"), o tamanho ("60 × 150 px em vez de 60 × 166 px"), o lugar ("fora do lugar: 12 px à direita e 4 px acima") ou a forma ("deveria ser um círculo"). Também aparecem as formas a mais, que a sua página tem e o gabarito não. Clique num componente da lista para vê-lo destacado no gabarito. A lista completa fica na aba do gabarito, com uma marca em cada componente.
+7. Ajuste e verifique de novo. Abaixo da nota ficam as últimas tentativas do desafio e a melhor delas. Se a sua página não mudou desde a última verificação, a extensão não a reenvia: ela repete a nota e avisa.
+8. **⏹**, ao lado do tempo, encerra o desafio e congela o cronômetro quando você terminar. No mesmo lugar, aparece **↻**, que refaz o mesmo desafio, do zero.
 
 Só contam elementos com cor de fundo sólida (`background` ou `background-color`). Texto, imagens, gradientes e sombras não são comparados.
 
-### Código do desafio, desafio do dia e histórico
+### Código do desafio e histórico
 
 Cada desafio tem um **código** de 4 letras (como `MESA`), que aparece nos dados do desafio (clique nele para copiar) e no topo da aba do gabarito. O mesmo código gera sempre a mesma imagem, no mesmo nível: o nível vem do próprio código, e aparece no título da seção (por exemplo, **Desafio · médio**). Quem abre o código de um colega treina o mesmo nível dele, qualquer que seja o nível escolhido.
 
-- **Em sala:** o professor passa um código, e cada aluno abre o desafio com **Abrir por código**. Todos treinam o mesmo layout, cada um na própria dinâmica de treino.
-- **Desafio do dia:** sem ninguém passar um código, **Desafio do dia** abre o desafio da data, o mesmo para todos que o abrirem no mesmo dia (vale a data do computador). Ele é sempre médio. Enquanto ele está aberto, a seção se chama **Desafio do dia**.
+- **Em sala ou com um colega:** alguém passa um código, e cada um abre o desafio com **Abrir por código**. Todos treinam o mesmo layout, cada um na própria dinâmica de treino.
 - **Sozinho:** refaça um desafio para tentar uma nota maior ou um tempo menor.
 
-O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. O ↻ de cada linha refaz aquele desafio, e **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
+O **Histórico**, abaixo do Resultado, mostra os desafios que você já verificou, do mais recente ao mais antigo, com a melhor nota e o tempo em que ela foi alcançada. Em cada linha, clique no código para copiá-lo; **⤓** continua o desafio de onde você parou, com o `index.html` e o `style.css` salvos (aparece quando há progresso salvo; veja [Continuar em outro computador](#continuar-em-outro-computador)); **↻** refaz o desafio do zero, com os arquivos limpos, para tentar uma nota maior ou um tempo menor. **Ver todos** (ou **FlexBox Trainer: Histórico de Desafios**) lista até 30. Ao refazer um desafio, o Resultado mostra também o seu **Recorde** nele, a nota a bater.
 
 No topo do Histórico, o gráfico **Melhor nota** mostra a sua evolução no nível escolhido: a melhor nota de cada dia, de 0 a 100%, com a primeira e a última nota ao lado do título. Ele aparece desde o primeiro dia, como um ponto; a linha surge a partir do segundo dia de treino. Pare o mouse sobre um ponto para ver o dia e a nota.
 
 O histórico fica separado por e-mail: num laboratório, cada aluno vê os próprios desafios. Com a **Sincronização de Configurações** do VS Code ligada (ícone da conta, embaixo à esquerda), o histórico e o gráfico vão com você para os outros computadores em que você usar o VS Code, junto com o nível escolhido. Só os seus: os de outros alunos que usaram o mesmo computador não vão.
 
-Depois da primeira nota, **Copiar resultado**, no topo do Resultado, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
+O comando **FlexBox Trainer: Copiar Resultado**, na paleta, copia o código, a melhor nota desta tentativa e o tempo em que ela saiu, para colar no grupo da turma:
 
 ```text
 Desafio médio MESA: 87,42% em 12:34
-Desafio do dia 14/10 (DHAG): 87,42% em 12:34
 ```
 
 ### Continuar em outro computador
 
-Cada desafio pode ter um progresso salvo no servidor. **Salvar progresso**, na seção Desafio, guarda o `index.html` e o `style.css` do desafio atual numa dinâmica com o mesmo código dele: o desafio `MESA` fica na dinâmica `mesa`. A extensão cria essa dinâmica no primeiro salvamento, e o servidor guarda os arquivos numa pasta sua dentro dela, pelas mesmas rotas da extensão oficial do torneio (`criar-pasta`, `salvar-conteudo` e `obter-conteudo`). Salvar de novo o mesmo desafio substitui o que estava salvo nele; os outros desafios não mudam.
+Cada desafio pode ter um progresso salvo no servidor. Para quem está no torneio, a cada **Verificar** a extensão guarda sozinha o `index.html` e o `style.css` do desafio atual numa dinâmica com o mesmo código dele: o desafio `MESA` fica na dinâmica `mesa`. A extensão cria essa dinâmica no primeiro salvamento, e o servidor guarda os arquivos numa pasta sua dentro dela, pelas mesmas rotas da extensão oficial do torneio (`criar-pasta`, `salvar-conteudo` e `obter-conteudo`). Salvar de novo o mesmo desafio substitui o que estava salvo nele; os outros desafios não mudam. Embaixo do **Verificar**, uma linha mostra o que acontece: **Cada verificação salva o seu progresso no servidor.** antes da primeira, **Salvando no servidor…** e depois **Salvo no servidor às 14:32.** Se não der para salvar (por exemplo, sem internet), a linha avisa, e a extensão não insiste naquele desafio até você reabrir o VS Code. **Salvar Progresso no Servidor**, no menu **⋯**, salva na hora e avisa o resultado.
 
-Para continuar, em qualquer computador, entre com a mesma conta e clique em **Puxar progresso**. A extensão lista os desafios que você salvou; escolha um, ou **Digitar outro código…**. Ela puxa o que está no servidor para aquele código, abre o desafio e grava nele os seus arquivos. Se a pasta aberta já tiver algo escrito, ela pergunta antes de substituir. O cronômetro recomeça.
+Para continuar, em qualquer computador, entre com a mesma conta e clique em **⤓** ao lado do desafio, no Histórico. Se ele não estiver no Histórico (por exemplo, num computador sem a Sincronização de Configurações), clique em **⤓ Continuar…**, no topo do Histórico: a extensão lista os desafios que você salvou; escolha um, ou **Digitar outro código…**. Os dois fazem a mesma coisa: trazem o que está no servidor para aquele código, abrem o desafio e gravam nele os seus arquivos. Se a pasta aberta já tiver algo escrito, ela pergunta antes de substituir. O cronômetro recomeça.
 
-A lista dos desafios salvos acompanha você pela **Sincronização de Configurações**. Sem ela, digite o código no outro computador: depois de puxar, dá para voltar a salvar ali normalmente.
+A lista dos desafios salvos acompanha você pela **Sincronização de Configurações**. Sem ela, digite o código no outro computador: depois de continuar, dá para voltar a salvar ali normalmente.
 
-A extensão só salva numa dinâmica que ela mesma criou para você. Se já existir no servidor uma dinâmica com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o progresso desse desafio não é salvo (puxar continua funcionando, porque só lê). Só quem está no torneio salva e puxa o progresso, como acontece na correção. O histórico de notas não vai pelo servidor; ele acompanha você pela Sincronização de Configurações (veja acima).
+A extensão só salva numa dinâmica que ela mesma criou para você. Se já existir no servidor uma dinâmica com o código do desafio, criada por outra pessoa, ela pode ser do torneio, e o progresso desse desafio não é salvo (continuar funciona, porque só lê). Só quem está no torneio salva e continua desafios salvos, como acontece na correção. O histórico de notas não vai pelo servidor; ele acompanha você pela Sincronização de Configurações (veja acima).
+
+### Cópias de segurança
+
+Antes de apagar ou substituir o que você escreveu no `index.html` e no `style.css` (num desafio novo, ao continuar um desafio salvo ou ao restaurar uma cópia), a extensão guarda uma cópia deles neste computador, como o "Restaurar Backup Local Seguro" da extensão oficial. Para voltar a uma, rode **FlexBox Trainer: Restaurar Cópia de Segurança** (também no menu **⋯**): a lista mostra o desafio de cada cópia e quando ela foi feita. Escolhida uma, a extensão abre o desafio dela com os arquivos dela, e os arquivos de agora também viram uma cópia; o cronômetro recomeça. Ficam as 10 cópias mais recentes, separadas por aluno (no laboratório, um não vê as do outro), e elas não vão pela Sincronização de Configurações.
 
 ## As regras do desafio
 
@@ -132,49 +135,52 @@ Como no torneio, o desafio é feito do começo ao fim no editor, sem IA:
 - Se uma extensão de IA for habilitada durante o desafio, ele é **invalidado**, mesmo que você a desabilite depois.
 - Se o `index.html` ou o `style.css` forem alterados fora do editor durante o desafio, ele também é invalidado. Isso pega assistentes de IA que rodam no terminal e gravam direto nos arquivos, mas vale para qualquer programa ou comando (outra janela do VS Code, `git checkout`, um formatador rodado no terminal).
 - Um desafio invalidado não pode mais ser corrigido: a barra lateral mostra o motivo, e é só gerar outro.
-- Cada desafio começa do zero. Ao gerar um desafio novo, o `index.html` e o `style.css` voltam à base (o HTML mínimo e o reset do CSS: `box-sizing`, `margin` e `padding`), para nada do desafio anterior ser reaproveitado e o tempo contar o desafio inteiro. Se você escreveu algo, a extensão pergunta antes de limpar; com o arquivo aberto, `Ctrl+Z` no editor desfaz a limpeza. A exceção é **Puxar progresso**: o desafio recomeça com os arquivos que você mesmo salvou.
+- Cada desafio começa do zero. Ao gerar um desafio novo, o `index.html` e o `style.css` voltam à base (o HTML mínimo e o reset do CSS: `box-sizing`, `margin` e `padding`), para nada do desafio anterior ser reaproveitado e o tempo contar o desafio inteiro. Se você escreveu algo, a extensão pergunta antes de limpar; com o arquivo aberto, `Ctrl+Z` no editor desfaz a limpeza. A exceção é continuar um desafio salvo (o **⤓** do Histórico ou **Puxar…**): o desafio recomeça com os arquivos que você mesmo salvou.
 
-Salvar no editor, inclusive com formatação ao salvar, e criar, limpar ou puxar os arquivos pela extensão não contam como alteração de fora.
+Salvar no editor, inclusive com formatação ao salvar, e criar, limpar ou trazer os arquivos pela extensão não contam como alteração de fora.
 
 ## A barra lateral
 
-A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gabarito e a sua página, as medidas e os dados do gabarito, com o código), **Resultado** (o **Verificar**, a precisão e as tentativas) e **Histórico**, que aparece depois da primeira verificação. Se faltar o `index.html` ou o `style.css` na pasta aberta, o Resultado avisa e oferece criá-los. O caminho dos arquivos usados aparece ao parar o mouse sobre **Sua página**.
+A barra lateral tem três partes: **Desafio** (o quadro, que alterna entre o gabarito e a sua página, as medidas e os dados do gabarito, com o código), **Resultado** (o **Verificar**, a precisão, o que corrigir e as tentativas) e **Histórico**, com os desafios que você já verificou. Se faltar o `index.html` ou o `style.css` na pasta aberta, o Resultado avisa e oferece criá-los. O caminho dos arquivos usados aparece ao parar o mouse sobre **Sua página**.
 
 | Botão | O que faz |
 |---|---|
 | Gabarito, Sua página | Alternam o que o quadro mostra: o gabarito ou a sua página |
 | Fácil, Médio, Difícil | Escolhem o nível dos desafios novos; a escolha fica guardada |
-| Gerar novo desafio | Cria um desafio novo, no nível escolhido, e reinicia o cronômetro (`Ctrl+Alt+D`) |
-| Desafio do dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
-| Abrir por código | Abre o desafio de um código de 4 letras, como o que o professor passar |
-| Salvar progresso | Aparece com um desafio aberto; guarda no servidor o `index.html` e o `style.css` deste desafio |
-| Puxar progresso | Pede o código de um desafio salvo e o abre com os seus arquivos, em qualquer computador |
-| O código, nos dados do desafio | Copia o código, para outra pessoa abrir o mesmo desafio |
-| Encerrar desafio | Congela o cronômetro do desafio atual |
-| ↻ Refazer | Aparece depois de encerrar, no lugar de Encerrar desafio; começa o mesmo desafio de novo, do zero |
-| Abrir em uma aba | Abre o gabarito, as medidas e a comparação em uma aba do editor |
+| Gerar novo desafio | Cria um desafio novo, no nível escolhido, e reinicia o cronômetro (`Ctrl+Alt+G`) |
+| Abrir por código | Abre o desafio de um código de 4 letras, como o que o professor ou um colega passar |
+| O código e a cor do fundo, nos dados do desafio | Copiam o valor: o código, para outra pessoa abrir o mesmo desafio; a cor, para o CSS |
+| A largura, a altura e a cor de um componente | Copiam o valor, já com `px` nas medidas |
+| ⏹, ao lado do tempo | Encerra o desafio e congela o cronômetro |
+| ↻, ao lado do tempo | Aparece depois de encerrar, no lugar do ⏹; começa o mesmo desafio de novo, do zero (`Ctrl+Alt+Shift+N`) |
+| ⧉ (ao lado de Sua página) | Abre o gabarito, as medidas e a comparação em uma aba do editor (`Ctrl+Alt+A`) |
 | ↻ (ao lado de Sua página) | Atualiza a sua página na hora. Ela já atualiza sozinha enquanto você digita; use se demorar |
 | Criar index.html e style.css | Aparece quando falta algum dos dois; cria só o que falta, sem sobrescrever nada |
 | Ver extensões | Aparece no aviso de extensões de IA; abre a página delas para você desabilitar |
-| Verificar | Mede a sua página e envia para a correção (`Ctrl+Alt+V`) |
-| Copiar resultado | Aparece depois da primeira nota; copia o código, a melhor nota e o tempo dela |
-| ↻, no Histórico | Refaz aquele desafio |
-| Ver todos, no Histórico | Lista todos os desafios do histórico; escolher um o refaz |
+| Verificar | Mede a sua página e envia para a correção (`Ctrl+Alt+V`); para quem está no torneio, também salva o progresso |
+| O código, no Histórico | Copia o código |
+| ⤓, no Histórico | Aparece quando há progresso salvo; continua aquele desafio com os seus arquivos |
+| ↻, no Histórico | Refaz aquele desafio do zero |
+| ⤓ Continuar…, no Histórico | Lista os desafios salvos, ou pede um código, e abre o escolhido com os seus arquivos |
+| Ver todos, no Histórico | Lista todos os desafios do histórico; escolher um o refaz (`Ctrl+Alt+H`) |
 | Sair | Encerra a sua sessão |
 
 Enquanto há um desafio, a barra de status, embaixo da janela, mostra o tempo e a última precisão, mesmo com a barra lateral fechada. Clique nela para abrir a barra lateral.
 
-No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Desafio do Dia**, **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Copiar Resultado**, **Salvar Progresso no Servidor**, **Puxar Progresso do Servidor**, o **Guia de Primeiros Passos**, os **Atalhos e Abreviações Emmet** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
+No topo da barra lateral, o ícone de paleta escolhe as cores de destaque da extensão (veja [Configurações](#configurações)), e o menu **⋯** tem **Abrir Desafio por Código**, **Refazer o Desafio Atual**, **Histórico de Desafios**, **Salvar Progresso no Servidor**, **Continuar Desafio Salvo**, **Restaurar Cópia de Segurança**, o **Guia de Primeiros Passos**, os **Atalhos e Abreviações Emmet** e o **Testar Servidor**, que confere se a sua sessão está valendo. A extensão já testa o servidor sozinha a cada desafio novo e só avisa se der erro.
 
 ## A aba do gabarito
 
-Abra pelo botão **Abrir em uma aba**, pelo atalho **Abrir gabarito em uma aba** que aparece no topo do `index.html` e do `style.css`, ou pela paleta de comandos. A aba acompanha o desafio atual e tem três modos:
+Abra pelo **⧉**, ao lado de **Sua página**, pelo atalho **Abrir gabarito em uma aba** que aparece no topo do `index.html` e do `style.css`, ou pela paleta de comandos. A aba acompanha o desafio atual e tem quatro modos:
 
 - **Gabarito**: a imagem grande e a lista de todos os componentes, um por linha, com largura, altura e cor. Os círculos também aparecem em largura e altura, como você os faz com `border-radius`, e têm a amostra redonda. Clique em um componente, na imagem ou na lista, para destacá-lo por alguns segundos (Esc tira o destaque na hora); clique em um valor para copiá-lo.
 - **Sobrepor à sua página**: o gabarito por cima da sua página. Arraste o controle entre "Sua página" e "Gabarito" para ver onde cada uma difere.
+- **Comparar**: o gabarito e a sua página na mesma imagem, divididos por uma linha, como na extensão oficial do torneio. Arraste a linha, ou use as setas do teclado, para ver o gabarito à esquerda e a sua página à direita.
 - **Lado a lado**: o gabarito e a sua página, um ao lado do outro. A lista começa escondida, para as imagens ficarem maiores.
 
 O botão **Componentes** mostra ou esconde a lista em qualquer modo.
+
+No topo da aba fica o **Verificar** (`Ctrl+Alt+V`), com a última nota, a melhor, quantas verificações você fez e quantos componentes estão certos. Depois de uma verificação, cada componente da lista (e o fundo) ganha uma marca: **✓**, ou o que falta acertar (**falta**, **cor**, **tamanho**, **lugar** ou **forma**); pare o mouse sobre a marca para ver os valores. Ele faz o mesmo que o botão da barra lateral, que é onde a sua página é medida: a barra se abre, se estiver fechada, e a aba mostra as etapas até a nota chegar.
 
 A sua página aparece na aba exatamente como ela é medida para a correção, e acompanha o que você digita.
 
@@ -192,14 +198,14 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 | FlexBox Trainer: Sair | Encerra a sessão |
 | FlexBox Trainer: Iniciar | Abre a barra lateral (e o login, se precisar) |
 | FlexBox Trainer: Gerar Novo Desafio | Sorteia um desafio novo |
-| FlexBox Trainer: Desafio do Dia | Abre o desafio de hoje, o mesmo para todos na mesma data |
 | FlexBox Trainer: Abrir Desafio por Código | Abre o desafio de um código de 4 letras |
 | FlexBox Trainer: Verificar | Verifica a sua página, como o botão da barra lateral |
 | FlexBox Trainer: Copiar Resultado | Copia o código, a melhor nota e o tempo do desafio atual |
 | FlexBox Trainer: Refazer o Desafio Atual | Começa o desafio atual de novo, do zero |
 | FlexBox Trainer: Histórico de Desafios | Lista os desafios já verificados; escolher um o refaz |
 | FlexBox Trainer: Salvar Progresso no Servidor | Guarda no servidor o `index.html` e o `style.css` do desafio atual |
-| FlexBox Trainer: Puxar Progresso do Servidor | Pede o código de um desafio salvo e o abre com os arquivos salvos |
+| FlexBox Trainer: Continuar Desafio Salvo | Pede o código de um desafio salvo e o abre com os arquivos salvos, como o ⤓ Continuar… do Histórico |
+| FlexBox Trainer: Restaurar Cópia de Segurança | Volta uma das cópias que a extensão guarda antes de apagar ou substituir os seus arquivos |
 | FlexBox Trainer: Guia de Primeiros Passos | Abre o guia na tela de boas-vindas do VS Code |
 | FlexBox Trainer: Atalhos e Abreviações Emmet | Abre, numa aba, os atalhos da extensão e do editor e as abreviações Emmet de HTML e CSS |
 | FlexBox Trainer: Abrir Gabarito em uma Aba | Abre a aba do gabarito |
@@ -212,17 +218,17 @@ Abra a paleta com `Ctrl+Shift+P` e digite "FlexBox Trainer".
 
 ## Atalhos
 
-| Atalho | O que faz | Quando funciona |
-|---|---|---|
-| `Ctrl+Alt+D` | Gera um novo desafio | Com a sessão aberta |
-| `Ctrl+Alt+Shift+D` | Abre o desafio do dia | Com a sessão aberta |
-| `Ctrl+Alt+V` | Verifica a sua página; abre a barra lateral, se estiver fechada | Com um desafio |
-| `Ctrl+Alt+Shift+V` | Copia o resultado (a melhor nota e o tempo) | Com um desafio já verificado |
-| `Ctrl+Alt+A` | Abre o gabarito em uma aba | Com um desafio |
-| `Ctrl+Alt+Shift+N` | Refaz o desafio atual, do zero | Com um desafio |
-| `Ctrl+Alt+H` | Mostra o histórico de desafios | Com a sessão aberta |
+| Atalho | O que faz |
+|---|---|
+| `Ctrl+Alt+G` | Gera um novo desafio |
+| `Ctrl+Alt+V` | Verifica a sua página; abre a barra lateral, se estiver fechada |
+| `Ctrl+Alt+A` | Abre o gabarito em uma aba |
+| `Ctrl+Alt+Shift+N` | Refaz o desafio atual, do zero |
+| `Ctrl+Alt+H` | Mostra o histórico de desafios |
 
-Para lembrar: **D** de desafio, **V** de verificar, **A** de aba, **N** de novo e **H** de histórico; com `Shift`, a variação (o desafio do dia, copiar o que foi verificado). Cada botão da barra lateral mostra o seu atalho, pequeno, embaixo do texto.
+Para lembrar: **G** de gerar, **V** de verificar, **A** de aba, **N** de novo e **H** de histórico. Os atalhos funcionam a qualquer momento, até com a barra lateral fechada logo ao abrir o VS Code; sem sessão ou sem desafio, a extensão diz o que falta. **Gerar novo desafio** e **Verificar** mostram o atalho embaixo do texto; nos outros botões, ele aparece ao parar o mouse em cima.
+
+Se um atalho não fizer nada, o sistema pode estar usando a mesma tecla (no Xfce, por exemplo, `Ctrl+Alt+D` mostra a área de trabalho). Para conferir, rode **Developer: Toggle Keyboard Shortcuts Troubleshooting** na paleta e aperte o atalho: se nada aparecer no painel **Saída**, a tecla não chegou ao VS Code. Dá para trocar qualquer atalho em **Arquivo → Preferências → Atalhos de Teclado**, procurando "FlexBox Trainer".
 
 ### Dicas de digitação
 
@@ -264,7 +270,7 @@ O VS Code não encontrou o `npm`. Acontece quando o Node foi instalado pelo nvm 
 Feche a janela de teste e abra de novo. Se continuar, confira em **Extensões** (busque `@builtin GitHub Authentication` ou `Microsoft Authentication`) se a extensão de login embutida está habilitada. No VS Code pelo navegador, o login da Microsoft não está disponível.
 
 **A minha página parece igual ao gabarito, mas a nota está baixa.**
-Confira se todos os elementos usam cor de fundo sólida e se as medidas batem exatamente; use o modo **Sobrepor à sua página** da aba do gabarito para ver as diferenças.
+Confira se todos os elementos usam cor de fundo sólida e se as medidas batem exatamente; use os modos **Comparar** ou **Sobrepor à sua página** da aba do gabarito para ver as diferenças.
 
 **O código da dinâmica de treino foi recusado.**
 O servidor aceita no máximo 4 caracteres (letras minúsculas e números). Se o código sugerido já existir, escolha outro.

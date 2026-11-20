@@ -24,6 +24,9 @@ export function obterHtmlWebview(
     `<small class="atalho">${teclasDaExtensao(teclasDoComando(`flexbox-trainer.${comando}`), plataforma)}</small>`;
   const comAtalho = (texto: string, comando: string) =>
     `<span class="rotulo-botao"><span class="texto-botao">${texto}</span>${atalho(comando)}</span>`;
+  // Nos botões pequenos, o atalho não cabe embaixo: vai na dica do mouse.
+  const dicaComAtalho = (dica: string, comando: string) =>
+    `${dica} · ${teclasDaExtensao(teclasDoComando(`flexbox-trainer.${comando}`), plataforma)}`;
   const dicas = escapeHtml(JSON.stringify(dicasDeDigitacao(plataforma)));
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
@@ -74,7 +77,8 @@ export function obterHtmlWebview(
         <button type="button" class="modo" data-vista="gabarito" aria-pressed="true">Gabarito</button>
         <button type="button" class="modo" id="botaoVistaPagina" data-vista="pagina" aria-pressed="false">Sua página</button>
       </div>
-      <button type="button" id="botaoAtualizarPreview" class="secundario atualizar" title="Atualizar a sua página agora. Ela já atualiza sozinha enquanto você digita." aria-label="Atualizar a sua página">↻</button>
+      <button type="button" id="botaoAbrirAba" class="secundario icone" title="${dicaComAtalho("Abrir em uma aba: o gabarito e as medidas no editor", "abrirGabarito")}" aria-label="Abrir em uma aba" hidden>⧉</button>
+      <button type="button" id="botaoAtualizarPreview" class="secundario icone" title="Atualizar a sua página agora. Ela já atualiza sozinha enquanto você digita." aria-label="Atualizar a sua página">↻</button>
     </div>
     <div class="canvas-desafio" id="quadroDesafio" data-vista="gabarito">
       <canvas id="canvasAlvo" width="960" height="540"></canvas>
@@ -85,8 +89,8 @@ export function obterHtmlWebview(
     <div class="detalhe" id="detalheComponente" hidden></div>
     <dl class="dados dados-grade" id="metaDesafio" hidden>
       <div><dt>Código</dt><dd><button type="button" id="botaoCodigo" class="valor-codigo" title="Copiar o código: com ele, outra pessoa abre este mesmo desafio">--</button></dd></div>
-      <div><dt>Tempo</dt><dd id="valorTempo">--:--</dd></div>
-      <div><dt>Fundo</dt><dd id="valorFundo">--</dd></div>
+      <div><dt>Tempo</dt><dd class="tempo-desafio"><span id="valorTempo">--:--</span><button type="button" id="botaoEncerrarDesafio" class="encerrar pequeno" title="Encerrar desafio: para o cronômetro" aria-label="Encerrar desafio" disabled hidden>⏹</button><button type="button" id="botaoRefazer" class="encerrar pequeno" title="${dicaComAtalho("Refazer: começa este mesmo desafio de novo, do zero", "refazerDesafio")}" aria-label="Refazer o desafio, do zero" hidden>↻</button></dd></div>
+      <div><dt>Fundo</dt><dd><button type="button" id="valorFundo" class="valor-copiavel" title="Copiar a cor do fundo" disabled>--</button></dd></div>
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
     </dl>
     <div class="acoes">
@@ -96,13 +100,7 @@ export function obterHtmlWebview(
         <button type="button" class="modo" data-nivel="dificil" aria-pressed="false" title="Desafios novos com todos os componentes">Difícil</button>
       </div>
       <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>${comAtalho("Gerar novo desafio", "novoDesafio")}</button>
-      <button id="botaoDesafioDia" class="secundario" title="O mesmo desafio para todos hoje">${comAtalho("Desafio do dia", "desafioDoDia")}</button>
-      <button id="botaoPorCodigo" class="secundario" title="Abrir o desafio de um código de 4 letras, como o que o professor passar">Abrir por código</button>
-      <button id="botaoSalvarProgresso" class="secundario" title="Guarda no servidor o index.html e o style.css deste desafio, para continuar em outro computador" hidden>Salvar progresso</button>
-      <button id="botaoPuxarProgresso" class="secundario" title="Traz o desafio e os arquivos que você salvou no servidor, de qualquer computador">Puxar progresso</button>
-      <button id="botaoAbrirAba" class="secundario" title="Gabarito e medidas numa aba do editor" hidden>${comAtalho("Abrir em uma aba", "abrirGabarito")}</button>
-      <button id="botaoEncerrarDesafio" class="encerrar" title="Para o cronômetro" disabled hidden>Encerrar desafio</button>
-      <button id="botaoRefazer" class="encerrar" title="Começa este mesmo desafio de novo, do zero" hidden>${comAtalho("↻ Refazer", "refazerDesafio")}</button>
+      <button type="button" id="botaoPorCodigo" class="largo secundario" title="Abrir o desafio de um código de 4 letras, como o que o professor ou um colega passar">Abrir por código</button>
     </div>
     <div class="dica" id="dicaDigitacao" data-dicas="${dicas}" hidden>
       <div class="cabecalho-dica">
@@ -116,7 +114,6 @@ export function obterHtmlWebview(
   <section class="bloco surge" style="--ordem: 2" aria-label="Resultado">
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">02</span> / Resultado</h2>
-      <button id="botaoCopiarResultado" class="discreto" title="Copia a melhor nota deste desafio, para colar no grupo da turma" hidden>${comAtalho("Copiar resultado", "copiarResultado")}</button>
     </div>
     <div id="avisoArquivos" hidden>
       <p class="falta" id="textoArquivos"></p>
@@ -132,11 +129,20 @@ export function obterHtmlWebview(
     <div class="acoes">
       <button id="botaoVerificar" class="largo principal" disabled><span class="simbolo" id="simboloVerificar" aria-hidden="true">✓</span>${comAtalho("Verificar", "verificar")}</button>
     </div>
+    <p class="salvamento" id="avisoSalvamento" data-estado="aguardando" role="status" hidden>Cada verificação salva o seu progresso no servidor.</p>
     <div class="nota resultado" id="notaResultado" hidden>
       <strong class="valor-nota" id="valorNota"></strong>
       <div class="barra-nota" aria-hidden="true"><span id="barraNota"></span></div>
     </div>
     <div class="linha" id="caixaResultado" role="status">Nenhuma verificação.</div>
+    <div class="correcoes" id="caixaCorrecoes" hidden>
+      <div class="cabecalho-correcoes">
+        <span class="rotulo">O que corrigir</span>
+        <span class="resumo-correcoes" id="resumoCorrecoes"></span>
+      </div>
+      <ul class="lista-correcoes" id="listaCorrecoes"></ul>
+      <button type="button" id="botaoTodasCorrecoes" class="discreto" title="A lista de todos os componentes, com o que corrigir em cada um, na aba do gabarito" hidden></button>
+    </div>
     <dl class="dados historico" id="historicoNotas" hidden>
       <div id="linhaTentativas"><dt>Tentativas</dt><dd id="valorTentativas"></dd></div>
       <div id="linhaMelhor"><dt>Melhor</dt><dd id="valorMelhor"></dd></div>
@@ -144,11 +150,15 @@ export function obterHtmlWebview(
     </dl>
   </section>
 
-  <section class="bloco surge" style="--ordem: 3" aria-label="Histórico" id="secaoHistorico" hidden>
+  <section class="bloco surge" style="--ordem: 3" aria-label="Histórico" id="secaoHistorico">
     <div class="cabecalho">
       <h2 class="rotulo"><span class="numero">03</span> / Histórico</h2>
-      <button id="botaoVerHistorico" class="discreto" title="Todos os desafios que você já verificou" hidden>${comAtalho("Ver todos", "verHistorico")}</button>
+      <div class="acoes-cabecalho">
+        <button type="button" id="botaoPuxarProgresso" class="discreto" title="Continuar um desafio salvo no servidor: escolha na lista ou digite o código" hidden>⤓ Continuar…</button>
+        <button id="botaoVerHistorico" class="discreto" title="${dicaComAtalho("Todos os desafios que você já verificou", "verHistorico")}" hidden><span class="texto-botao">Ver todos</span></button>
+      </div>
     </div>
+    <p class="historico-vazio" id="historicoVazio">Os desafios que você verificar aparecem aqui.</p>
     <figure class="evolucao" id="evolucao" hidden>
       <figcaption><span id="tituloEvolucao">Melhor nota</span><span class="valor" id="resumoEvolucao"></span></figcaption>
       <svg id="graficoEvolucao" role="img"></svg>

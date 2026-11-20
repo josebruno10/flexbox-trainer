@@ -112,10 +112,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("flexbox-trainer.refazerDesafio", () =>
       provedor.refazerDesafio(),
     ),
-    vscode.commands.registerCommand("flexbox-trainer.desafioDoDia", async () => {
-      await abrirBarraLateral();
-      await provedor.abrirDesafioDoDia();
-    }),
     vscode.commands.registerCommand("flexbox-trainer.verificar", () =>
       provedor.pedirVerificacao(),
     ),
@@ -127,6 +123,9 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("flexbox-trainer.salvarProgresso", () =>
       provedor.salvarProgresso(),
+    ),
+    vscode.commands.registerCommand("flexbox-trainer.restaurarCopia", () =>
+      provedor.restaurarCopiaDeSeguranca(),
     ),
     vscode.commands.registerCommand("flexbox-trainer.puxarProgresso", async () => {
       await abrirBarraLateral();
@@ -149,6 +148,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("flexbox-trainer.abrirGabarito", () => {
+      // Sem "when" no atalho, o comando diz o que falta.
+      if (!provedor.temDesafio()) {
+        void vscode.window.showInformationMessage(
+          "Gere um desafio antes de abrir o gabarito.",
+        );
+        return;
+      }
       provedor.abrirPainelGabarito();
     }),
   );
