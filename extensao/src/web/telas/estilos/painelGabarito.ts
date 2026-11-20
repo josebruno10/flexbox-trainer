@@ -104,6 +104,10 @@ export const ESTILOS_PAINEL_GABARITO = `
       align-items: center;
       gap: 8px 14px;
       margin-bottom: 12px;
+      /* A nota quebra na largura da imagem, sem alargar a coluna e
+         empurrar a lista de componentes para fora da aba. */
+      width: 0;
+      min-width: 100%;
     }
 
     .verificacao-aba button {
