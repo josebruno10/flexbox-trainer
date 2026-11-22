@@ -57,10 +57,12 @@ suite("Barra lateral: formato livre", () => {
       largura: 1200,
       altura: 500,
     });
-    // Fora dos limites (de 300 a 1800 de largura e de 300 a 1200 de altura),
+    // Fora dos limites (de 400 a 1800 de largura e de 400 a 1200 de altura),
     // ou sem ser número inteiro, não vale.
     for (const errado of [
       { largura: 100, altura: 500 },
+      { largura: 399, altura: 500 },
+      { largura: 1200, altura: 399 },
       { largura: 1801, altura: 500 },
       { largura: 1200, altura: 1201 },
       { largura: 1200, altura: 1800 },
@@ -71,7 +73,10 @@ suite("Barra lateral: formato livre", () => {
     }
     await espera();
     assert.deepStrictEqual(provedor.tamanhoLivreEscolhido(), { largura: 1200, altura: 500 });
-    // O máximo vale.
+    // O mínimo e o máximo valem.
+    barra.receber({ type: "definirTamanhoLivre", largura: 400, altura: 400 });
+    await espera();
+    assert.deepStrictEqual(provedor.tamanhoLivreEscolhido(), { largura: 400, altura: 400 });
     barra.receber({ type: "definirTamanhoLivre", largura: 1800, altura: 1200 });
     await espera();
     assert.deepStrictEqual(provedor.tamanhoLivreEscolhido(), { largura: 1800, altura: 1200 });

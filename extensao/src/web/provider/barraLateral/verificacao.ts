@@ -11,6 +11,8 @@ import {
   ResumoWorkspace,
 } from "../../types";
 import { Corretor } from "./corretor";
+import { PaginaDoAluno } from "./paginaDoAluno";
+import { Tentativa } from "./tentativa";
 import { motivoExtensoesIa, resultadoInvalidado } from "./regras";
 
 /** O que a verificação lê e muda no provedor da barra lateral. */
@@ -32,6 +34,49 @@ export type TentativaEmCurso = {
   viewId: string;
   postar(mensagem: { type: string; payload: unknown }): void;
 };
+
+/**
+ * A tentativa em curso, como a verificação a vê, a partir das partes do
+ * provedor. As etapas e a conclusão vão para a barra lateral e também para
+ * a aba do gabarito.
+ */
+export function tentativaDaBarra(partes: {
+  tentativa: Tentativa;
+  pagina: PaginaDoAluno;
+  postarNaBarra(mensagem: { type: string; payload: unknown }): void;
+  viewId: string;
+} & Pick<
+  TentativaEmCurso,
+  | "autenticado"
+  | "extensoesIa"
+  | "resumo"
+  | "registrarNota"
+  | "enviarEstado"
+  | "criarArquivosQueFaltam"
+  | "recusarSessaoSePreciso"
+>): TentativaEmCurso {
+  const { tentativa, pagina, postarNaBarra, ...resto } = partes;
+  return {
+    ...resto,
+    desafio: () => tentativa.desafio,
+    gabarito: () => tentativa.gabarito,
+    motivoInvalidacao: () => tentativa.motivoInvalidacao,
+    invalidar: (motivo) => tentativa.invalidar(motivo),
+    definirResumo: (resumo) => pagina.definir(resumo),
+    guardarResultado: (resultado) => {
+      tentativa.avaliacao = resultado;
+    },
+    postar: (mensagem) => {
+      postarNaBarra(mensagem);
+      const payload = mensagem.payload as { mensagem?: string } | undefined;
+      if (mensagem.type === "progressoVerificacao") {
+        pagina.avisarVerificacao({ andamento: true, etapa: payload?.mensagem });
+      } else if (mensagem.type === "verificacaoConcluida") {
+        pagina.avisarVerificacao({ andamento: false });
+      }
+    },
+  };
+}
 
 // A barra lateral mostra as etapas e espera o aviso de conclusão, que vai
 // sempre, mesmo quando a verificação para no meio.

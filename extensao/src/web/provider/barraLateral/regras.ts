@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { abrirExtensoesIa, ExtensaoIa } from "../../services/extensoesIa";
-import { ResultadoAvaliacao, ResumoWorkspace } from "../../types";
+import { AlteracaoExterna } from "../../services/alteracoesExternas";
+import { Desafio, ResultadoAvaliacao, ResumoWorkspace } from "../../types";
 
 // As regras do desafio, como no torneio: sem IA e sem alterar os arquivos
 // fora do editor.
@@ -37,6 +38,28 @@ export function resultadoInvalidado(motivo: string): ResultadoAvaliacao {
     source: "desafio-invalidado",
     error: `Desafio invalidado: ${motivo} Gere outro e faça-o no editor, sem IA.`,
   };
+}
+
+/**
+ * Um index.html ou style.css mudou no disco sem ter saído do editor: se for
+ * um arquivo de treino, durante o desafio, o motivo para invalidá-lo. Um
+ * desafio já invalidado, ou uma mudança de antes do começo, não conta.
+ */
+export function motivoDaAlteracaoExterna(
+  alteracao: AlteracaoExterna,
+  tentativa: { desafio?: Desafio; motivoInvalidacao?: string; inicioMs: number },
+  resumo: ResumoWorkspace,
+): string | undefined {
+  if (
+    !tentativa.desafio ||
+    tentativa.motivoInvalidacao ||
+    alteracao.instante < tentativa.inicioMs ||
+    !ehArquivoDeTreino(resumo, alteracao.uri.fsPath)
+  ) {
+    return undefined;
+  }
+  const nome = alteracao.uri.path.split("/").pop() ?? "arquivo";
+  return `o ${nome} foi alterado fora do editor.`;
 }
 
 /** Se o arquivo alterado é o index.html ou o style.css do treino. */

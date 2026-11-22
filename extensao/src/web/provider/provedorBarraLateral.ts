@@ -13,18 +13,15 @@ import {
   StatusConexaoServidor,
   Tamanho,
 } from "../types";
-import { criarDesafioPorCodigo } from "../services/desafio";
 import {
   escreverArquivosDeTreino,
   lerResumoWorkspace,
   limparArquivosDeTreino,
-  temTrabalhoDoAluno,
 } from "../services/workspace";
 import { ConteudoDoAluno } from "../services/servidor/conteudo";
 import { CopiasDeSeguranca } from "../services/copiasDeSeguranca";
 import { ProgressosSalvos } from "../services/progressosSalvos";
 import { AlteracaoExterna } from "../services/alteracoesExternas";
-import { log } from "../services/logger";
 import {
   abrirExtensoesIa,
   encontrarExtensoesIa,
@@ -33,16 +30,11 @@ import {
 import { obterHtmlWebview } from "../telas/barraLateral";
 import { obterHtmlAutenticacao } from "../telas/entrada";
 import { BarraDeStatus, COMANDO_ABRIR_BARRA } from "./barraDeStatus";
-import {
-  confirmarLimpeza,
-  criarArquivosComAviso,
-} from "./barraLateral/arquivosDeTreino";
+import { criarArquivosComAviso } from "./barraLateral/arquivosDeTreino";
 import * as porCodigo from "./barraLateral/codigos";
-import { escolherCopia } from "./barraLateral/copias";
 import * as conexao from "./barraLateral/conexao";
 import { Corretor } from "./barraLateral/corretor";
 import {
-  EstadoDoSalvamento,
   estadoDaBarraDeStatus,
   mensagensDaBarra,
   progressoDoGuia,
@@ -52,22 +44,23 @@ import {
 import { HistoricoDoAluno } from "./barraLateral/historicoDoAluno";
 import { PaginaDoAluno } from "./barraLateral/paginaDoAluno";
 import { PreferenciasDoDesafio } from "./barraLateral/preferencias";
-import { ContextoDaEscolha, escolherDesafio } from "./barraLateral/tamanhoLivre";
+import { ContextoDaEscolha } from "./barraLateral/tamanhoLivre";
+import { comecarDesafio, ContextoDoInicio, restaurarCopia } from "./barraLateral/inicioDoDesafio";
+import { SalvamentoNoServidor } from "./barraLateral/salvamentoAutomatico";
 import { TamanhosLivres } from "../services/tamanhosLivres";
 import {
   ContextoDoProgresso,
   estaNoTorneio,
   puxarProgresso,
-  salvarProgresso,
-  salvarProgressoAutomatico,
+  ResultadoDoSalvamento,
 } from "./barraLateral/progresso";
 import { ControladorDaBarra, rotearMensagem } from "./barraLateral/mensagens";
 import {
   avisarExtensoesIa,
-  ehArquivoDeTreino,
+  motivoDaAlteracaoExterna,
   motivoExtensoesIa,
 } from "./barraLateral/regras";
-import { TentativaEmCurso, verificarTentativa } from "./barraLateral/verificacao";
+import { tentativaDaBarra, verificarTentativa } from "./barraLateral/verificacao";
 import { Tentativa } from "./barraLateral/tentativa";
 import { criarControlador } from "./barraLateral/controlador";
 import { VistaDaBarra } from "./barraLateral/vista";
@@ -105,12 +98,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   private readonly preferencias: PreferenciasDoDesafio;
   private readonly tamanhosLivres: TamanhosLivres;
 
-  // Os desafios em que salvar sozinho deu recusa ou erro nesta sessão: não
-  // tenta de novo a cada Verificar. O Salvar progresso do menu ainda tenta.
-  private readonly semSalvarSozinho = new Set<string>();
-
-  // O último salvamento no servidor, mostrado embaixo do Verificar.
-  private salvamento?: { codigo: string; estado: "salvando" | "salvo" | "falhou"; instante?: number };
+  // O progresso no servidor (veja barraLateral/salvamentoAutomatico.ts).
+  private readonly salvamento: SalvamentoNoServidor;
 
   // O resumo dos arquivos fica na página do aluno; os testes o trocam aqui.
   private get resumoWorkspaceAtual(): ResumoWorkspace {
@@ -151,6 +140,12 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.copias = new CopiasDeSeguranca(registroGabaritos);
     this.preferencias = new PreferenciasDoDesafio(registroGabaritos);
     this.tamanhosLivres = new TamanhosLivres(registroGabaritos);
+    this.salvamento = new SalvamentoNoServidor(
+      () => this.contextoDoProgresso(),
+      () => this.tentativa.desafio?.codigo,
+      () => this.lerConfiguracaoServidorAtual(),
+      () => this.enviarEstado(),
+    );
     this.estadoAutenticacao = authService.getEstadoAtual();
 
     this.authService.onDidChangeEstado((estado) => {
@@ -210,42 +205,13 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     this.gerandoDesafio = true;
 
     try {
-      // Como no torneio, cada desafio começa do zero: o que o aluno escreveu
-      // no anterior não é reaproveitado nem fica fora do tempo.
-      // Quem puxa o progresso já confirmou a troca dos arquivos.
-      // No formato livre, o tamanho vem antes de tudo: sem ele, nada muda.
-      const escolhido = await escolherDesafio(this.contextoDaEscolha(), codigo);
-      if (!escolhido) {
-        return;
+      // O começo fica em barraLateral/inicioDoDesafio.ts.
+      if (await comecarDesafio(this.contextoDoInicio(), codigo, retomado)) {
+        this.enviarEstado();
+        void this.testarConexaoServidor();
+        // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
+        void this.criarArquivosSeFaltarem();
       }
-      const arquivos = await this.lerArquivosDoAluno();
-      const temTrabalho = temTrabalhoDoAluno(arquivos);
-      if (!retomado && temTrabalho && !(await confirmarLimpeza())) {
-        return;
-      }
-      // O que vai ser apagado ou substituído fica numa cópia de segurança.
-      if (temTrabalho) {
-        await this.guardarCopia(arquivos);
-      }
-
-      const desafio = criarDesafioPorCodigo(escolhido.codigo, escolhido.tamanho);
-      log.info(`Novo desafio: código ${desafio.codigo} (${desafio.challengeId}).`);
-      this.tentativa.comecar(desafio);
-      this.pagina.mostrarDesafio(desafio);
-      this.vista.esquecerVerificacao();
-
-      if (retomado) {
-        await this.gravarComAviso(() => this.escreverArquivosDoAluno(retomado));
-      } else if (temTrabalho) {
-        await this.gravarComAviso(() => this.limparArquivosDoAluno());
-      }
-
-      // O tempo começa com os arquivos já limpos.
-      this.tentativa.iniciarRelogio();
-      this.enviarEstado();
-      void this.testarConexaoServidor();
-      // Sem esperar: numa pasta nova, cria index.html e style.css para o aluno.
-      void this.criarArquivosSeFaltarem();
     } finally {
       this.gerandoDesafio = false;
     }
@@ -253,7 +219,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   /**
    * Volta uma cópia de segurança para index.html e style.css, com o desafio
-   * dela. Os arquivos de agora também ficam guardados antes da troca.
+   * dela (veja barraLateral/inicioDoDesafio.ts).
    */
   public async restaurarCopiaDeSeguranca(): Promise<void> {
     if (!this.authService.isAutenticado()) {
@@ -262,32 +228,33 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       );
       return;
     }
-    const copia = await escolherCopia(
+    await restaurarCopia(
+      this.contextoDoInicio(),
       this.copias.listar(this.authService.getSessaoAtual()?.email),
+      (codigo, conteudo) => this.iniciarNovoDesafio(codigo, conteudo),
     );
-    if (!copia) {
-      return;
-    }
-    const conteudo = { html: copia.html, css: copia.css };
-    if (copia.codigo) {
-      await this.iniciarNovoDesafio(copia.codigo, conteudo);
-      return;
-    }
-    // Sem desafio na cópia, só os arquivos voltam.
-    const arquivos = await this.lerArquivosDoAluno();
-    if (temTrabalhoDoAluno(arquivos)) {
-      await this.guardarCopia(arquivos);
-    }
-    await this.gravarComAviso(() => this.escreverArquivosDoAluno(conteudo));
   }
 
-  private guardarCopia(arquivos: ResumoWorkspace): Promise<void> {
-    return this.copias.guardar(this.authService.getSessaoAtual()?.email, {
-      codigo: this.tentativa.desafio?.codigo,
-      html: arquivos.textoHtml,
-      css: arquivos.textoCss,
-      quando: Date.now(),
-    });
+  private contextoDoInicio(): ContextoDoInicio {
+    return {
+      escolha: this.contextoDaEscolha(),
+      lerArquivos: () => this.lerArquivosDoAluno(),
+      limparArquivos: () => this.limparArquivosDoAluno(),
+      escreverArquivos: (conteudo) => this.escreverArquivosDoAluno(conteudo),
+      guardarCopia: (arquivos) =>
+        this.copias.guardar(this.authService.getSessaoAtual()?.email, {
+          codigo: this.tentativa.desafio?.codigo,
+          html: arquivos.textoHtml,
+          css: arquivos.textoCss,
+          quando: Date.now(),
+        }),
+      mostrar: (desafio) => {
+        this.tentativa.comecar(desafio);
+        this.pagina.mostrarDesafio(desafio);
+        this.vista.esquecerVerificacao();
+      },
+      iniciarRelogio: () => this.tentativa.iniciarRelogio(),
+    };
   }
 
   // Separados para os testes trocarem a leitura e a escrita dos arquivos.
@@ -301,18 +268,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private escreverArquivosDoAluno(conteudo: ConteudoDoAluno): Promise<void> {
     return escreverArquivosDeTreino(conteudo.html, conteudo.css);
-  }
-
-  private async gravarComAviso(gravar: () => Promise<void>): Promise<void> {
-    try {
-      await gravar();
-    } catch (error) {
-      const mensagem = error instanceof Error ? error.message : "Erro desconhecido.";
-      log.error("Não foi possível gravar os arquivos de treino", error);
-      void vscode.window.showErrorMessage(
-        `Não foi possível gravar index.html e style.css: ${mensagem}`,
-      );
-    }
   }
 
   /** Cria os arquivos de treino que faltarem e avisa o que aconteceu. */
@@ -355,22 +310,15 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   ): Promise<void> {
     // A página mudou: o preview e a aba do gabarito mostram o conteúdo novo.
     await this.atualizarPreviewWorkspace();
-
-    if (
-      !this.tentativa.desafio ||
-      this.tentativa.motivoInvalidacao ||
-      alteracao.instante < this.tentativa.inicioMs
-    ) {
-      return;
+    const motivo = motivoDaAlteracaoExterna(
+      alteracao,
+      this.tentativa,
+      this.resumoWorkspaceAtual,
+    );
+    if (motivo) {
+      this.tentativa.invalidar(motivo);
+      this.enviarEstado();
     }
-
-    if (!ehArquivoDeTreino(this.resumoWorkspaceAtual, alteracao.uri.fsPath)) {
-      return;
-    }
-
-    const nome = alteracao.uri.path.split("/").pop() ?? "arquivo";
-    this.tentativa.invalidar(`o ${nome} foi alterado fora do editor.`);
-    this.enviarEstado();
   }
 
   /**
@@ -479,16 +427,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   /** Guarda no servidor o index.html e o style.css do desafio atual. */
-  public async salvarProgresso(): Promise<boolean> {
-    const codigo = this.tentativa.desafio?.codigo;
-    const salvou = await salvarProgresso(this.contextoDoProgresso());
-    if (salvou && codigo) {
-      // Pelo menu, o aluno tentou de novo e deu certo: volta a salvar sozinho.
-      this.semSalvarSozinho.delete(codigo);
-      this.salvamento = { codigo, estado: "salvo", instante: Date.now() };
-      this.enviarEstado();
-    }
-    return salvou;
+  public salvarProgresso(): Promise<boolean> {
+    return this.salvamento.salvarPeloMenu();
   }
 
   /**
@@ -503,30 +443,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
    * Depois de cada nota, quem está no torneio já fica com o progresso salvo
    * no servidor, sem clicar em nada. Devolve o que aconteceu (para os testes).
    */
-  public async salvarSozinho(): Promise<"salvo" | "ignorado" | "recusado" | "falhou"> {
-    const codigo = this.tentativa.desafio?.codigo;
-    if (
-      !codigo ||
-      this.semSalvarSozinho.has(codigo) ||
-      !estaNoTorneio(this.lerConfiguracaoServidorAtual())
-    ) {
-      return "ignorado";
-    }
-    const anterior = this.salvamento;
-    this.salvamento = { codigo, estado: "salvando" };
-    this.enviarEstado();
-    const resultado = await salvarProgressoAutomatico(this.contextoDoProgresso());
-    if (resultado === "recusado" || resultado === "falhou") {
-      this.semSalvarSozinho.add(codigo);
-      this.salvamento = { codigo, estado: "falhou" };
-    } else if (resultado === "salvo") {
-      this.salvamento = { codigo, estado: "salvo", instante: Date.now() };
-    } else {
-      this.salvamento = anterior;
-    }
-    // O aviso embaixo do Verificar e, salvo, o ⤓ Continuar no histórico.
-    this.enviarEstado();
-    return resultado;
+  public salvarSozinho(): Promise<ResultadoDoSalvamento> {
+    return this.salvamento.salvarSozinho();
   }
 
   private contextoDoProgresso(): ContextoDoProgresso {
@@ -549,21 +467,6 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     const lista = this.detectarExtensoesIa();
     await abrirExtensoesIa(lista);
     return lista;
-  }
-
-  /** O que o aviso embaixo do Verificar diz sobre o desafio atual. */
-  private estadoDoSalvamento(): EstadoDoSalvamento {
-    const codigo = this.tentativa.desafio?.codigo;
-    const torneio = estaNoTorneio(this.lerConfiguracaoServidorAtual());
-    if (codigo && this.semSalvarSozinho.has(codigo)) {
-      return { torneio, estado: "falhou" };
-    }
-    const atual = this.salvamento?.codigo === codigo ? this.salvamento : undefined;
-    return {
-      torneio,
-      estado: atual?.estado ?? "aguardando",
-      ...(atual?.instante ? { instante: atual.instante } : {}),
-    };
   }
 
   /** Com a sessão aberta e um desafio em andamento. */
@@ -618,36 +521,21 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
   }
 
   // O que a verificação (barraLateral/verificacao.ts) lê e muda aqui.
-  private tentativaEmCurso(): TentativaEmCurso {
-    return {
+  private tentativaEmCurso() {
+    return tentativaDaBarra({
+      tentativa: this.tentativa,
+      pagina: this.pagina,
+      postarNaBarra: (mensagem) => this.vista.postar(mensagem),
+      viewId: ProvedorBarraLateralFlexBox.viewType,
       autenticado: () => this.authService.isAutenticado(),
-      desafio: () => this.tentativa.desafio,
-      gabarito: () => this.tentativa.gabarito,
       extensoesIa: () => this.detectarExtensoesIa(),
-      motivoInvalidacao: () => this.tentativa.motivoInvalidacao,
-      invalidar: (motivo) => this.tentativa.invalidar(motivo),
       resumo: () => this.resumoWorkspaceAtual,
-      definirResumo: (resumo) => this.pagina.definir(resumo),
-      guardarResultado: (resultado) => {
-        this.tentativa.avaliacao = resultado;
-      },
       registrarNota: (precisao) => this.registrarNota(precisao),
       enviarEstado: () => this.enviarEstado(),
       criarArquivosQueFaltam: () => void this.criarArquivosDeTreino(false),
       recusarSessaoSePreciso: (httpStatus) =>
         this.invalidarSessaoSeRecusada(httpStatus),
-      viewId: ProvedorBarraLateralFlexBox.viewType,
-      postar: (mensagem) => {
-        this.vista.postar(mensagem);
-        // A aba do gabarito também mostra as etapas e a conclusão.
-        const payload = mensagem.payload as { mensagem?: string } | undefined;
-        if (mensagem.type === "progressoVerificacao") {
-          this.pagina.avisarVerificacao({ andamento: true, etapa: payload?.mensagem });
-        } else if (mensagem.type === "verificacaoConcluida") {
-          this.pagina.avisarVerificacao({ andamento: false });
-        }
-      },
-    };
+    });
   }
 
   // Uma nota nova: entra nas tentativas, na melhor da vez e no histórico.
@@ -738,7 +626,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       fimMs: this.tentativa.fimMs,
       resumoWorkspace: this.resumoWorkspaceAtual,
       historicoNotas: this.tentativa.notas,
-      salvamento: this.estadoDoSalvamento(),
+      salvamento: this.salvamento.estado(),
       historico: this.historico.naBarra(this.tentativa.desafio, nivel, {
         salvos: this.progressos.listar(this.authService.getSessaoAtual()?.email),
         torneio: estaNoTorneio(this.lerConfiguracaoServidorAtual()),

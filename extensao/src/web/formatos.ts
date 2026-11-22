@@ -29,10 +29,10 @@ export const TAMANHO_DO_FORMATO: Record<FormatoFixo, Tamanho> = {
   retrato: { largura: 450, altura: 800 },
 };
 
-// O tamanho livre. Abaixo de 300 px, as faixas mais estreitas dos layouts
-// (um quinto da largura) ficam pequenas demais para um elemento. O máximo é
-// o que o Prof. Thiago indicou ao Vitor em 2026-11-22: 1800x1200.
-export const TAMANHO_LIVRE_MINIMO = 300;
+// O tamanho livre: de 400x400 a 1800x1200, os limites que o Prof. Thiago
+// indicou em 2026-11-22. O gerador do Vitor aceita qualquer tamanho e deixou
+// os limites para a extensão.
+export const TAMANHO_LIVRE_MINIMO = 400;
 export const TAMANHO_LIVRE_MAXIMO: Tamanho = { largura: 1800, altura: 1200 };
 export const TAMANHO_LIVRE_PADRAO: Tamanho = { largura: 1000, altura: 600 };
 
@@ -52,7 +52,7 @@ export function ehFormato(valor: unknown): valor is Formato {
 }
 
 /**
- * Um tamanho livre aceito: px inteiros, de 300 a 1800 de largura e de 300 a
+ * Um tamanho livre aceito: px inteiros, de 400 a 1800 de largura e de 400 a
  * 1200 de altura.
  */
 export function ehTamanhoLivre(valor: unknown): valor is Tamanho {
