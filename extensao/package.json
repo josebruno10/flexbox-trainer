@@ -4,7 +4,7 @@
   "displayName": "FlexBox Trainer",
   "description": "Extensão para treinamento de recriação de layouts em HTML e CSS, no formato do Frontend Teams Cup.",
   "icon": "resources/icone.png",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -378,7 +378,7 @@
           {
             "id": "gerar",
             "title": "Gere um desafio",
-            "description": "Escolha o nível (fácil, médio ou difícil) logo acima do botão. Como no torneio, desabilite antes as extensões de IA, como o Copilot: com elas, o desafio não começa.\n[Gerar novo desafio](command:flexbox-trainer.novoDesafio)\n[Ver extensões de IA](command:flexbox-trainer.verExtensoesIa)",
+            "description": "Escolha o nível (fácil, médio ou difícil) e o formato da imagem (quadrado, paisagem, retrato ou livre, com a largura e a altura que você quiser) logo acima do botão. Como no torneio, desabilite antes as extensões de IA, como o Copilot: com elas, o desafio não começa.\n[Gerar novo desafio](command:flexbox-trainer.novoDesafio)\n[Ver extensões de IA](command:flexbox-trainer.verExtensoesIa)",
             "media": {
               "image": {
                 "dark": "media/guia/gerar-escuro.png",

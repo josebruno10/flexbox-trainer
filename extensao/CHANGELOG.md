@@ -2,11 +2,11 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
-## [Não publicado]
+## [0.9.0] - 2026-11-22
 
 ### Desafios
 - Gerador atualizado com a versão nova do Vitor: são 8 layouts primários, e não mais 3 (entram cabeçalho com duas colunas, faixa sobre três colunas, quatro quadrantes, coluna larga com duas partes ao lado e barra com menu lateral). Os códigos passam a gerar outras imagens, e o histórico recomeça; o gráfico da evolução continua.
-- Formato da imagem, escolhido embaixo do nível: **Quadrado** (800 × 800 px, o de sempre), **Paisagem** (1280 × 720 px, como uma tela de computador), **Retrato** (450 × 800 px, como um celular em pé) ou **Livre**, com a largura (de 300 a 1800 px) e a altura (de 300 a 1200 px) que o aluno escolher antes de gerar; o máximo é o que o professor indicou. Como o nível, o formato vem do código: quem abre o código de um colega treina no mesmo tamanho. No livre, o código também tem 4 letras e é único (a extensão só usa um que ainda não existe no servidor); o tamanho vai para o servidor no primeiro Verificar, com a imagem do desafio, e é de lá que outro computador o lê. As escolhas ficam guardadas e acompanham a Sincronização de Configurações.
+- Formato da imagem, escolhido embaixo do nível: **Quadrado** (800 × 800 px, o de sempre), **Paisagem** (1280 × 720 px, como uma tela de computador), **Retrato** (450 × 800 px, como um celular em pé) ou **Livre**, com a largura (de 400 a 1800 px) e a altura (de 400 a 1200 px) que o aluno escolher antes de gerar; os limites são os que o professor indicou. Como o nível, o formato vem do código: quem abre o código de um colega treina no mesmo tamanho. No livre, o código também tem 4 letras e é único (a extensão só usa um que ainda não existe no servidor); o tamanho vai para o servidor no primeiro Verificar, com a imagem do desafio, e é de lá que outro computador o lê. As escolhas ficam guardadas e acompanham a Sincronização de Configurações.
 - O tamanho do desafio aparece nos dados, embaixo do gabarito.
 - Como no gerador do Vitor, o tamanho mínimo das partes, a margem dos elementos e as medidas dos círculos acompanham a imagem: assim, paisagem e retrato saem com mais ou menos a mesma quantidade de componentes que o quadrado. No 800 × 800, essas medidas não mudam.
 - As cores dos componentes fogem mais do cinza, como na versão nova do Vitor: a regra que separa os canais de cor passou a valer para mais e para menos.
@@ -17,6 +17,9 @@ As mudanças de cada versão do FlexBox Trainer.
 - A aba Atalhos começa pelas abreviações de HTML e de CSS; os atalhos do editor e os da extensão vêm depois.
 - Mais atalhos do próprio VS Code na aba Atalhos e nas dicas, agora em grupos: vários cursores, andar e selecionar (palavra a palavra com `Ctrl+Shift+→`, aumentar a seleção com `Shift+Alt+→`), linhas (copiar para cima ou para baixo, recortar a linha, abrir linha em cima, recuo), desfazer e refazer (`Ctrl+Z`) e arquivos (`Ctrl+Tab` entre o HTML e o CSS, `Ctrl+\` para dividir o editor).
 - Mais abreviações Emmet: no HTML, `.pai>.filho`, `.item*3`, `.caixa*2>.item*2` e `.item$$*3`; no CSS, `fxdr`, `jcspar` (`space-around`), `jcsev` (`space-evenly`), `aife`, `asc`, `acc`, `fxg1`, `fxs0`, `fxb200`, `gap10-20`, `maw100`, `mla`, `bg#fff`, `r0`, `b0` e `z1`.
+
+### Para quem desenvolve
+- O provedor da barra lateral (`provider/provedorBarraLateral.ts`) foi dividido: o começo do desafio e a restauração de cópias foram para `provider/barraLateral/inicioDoDesafio.ts`, o salvamento no servidor para `salvamentoAutomatico.ts`, a regra da alteração fora do editor para `regras.ts` e a montagem da verificação para `verificacao.ts`. O gerador ganhou `services/gerador/layouts.ts` (os layouts primários) e `medidas.ts` (os tamanhos que acompanham a imagem).
 
 ## [0.8.0] - 2026-11-20
 
