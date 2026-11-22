@@ -1,11 +1,14 @@
+import { ehFormato, ehTamanhoLivre } from "../../formatos";
 import { ehNivel } from "../../niveis";
 import { normalizarCodigo } from "../../services/codigoDesafio";
 import {
   Desafio,
   FormaMedida,
+  Formato,
   GabaritoGerado,
   MensagemRecebidaBarraLateral,
   Nivel,
+  Tamanho,
 } from "../../types";
 import { sanitizarFormas } from "./formas";
 
@@ -25,6 +28,8 @@ export type ControladorDaBarra = {
   receberGabarito(gabarito: GabaritoGerado): void;
   novoDesafio(): void;
   definirNivel(nivel: Nivel): void;
+  definirFormato(formato: Formato): void;
+  definirTamanhoLivre(tamanho: Tamanho): void;
   abrirPorCodigo(): void;
   refazer(codigo?: string): void;
   verHistorico(): void;
@@ -89,6 +94,18 @@ export function rotearMensagem(
         barra.definirNivel(mensagem.nivel);
       }
       return;
+    case "definirFormato":
+      if (ehFormato(mensagem.formato)) {
+        barra.definirFormato(mensagem.formato);
+      }
+      return;
+    case "definirTamanhoLivre": {
+      const tamanho = { largura: mensagem.largura, altura: mensagem.altura };
+      if (ehTamanhoLivre(tamanho)) {
+        barra.definirTamanhoLivre(tamanho);
+      }
+      return;
+    }
     case "abrirPorCodigo":
       barra.abrirPorCodigo();
       return;

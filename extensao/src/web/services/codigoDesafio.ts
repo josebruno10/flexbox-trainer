@@ -6,21 +6,28 @@
 // códigos já compartilhados passam a gerar outros desafios; os testes do
 // gerador avisam quando isso acontece.
 
-import type { Nivel } from "../types";
+import type { Formato, Nivel } from "../types";
+import { FORMATOS } from "../formatos";
 import { LETRAS_DO_CODIGO, NIVEIS, TAMANHO_DO_CODIGO } from "../niveis";
 
 const TOTAL_CODIGOS = LETRAS_DO_CODIGO.length ** TAMANHO_DO_CODIGO;
+// Cada combinação de nível e formato é um resto da divisão por 9.
+const COMBINACOES = NIVEIS.length * FORMATOS.length;
 
-/** Um código ao acaso, entre os do nível pedido (veja nivelDoCodigo). */
+/**
+ * Um código ao acaso, entre os do nível e do formato pedidos (veja
+ * nivelDoCodigo e formatoDoCodigo).
+ */
 export function sortearCodigo(
   nivel: Nivel = "medio",
+  formato: Formato = "quadrado",
   aleatorio: () => number = Math.random,
 ): string {
-  const resto = NIVEIS.indexOf(nivel);
-  // Quantos códigos de AAAA a ZZZZ deixam esse resto na divisão por 3.
-  const quantidade = Math.floor((TOTAL_CODIGOS - 1 - resto) / 3) + 1;
+  const resto = NIVEIS.indexOf(nivel) + FORMATOS.indexOf(formato) * NIVEIS.length;
+  // Quantos códigos de AAAA a ZZZZ deixam esse resto na divisão por 9.
+  const quantidade = Math.floor((TOTAL_CODIGOS - 1 - resto) / COMBINACOES) + 1;
   const indice = Math.min(quantidade - 1, Math.floor(aleatorio() * quantidade));
-  return codigoDoValor(indice * 3 + resto);
+  return codigoDoValor(indice * COMBINACOES + resto);
 }
 
 /** Aceita "MESA", "mesa" ou "me-sa"; qualquer outra coisa é inválida. */

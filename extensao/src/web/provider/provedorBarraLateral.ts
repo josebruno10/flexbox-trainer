@@ -6,13 +6,13 @@ import {
   Desafio,
   EstadoAutenticacao,
   FormaMedida,
+  Formato,
   MensagemRecebidaBarraLateral,
   Nivel,
   ResumoWorkspace,
   StatusConexaoServidor,
+  Tamanho,
 } from "../types";
-import { sortearCodigo } from "../services/codigoDesafio";
-import { ehNivel } from "../niveis";
 import { criarDesafioPorCodigo } from "../services/desafio";
 import {
   escreverArquivosDeTreino,
@@ -50,8 +50,10 @@ import {
   resultadoDaAba,
 } from "./barraLateral/estado";
 import { HistoricoDoAluno } from "./barraLateral/historicoDoAluno";
-import { CHAVE_NIVEL } from "../sincronizacao";
 import { PaginaDoAluno } from "./barraLateral/paginaDoAluno";
+import { PreferenciasDoDesafio } from "./barraLateral/preferencias";
+import { ContextoDaEscolha, escolherDesafio } from "./barraLateral/tamanhoLivre";
+import { TamanhosLivres } from "../services/tamanhosLivres";
 import {
   ContextoDoProgresso,
   estaNoTorneio,
@@ -100,6 +102,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   private readonly progressos: ProgressosSalvos;
   private readonly copias: CopiasDeSeguranca;
+  private readonly preferencias: PreferenciasDoDesafio;
+  private readonly tamanhosLivres: TamanhosLivres;
 
   // Os desafios em que salvar sozinho deu recusa ou erro nesta sessão: não
   // tenta de novo a cada Verificar. O Salvar progresso do menu ainda tenta.
@@ -127,7 +131,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     private readonly authService: AuthService,
     // Guarda qual gabarito do evento de treino esta instalação criou, o
     // histórico e as escolhas do aluno.
-    private readonly registroGabaritos: vscode.Memento,
+    registroGabaritos: vscode.Memento,
     private readonly detectarExtensoesIa: () => ExtensaoIa[] = () =>
       encontrarExtensoesIa(),
     // Opcional para os testes não criarem itens na barra de status.
@@ -145,6 +149,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     );
     this.progressos = new ProgressosSalvos(registroGabaritos);
     this.copias = new CopiasDeSeguranca(registroGabaritos);
+    this.preferencias = new PreferenciasDoDesafio(registroGabaritos);
+    this.tamanhosLivres = new TamanhosLivres(registroGabaritos);
     this.estadoAutenticacao = authService.getEstadoAtual();
 
     this.authService.onDidChangeEstado((estado) => {
@@ -207,6 +213,11 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
       // Como no torneio, cada desafio começa do zero: o que o aluno escreveu
       // no anterior não é reaproveitado nem fica fora do tempo.
       // Quem puxa o progresso já confirmou a troca dos arquivos.
+      // No formato livre, o tamanho vem antes de tudo: sem ele, nada muda.
+      const escolhido = await escolherDesafio(this.contextoDaEscolha(), codigo);
+      if (!escolhido) {
+        return;
+      }
       const arquivos = await this.lerArquivosDoAluno();
       const temTrabalho = temTrabalhoDoAluno(arquivos);
       if (!retomado && temTrabalho && !(await confirmarLimpeza())) {
@@ -217,9 +228,7 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
         await this.guardarCopia(arquivos);
       }
 
-      const desafio = criarDesafioPorCodigo(
-        codigo ?? sortearCodigo(this.nivelEscolhido()),
-      );
+      const desafio = criarDesafioPorCodigo(escolhido.codigo, escolhido.tamanho);
       log.info(`Novo desafio: código ${desafio.codigo} (${desafio.challengeId}).`);
       this.tentativa.comecar(desafio);
       this.pagina.mostrarDesafio(desafio);
@@ -375,13 +384,44 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
 
   /** O nível dos desafios novos; o médio, se o aluno ainda não escolheu. */
   public nivelEscolhido(): Nivel {
-    const nivel = this.registroGabaritos.get<unknown>(CHAVE_NIVEL);
-    return ehNivel(nivel) ? nivel : "medio";
+    return this.preferencias.nivel();
+  }
+
+  /** O formato dos desafios novos; o quadrado, se o aluno ainda não escolheu. */
+  public formatoEscolhido(): Formato {
+    return this.preferencias.formato();
   }
 
   public async definirNivel(nivel: Nivel): Promise<void> {
-    await this.registroGabaritos.update(CHAVE_NIVEL, nivel);
+    await this.preferencias.definirNivel(nivel);
     this.enviarEstado();
+  }
+
+  public async definirFormato(formato: Formato): Promise<void> {
+    await this.preferencias.definirFormato(formato);
+    this.enviarEstado();
+  }
+
+  /** A largura e a altura dos desafios livres novos. */
+  public tamanhoLivreEscolhido(): Tamanho {
+    return this.preferencias.tamanhoLivre();
+  }
+
+  public async definirTamanhoLivre(tamanho: Tamanho): Promise<void> {
+    await this.preferencias.definirTamanhoLivre(tamanho);
+    this.enviarEstado();
+  }
+
+  private contextoDaEscolha(): ContextoDaEscolha {
+    return {
+      nivel: () => this.nivelEscolhido(),
+      formato: () => this.formatoEscolhido(),
+      tamanhoLivre: () => this.tamanhoLivreEscolhido(),
+      dono: () => this.authService.getSessaoAtual()?.email,
+      tamanhos: this.tamanhosLivres,
+      desafioAtual: () => this.tentativa.desafio,
+      configuracao: () => this.lerConfiguracaoServidorAtual(),
+    };
   }
 
   /**
@@ -691,6 +731,8 @@ export class ProvedorBarraLateralFlexBox implements vscode.WebviewViewProvider {
     for (const mensagem of mensagensDaBarra({
       extensoesIa: this.detectarExtensoesIa(),
       nivel,
+      formato: this.formatoEscolhido(),
+      tamanhoLivre: this.tamanhoLivreEscolhido(),
       desafio: this.tentativa.desafio,
       inicioMs: this.tentativa.inicioMs,
       fimMs: this.tentativa.fimMs,

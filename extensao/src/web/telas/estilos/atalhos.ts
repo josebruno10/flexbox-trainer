@@ -39,6 +39,10 @@ export const ESTILOS_ATALHOS = `
       margin-top: 24px;
     }
 
+    h2.rotulo + h3 {
+      margin-top: 4px;
+    }
+
     h3 {
       margin: 16px 0 6px;
       font-family: var(--fonte-mono);
@@ -60,9 +64,15 @@ export const ESTILOS_ATALHOS = `
       border-bottom: 1px dashed var(--linha-tracejada);
     }
 
+    /* As duas teclas de "Alt+↑ / Alt+↓" podem quebrar a linha entre si,
+       nunca no meio de uma. */
     td:first-child {
       width: 1%;
       padding-right: 16px;
+    }
+
+    kbd,
+    .ou {
       white-space: nowrap;
     }
 

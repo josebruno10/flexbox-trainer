@@ -2,7 +2,9 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { HistoricoDesafios } from "../../services/historico";
 import {
+  CHAVE_FORMATO,
   CHAVE_NIVEL,
+  CHAVE_TAMANHO_LIVRE,
   chavesSincronizadas,
   sincronizarComOutrosComputadores,
 } from "../../sincronizacao";
@@ -20,15 +22,18 @@ function armazenamentoFalso(): vscode.Memento {
 }
 
 suite("Sincronização entre computadores", () => {
-  test("vão o nível, o histórico e os progressos salvos do aluno da sessão", () => {
+  test("vão o nível, o formato, o histórico, os progressos salvos e os tamanhos livres do aluno da sessão", () => {
     assert.deepStrictEqual(chavesSincronizadas(" Aluno@Example.com "), [
       CHAVE_NIVEL,
-      "flexboxTrainer.historico2|aluno@example.com",
+      CHAVE_FORMATO,
+      CHAVE_TAMANHO_LIVRE,
+      "flexboxTrainer.historico3|aluno@example.com",
       "flexboxTrainer.evolucao|aluno@example.com",
       "flexboxTrainer.progressos|aluno@example.com",
+      "flexboxTrainer.tamanhosLivres|aluno@example.com",
     ]);
     // Sem sessão, nada de aluno nenhum.
-    assert.deepStrictEqual(chavesSincronizadas(undefined), [CHAVE_NIVEL]);
+    assert.deepStrictEqual(chavesSincronizadas(undefined), [CHAVE_NIVEL, CHAVE_FORMATO, CHAVE_TAMANHO_LIVRE]);
   });
 
   test("tudo o que o histórico guarda do aluno está na lista", async () => {

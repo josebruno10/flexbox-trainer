@@ -1,8 +1,9 @@
 import { desenharGabarito, normalizarHex } from "../desenhoGabarito";
 import { NOME_DO_NIVEL } from "../../niveis";
-import type { Nivel } from "../../types";
+import type { Formato, Nivel } from "../../types";
 import { vscode } from "../api";
 import { proximaDica } from "./dica";
+import { mostrarTamanhoLivre } from "./tamanhoLivre";
 import {
   criarAmostra,
   desenharDestaques,
@@ -17,6 +18,7 @@ import {
   botaoNovoDesafio,
   botaoRefazer,
   botaoVerificar,
+  botoesFormato,
   botoesNivel,
   botoesVista,
   canvasAlvo,
@@ -30,6 +32,7 @@ import {
   tituloEvolucao,
   valorComponentes,
   valorFundo,
+  valorTamanho,
   valorTempo,
   vistas,
 } from "./elementos";
@@ -62,6 +65,13 @@ export function marcarNivel(nivel: Nivel): void {
   }
   // O gráfico da evolução é o do nível escolhido.
   tituloEvolucao.textContent = `Melhor nota · ${NOME_DO_NIVEL[nivel]}`;
+}
+
+export function marcarFormato(formato: Formato): void {
+  for (const botao of botoesFormato) {
+    botao.setAttribute("aria-pressed", String(botao.dataset.formato === formato));
+  }
+  mostrarTamanhoLivre(formato);
 }
 
 export function definirVista(vista: "gabarito" | "pagina"): void {
@@ -121,6 +131,7 @@ export function desenharDesafio(desafio: DesafioRecebido): void {
   valorFundo.title = `Copiar a cor do fundo: ${corFundo}`;
   valorFundo.disabled = false;
   valorComponentes.textContent = String(desafio.blocks.length);
+  valorTamanho.textContent = `${desafio.width} × ${desafio.height}`;
 
   if (ultimoGabaritoEnviado !== desafio.challengeId) {
     ultimoGabaritoEnviado = desafio.challengeId;

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { ProgressoGuia } from "../../../provider/provedorBarraLateral";
+import { formatoDoCodigo } from "../../../formatos";
 import { valorDoCodigo } from "../../../niveis";
 import { criarDesafioPorCodigo } from "../../../services/desafio";
 import {
@@ -48,6 +49,38 @@ suite("Barra lateral: mensagens e comandos", () => {
     barra.receber({ type: "definirNivel", nivel: "impossivel" });
     await new Promise((pronto) => setTimeout(pronto, 0));
     assert.strictEqual(provedor.nivelEscolhido(), "facil");
+  });
+
+  test("guarda o formato escolhido e gera os desafios novos nele", async () => {
+    const registro = criarRegistroFalso();
+    const provedor = criarProvedorParaTeste([], { registro });
+    const interno = provedor as unknown as ProvedorInterno;
+    interno.testarConexaoServidor = async () => undefined;
+    const barra = criarBarraFalsa();
+    provedor.resolveWebviewView(barra.vista);
+    barra.receber({ type: "pronto" });
+
+    // Sem escolha, o quadrado de sempre.
+    assert.strictEqual(provedor.formatoEscolhido(), "quadrado");
+    assert.strictEqual(ultimaMensagem(barra.enviadas, "formato")?.payload, "quadrado");
+
+    barra.receber({ type: "definirFormato", formato: "paisagem" });
+    await new Promise((pronto) => setTimeout(pronto, 0));
+    assert.strictEqual(provedor.formatoEscolhido(), "paisagem");
+    assert.strictEqual(registro.get("flexboxTrainer.formato"), "paisagem");
+    assert.strictEqual(ultimaMensagem(barra.enviadas, "formato")?.payload, "paisagem");
+
+    await provedor.iniciarNovoDesafio();
+    const desafio = interno.tentativa.desafio!;
+    assert.deepStrictEqual([desafio.width, desafio.height], [1280, 720]);
+    assert.strictEqual(formatoDoCodigo(desafio.codigo!), "paisagem");
+    // O nível continua o escolhido (o médio, por padrão).
+    assert.strictEqual(desafio.nivel, "medio");
+
+    // Um formato que não existe é ignorado.
+    barra.receber({ type: "definirFormato", formato: "panorama" });
+    await new Promise((pronto) => setTimeout(pronto, 0));
+    assert.strictEqual(provedor.formatoEscolhido(), "paisagem");
   });
 
   test("copia o que a barra pede e puxa pelo código do histórico", async () => {

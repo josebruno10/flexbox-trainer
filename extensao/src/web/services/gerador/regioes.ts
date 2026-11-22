@@ -1,7 +1,7 @@
 import { Bloco } from "../../types";
 import { Rgb, corDerivada, rgbParaHex } from "./cores";
+import { Medidas } from "./medidas";
 import {
-  MARGEM,
   Retangulo,
   circulos,
   retanguloAlinhado,
@@ -13,8 +13,6 @@ import { Aleatorio, inteiroAleatorio, limitar } from "./sorteio";
 // O layout do desafio: as faixas principais, os cortes delas e os padrões
 // dentro de cada parte, que viram os blocos da imagem.
 
-// Nenhuma parte de um corte fica menor que isto.
-const TAMANHO_MINIMO = 70;
 const PROFUNDIDADE_MAXIMA_CORTE = 2;
 
 // 0 corta em partes lado a lado, 1 em faixas empilhadas. Filhos de padrões
@@ -24,6 +22,9 @@ type Forma = NonNullable<Bloco["shape"]>;
 
 export type ContextoGeracao = {
   aleatorio: Aleatorio;
+  // O tamanho mínimo, a margem e as medidas dos círculos, que acompanham a
+  // imagem.
+  medidas: Medidas;
   blocks: Bloco[];
   proximoId: number;
   // Os blocos criados juntos (uma sequência, uma fileira de círculos) saem
@@ -45,36 +46,6 @@ export type Regiao = {
   cortado: boolean;
 };
 
-// Coordenadas fixas do script original, em px do gabarito 800x800.
-export function escolherLayoutPrimario(
-  aleatorio: Aleatorio,
-  direcao: 0 | 1,
-): { area: Retangulo; direcao: 0 | 1 }[] {
-  switch (inteiroAleatorio(aleatorio, 0, 2)) {
-    case 0:
-      // Cabeçalho, conteúdo e rodapé.
-      return [
-        { area: { x: 0, y: 0, width: 800, height: 200 }, direcao: 0 },
-        { area: { x: 0, y: 200, width: 800, height: 400 }, direcao },
-        { area: { x: 0, y: 600, width: 800, height: 200 }, direcao: 0 },
-      ];
-    case 1:
-      // Três colunas.
-      return [
-        { area: { x: 0, y: 0, width: 200, height: 800 }, direcao: 1 },
-        { area: { x: 200, y: 0, width: 400, height: 800 }, direcao },
-        { area: { x: 600, y: 0, width: 200, height: 800 }, direcao: 1 },
-      ];
-    default:
-      // Duas colunas sobre um rodapé.
-      return [
-        { area: { x: 0, y: 0, width: 300, height: 600 }, direcao },
-        { area: { x: 300, y: 0, width: 500, height: 600 }, direcao },
-        { area: { x: 0, y: 600, width: 800, height: 200 }, direcao },
-      ];
-  }
-}
-
 // EscolheLayout do original: as partes só organizam o espaço e não aparecem
 // na imagem; os elementos dentro delas tiram a cor do bloco visível mais
 // próximo.
@@ -83,7 +54,13 @@ export function cortarRegiao(
   regiao: Regiao,
   direcao: 0 | 1,
 ): void {
-  for (const parte of dividirArea(regiao.area, direcao, contexto.aleatorio)) {
+  const partes = dividirArea(
+    regiao.area,
+    direcao,
+    contexto.aleatorio,
+    contexto.medidas.tamanhoMinimo,
+  );
+  for (const parte of partes) {
     processarRegiao(
       contexto,
       { ...regiao, area: parte, count: regiao.count + 1, cortado: true },
@@ -96,9 +73,10 @@ function dividirArea(
   area: Retangulo,
   direcao: 0 | 1,
   aleatorio: Aleatorio,
+  tamanhoMinimo: number,
 ): Retangulo[] {
   let restante = direcao === 0 ? area.width : area.height;
-  const maximoDivisoes = Math.min(Math.floor(restante / TAMANHO_MINIMO), 3);
+  const maximoDivisoes = Math.min(Math.floor(restante / tamanhoMinimo), 3);
   const quantidade =
     maximoDivisoes <= 1
       ? 0
@@ -115,8 +93,8 @@ function dividirArea(
         ? restante
         : limitar(
             Math.floor(
-              aleatorio() * (restante - TAMANHO_MINIMO * (partesSeguintes + 1)),
-            ) + TAMANHO_MINIMO,
+              aleatorio() * (restante - tamanhoMinimo * (partesSeguintes + 1)),
+            ) + tamanhoMinimo,
             1,
             restante - partesSeguintes,
           );
@@ -153,7 +131,7 @@ function processarRegiao(
   const { width, height } = regiao.area;
   const blocosAntes = contexto.blocks.length;
 
-  if (deveDividir(aleatorio, width, height, direcao)) {
+  if (deveDividir(aleatorio, width, height, direcao, contexto.medidas.tamanhoMinimo)) {
     // Quanto mais profundo o corte, menor a chance de cortar de novo.
     const cortar =
       regiao.count < PROFUNDIDADE_MAXIMA_CORTE &&
@@ -201,6 +179,7 @@ function deveDividir(
   width: number,
   height: number,
   direcao: Direcao,
+  tamanhoMinimo: number,
 ): boolean {
   // O lado que pode ser dividido e o outro, que também precisa ter espaço.
   const [lado, outro] =
@@ -210,11 +189,11 @@ function deveDividir(
         ? [width, height]
         : [Math.max(width, height), Math.min(width, height)];
 
-  if (lado <= TAMANHO_MINIMO * 2 || outro <= TAMANHO_MINIMO) {
+  if (lado <= tamanhoMinimo * 2 || outro <= tamanhoMinimo) {
     return false;
   }
 
-  const proporcao = lado / TAMANHO_MINIMO;
+  const proporcao = lado / tamanhoMinimo;
   return Math.floor(aleatorio() * proporcao) + (proporcao < 3 ? 0 : 2) > 0;
 }
 
@@ -228,11 +207,12 @@ function adicionarPadraoInterno(
   continuarDividindo: boolean,
 ): void {
   const { aleatorio } = contexto;
+  const { margem } = contexto.medidas;
   const area: Retangulo = {
-    x: pai.area.x + MARGEM,
-    y: pai.area.y + MARGEM,
-    width: pai.area.width - MARGEM * 2,
-    height: pai.area.height - MARGEM * 2,
+    x: pai.area.x + margem,
+    y: pai.area.y + margem,
+    width: pai.area.width - margem * 2,
+    height: pai.area.height - margem * 2,
   };
   const { width, height } = area;
   const cabeSequencia =
@@ -252,7 +232,7 @@ function adicionarPadraoInterno(
         ? [[retanguloAlinhado(aleatorio, area)], "rectangle"]
         : tipo === 2
           ? [sequencia(aleatorio, area), "rectangle"]
-          : [circulos(aleatorio, area), "circle"];
+          : [circulos(aleatorio, area, contexto.medidas), "circle"];
   const grupo = contexto.proximoGrupo++;
 
   for (const areaFilho of areas) {
@@ -286,14 +266,20 @@ function adicionarBloco(
   // Arredondar as bordas, e não a largura, mantém o filho dentro do pai.
   const x = Math.round(area.x);
   const y = Math.round(area.y);
-  const width = Math.max(1, Math.round(area.x + area.width) - x);
+  let width = Math.max(1, Math.round(area.x + area.width) - x);
+  let height = Math.max(1, Math.round(area.y + area.height) - y);
+  // Com as faixas em frações de px (L / 3), um círculo pode arredondar 1 px
+  // mais largo que alto: fica o menor lado, dentro da mesma caixa.
+  if (shape === "circle") {
+    width = height = Math.min(width, height);
+  }
   const bloco: Bloco = {
     id: contexto.proximoId++,
     parentId,
     x,
     y,
     width,
-    height: Math.max(1, Math.round(area.y + area.height) - y),
+    height,
     color: rgbParaHex(rgb),
     borderRadius: shape === "circle" ? width / 2 : 0,
     shape,

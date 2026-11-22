@@ -15,6 +15,12 @@ export type Bloco = {
 // Nos níveis mais fáceis, saem os componentes menores, que dão mais trabalho.
 export type Nivel = "facil" | "medio" | "dificil";
 
+// O formato da imagem: o mesmo layout, em outro tamanho (veja formatos.ts).
+// No livre, o aluno escolhe a largura e a altura.
+export type Formato = "quadrado" | "paisagem" | "retrato" | "livre";
+export type FormatoFixo = Exclude<Formato, "livre">;
+export type Tamanho = { largura: number; altura: number };
+
 export type Desafio = {
   challengeId: string;
   // Reproduz a mesma imagem (veja services/codigoDesafio.ts). Os desafios
@@ -198,6 +204,8 @@ export type MensagemRecebidaBarraLateral =
   | { type: "criarArquivos" }
   | { type: "abrirPorCodigo" }
   | { type: "definirNivel"; nivel?: unknown }
+  | { type: "definirFormato"; formato?: unknown }
+  | { type: "definirTamanhoLivre"; largura?: unknown; altura?: unknown }
   | { type: "refazer"; codigo?: unknown }
   | { type: "verHistorico" }
   | { type: "verAtalhos" }

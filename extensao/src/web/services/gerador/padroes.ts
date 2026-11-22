@@ -1,3 +1,4 @@
+import { Medidas } from "./medidas";
 import { Aleatorio, inteiroAleatorio, itemAleatorio } from "./sorteio";
 
 // Os padrões que preenchem uma região: um retângulo comum, um alinhado, uma
@@ -10,11 +11,9 @@ export type Retangulo = {
   height: number;
 };
 
-// Cada elemento fica a esta distância das bordas da região que o contém.
-export const MARGEM = 15;
+// Em px, como no script; as medidas que acompanham a imagem vêm de fora
+// (veja medidas.ts).
 const ESPACO_SEQUENCIA = 10;
-const ESPACO_MINIMO_CIRCULOS = 30;
-const DIAMETRO_MINIMO = 20;
 
 export function retanguloComum(aleatorio: Aleatorio, area: Retangulo): Retangulo {
   const width = inteiroAleatorio(aleatorio, area.width * 0.8, area.width);
@@ -130,24 +129,26 @@ export function sequencia(aleatorio: Aleatorio, area: Retangulo): Retangulo[] {
 
 // Círculos enfileirados no maior lado, centralizados no outro. A fileira usa
 // o comprimento inteiro da região, sem a margem, e tem ao menos um círculo.
-export function circulos(aleatorio: Aleatorio, area: Retangulo): Retangulo[] {
+export function circulos(
+  aleatorio: Aleatorio,
+  area: Retangulo,
+  { margem, diametroMinimo, espacoCirculos }: Medidas,
+): Retangulo[] {
   const menorLado = Math.min(area.width, area.height);
   const diametro = Math.max(
     inteiroAleatorio(aleatorio, menorLado * 0.9, menorLado),
-    DIAMETRO_MINIMO,
+    diametroMinimo,
   );
-  const comprimento = Math.max(area.width, area.height) + MARGEM * 2;
+  const comprimento = Math.max(area.width, area.height) + margem * 2;
   const quantidade = Math.max(
     1,
-    Math.floor(
-      (comprimento - ESPACO_MINIMO_CIRCULOS) / (diametro + ESPACO_MINIMO_CIRCULOS),
-    ),
+    Math.floor((comprimento - espacoCirculos) / (diametro + espacoCirculos)),
   );
   const espaco = (comprimento - quantidade * diametro) / (quantidade + 1);
   const areas: Retangulo[] = [];
 
   for (let indice = 0; indice < quantidade; indice++) {
-    const deslocamento = espaco + indice * (diametro + espaco) - MARGEM;
+    const deslocamento = espaco + indice * (diametro + espaco) - margem;
     areas.push(
       area.width >= area.height
         ? {

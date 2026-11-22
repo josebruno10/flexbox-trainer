@@ -1,3 +1,4 @@
+import { ehFormato } from "../../formatos";
 import { ehNivel } from "../../niveis";
 import { vscode } from "../api";
 import {
@@ -14,6 +15,7 @@ import {
   botaoVerExtensoesIa,
   botaoVerHistorico,
   botaoVerificar,
+  botoesFormato,
   botoesNivel,
   botoesVista,
   valorFundo,
@@ -22,7 +24,7 @@ import { selecionarComponente } from "./componentes";
 import { copiarAoClicar } from "./copiar";
 import { ligarCorrecoes } from "./correcoes";
 import { estado } from "./estado";
-import { definirVista, marcarNivel } from "./quadro";
+import { definirVista, marcarFormato, marcarNivel } from "./quadro";
 import { solicitarVerificacao } from "./verificacao";
 
 // Os botões da barra lateral. Quase todos só pedem algo à extensão.
@@ -105,6 +107,15 @@ export function ligarAcoes(): void {
       if (ehNivel(botao.dataset.nivel)) {
         marcarNivel(botao.dataset.nivel);
         vscode.postMessage({ type: "definirNivel", nivel: botao.dataset.nivel });
+      }
+    });
+  }
+  // O formato também.
+  for (const botao of botoesFormato) {
+    botao.addEventListener("click", () => {
+      if (ehFormato(botao.dataset.formato)) {
+        marcarFormato(botao.dataset.formato);
+        vscode.postMessage({ type: "definirFormato", formato: botao.dataset.formato });
       }
     });
   }

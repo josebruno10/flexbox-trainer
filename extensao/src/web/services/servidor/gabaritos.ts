@@ -107,6 +107,33 @@ export async function garantirGabaritoDaDinamica(
   return true;
 }
 
+/**
+ * O tamanho do gabarito de uma dinâmica, pelo nome do arquivo:
+ * gab_<evento>_tam_<largura>x<altura>, com a largura primeiro, como a
+ * extensão oficial lê. Com ele, quem abre pelo código um desafio de tamanho
+ * livre gera a mesma imagem de quem o criou. Sem gabarito, ou com gabaritos
+ * de tamanhos diferentes, não há como saber.
+ */
+export async function tamanhoDoGabaritoDaDinamica(
+  configuracao: ConfiguracaoServidor,
+  evento: string,
+): Promise<{ largura: number; altura: number } | undefined> {
+  const tamanhos = new Set<string>();
+  for (const item of await listarGabaritos(configuracao, evento)) {
+    for (const texto of textosDoItem(item)) {
+      const tamanho = NOME_GABARITO.exec(texto);
+      if (tamanho) {
+        tamanhos.add(`${Number(tamanho[1])}x${Number(tamanho[2])}`);
+      }
+    }
+  }
+  if (tamanhos.size !== 1) {
+    return undefined;
+  }
+  const [largura, altura] = [...tamanhos][0].split("x").map(Number);
+  return { largura, altura };
+}
+
 /** A imagem do gabarito, que chega da barra lateral como data URL. */
 export function dataUrlParaPng(dataUrl: string): Uint8Array<ArrayBuffer> {
   const binario = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));

@@ -62,9 +62,13 @@ export async function avaliarTentativa(
   }
 
   const { gabarito } = tentativa;
+  // O servidor não distingue 1000x600 de 600x1000 (veja enviarGabaritoDeTreino):
+  // os dois tamanhos são o mesmo gabarito do evento de treino, substituído a
+  // cada desafio. Com o tamanho livre, o aluno pode treinar os dois.
+  const [menor, maior] = [gabarito.width, gabarito.height].sort((a, b) => a - b);
   const chave =
     `flexboxTrainer.gabaritoTreino|${configuracao.apiBaseUrl}|` +
-    `${configuracao.eventoTreino}|${gabarito.width}x${gabarito.height}`;
+    `${configuracao.eventoTreino}|${menor}x${maior}`;
   const registrado = registro.get<GabaritoRegistrado>(chave);
 
   try {

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { dicasDeDigitacao } from "../../atalhos/dicas";
+import { ATALHOS_DO_EDITOR, GRUPOS_DO_EDITOR } from "../../atalhos/editor";
 import { EMMET_CSS, EMMET_HTML } from "../../atalhos/emmet";
 import { ATALHOS_DA_EXTENSAO } from "../../atalhos/extensao";
 import { plataformaDe, teclasDaExtensao } from "../../atalhos/plataforma";
@@ -106,11 +107,38 @@ suite("Atalhos e dicas de digitação", () => {
       ...EMMET_HTML.map((item) => item.abreviacao),
     ];
     // Testadas no VS Code 1.142: fdc e fww não expandem, e jcsa vira
-    // "justify-content: start", não space-around.
-    for (const enganosa of ["fdc", "fww", "jcsa"]) {
+    // "justify-content: start", não space-around. No Emmet do VS Code,
+    // jcse vira stretch (não space-evenly), ais vira start (não stretch), e
+    // ord1 e zi1 saem com px.
+    for (const enganosa of ["fdc", "fww", "jcsa", "jcse", "ais", "ord1", "zi1"]) {
       assert.ok(!abreviacoes.includes(enganosa), enganosa);
     }
     assert.strictEqual(new Set(abreviacoes).size, abreviacoes.length);
+  });
+
+  test("estão os atalhos e as abreviações que o Vitor pediu", () => {
+    const teclas = (plataforma: "windows" | "linux" | "mac") =>
+      ATALHOS_DO_EDITOR.map((atalho) => atalho.teclas[plataforma]);
+    for (const esperada of [
+      "Ctrl+D",
+      "Alt+↑ / Alt+↓",
+      "Shift+Alt+↑ / Shift+Alt+↓",
+      "Ctrl+Shift+← / Ctrl+Shift+→",
+      "Ctrl+Z",
+    ]) {
+      assert.ok(teclas("windows").includes(esperada), esperada);
+    }
+    // No Linux, copiar a linha também leva o Ctrl.
+    assert.ok(teclas("linux").includes("Ctrl+Shift+Alt+↑ / Ctrl+Shift+Alt+↓"));
+    assert.ok(teclas("mac").includes("⌘Z"));
+    const html = EMMET_HTML.map((item) => item.abreviacao);
+    for (const esperada of [".caixa", ".pai>.filho", ".item*3", ".item$*3"]) {
+      assert.ok(html.includes(esperada), esperada);
+    }
+    // Nenhum atalho do editor se repete, em nenhum sistema.
+    for (const plataforma of ["windows", "linux", "mac"] as const) {
+      assert.strictEqual(new Set(teclas(plataforma)).size, ATALHOS_DO_EDITOR.length, plataforma);
+    }
   });
 
   test("a aba Atalhos lista tudo, sem script", () => {
@@ -127,6 +155,17 @@ suite("Atalhos e dicas de digitação", () => {
       }
     }
     assert.ok(html.includes("<code>.linha&gt;.item*3</code>"));
+    for (const grupo of GRUPOS_DO_EDITOR) {
+      assert.ok(html.includes(`<h3>${grupo.nome}</h3>`), grupo.nome);
+    }
+    // Duas teclas na mesma linha viram duas teclas.
+    assert.ok(html.includes('<kbd>Alt+↑</kbd> <span class="ou">/ <kbd>Alt+↓</kbd></span>'));
+    // HTML e CSS vêm primeiro; depois, o editor e a extensão.
+    const posicoes = ["HTML com Emmet", "CSS com Emmet", "No editor", "Na extensão"].map(
+      (titulo) => html.indexOf(`</span> / ${titulo}</h2>`),
+    );
+    assert.ok(posicoes.every((posicao) => posicao >= 0), String(posicoes));
+    assert.deepStrictEqual([...posicoes].sort((a, b) => a - b), posicoes);
     assert.ok(html.includes("<kbd>Ctrl+Shift+I</kbd>"));
     assert.ok(obterHtmlAtalhos(webview, raiz, "floresta", "mac").includes("<kbd>⇧⌥F</kbd>"));
     assert.ok(obterHtmlAtalhos(webview, raiz, "floresta", "windows").includes("<kbd>Shift+Alt+F</kbd>"));

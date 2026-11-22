@@ -8,9 +8,11 @@ import {
   resumirDetalhes,
 } from "../../webview/correcoes";
 
-// A resposta de corrigir-formas do desafio TSQR, como o servidor mandou (a
-// página tinha só o fundo branco).
-const RESPOSTA_TSQR = {
+// A resposta de corrigir-formas de um desafio fácil com 11 componentes, como
+// o servidor mandou (a página tinha só o fundo branco). Ela veio do TSQR,
+// antes dos 8 layouts do gerador; hoje, o BZVG também tem 11 componentes, e
+// a cor do fundo foi trocada pela dele (era #1930f8).
+const RESPOSTA_BZVG = {
   message: "Correção por formas concluída.",
   pontuacao: { "81_74_800x800": { pontuacao_total: 0.8, pontuacao_maxima: 12, percentual: 6.67 } },
   detalhes: [
@@ -27,7 +29,7 @@ const RESPOSTA_TSQR = {
           forma_correta: true,
           distancia_px: 0,
           cliente_forma: { id: "forma_1", tipo: "quadrado", x: 400, y: 400, width: 800, height: 800, cor: "#ffffff" },
-          gabarito_forma: { x: 400, y: 400, id: "gab_6", cor: "#1930f8", width: 800, height: 800, label_cor: "Azul" },
+          gabarito_forma: { x: 400, y: 400, id: "gab_6", cor: "#4023f2", width: 800, height: 800, label_cor: "Azul" },
         },
       ],
       extras: [],
@@ -50,14 +52,14 @@ function formaDoBloco(codigo: string, id: number, mudar: Partial<Record<"x" | "y
 
 suite("Detalhes da nota", () => {
   test("liga a resposta do servidor ao fundo e aos blocos do desafio", () => {
-    const desafio = criarDesafioPorCodigo("TSQR");
-    const detalhes = ligarAosComponentes(desafio, lerDetalhesDoServidor(RESPOSTA_TSQR)!);
+    const desafio = criarDesafioPorCodigo("BZVG");
+    const detalhes = ligarAosComponentes(desafio, lerDetalhesDoServidor(RESPOSTA_BZVG)!);
 
     assert.strictEqual(detalhes.componentes.length, desafio.blocks.length + 1);
     assert.deepStrictEqual(detalhes.componentes[0], {
       componente: "fundo",
       pontos: 0.8,
-      problemas: [{ tipo: "cor", sua: "#ffffff", esperada: "#1930f8" }],
+      problemas: [{ tipo: "cor", sua: "#ffffff", esperada: "#4023f2" }],
     });
     for (const item of detalhes.componentes.slice(1)) {
       assert.deepStrictEqual(item.problemas, [{ tipo: "faltando" }], `#${item.componente}`);
@@ -66,12 +68,12 @@ suite("Detalhes da nota", () => {
   });
 
   test("separa blocos da mesma cor pela posição e diz quanto e para onde mexer", () => {
-    // No TSQR, os blocos 2, 3 e 4 têm a mesma cor, um embaixo do outro.
-    const desafio = criarDesafioPorCodigo("TSQR");
-    const gabarito3 = formaDoBloco("TSQR", 3);
-    const pagina3 = formaDoBloco("TSQR", 3, { x: 12, y: -4 });
-    const gabarito9 = formaDoBloco("TSQR", 9, { width: -1 });
-    const pagina9 = { ...formaDoBloco("TSQR", 9, { width: -20 }), cor: "#000000" };
+    // No BZVG, os blocos 2, 3 e 4 têm a mesma cor, um embaixo do outro.
+    const desafio = criarDesafioPorCodigo("BZVG");
+    const gabarito3 = formaDoBloco("BZVG", 3);
+    const pagina3 = formaDoBloco("BZVG", 3, { x: 12, y: -4 });
+    const gabarito9 = formaDoBloco("BZVG", 9, { width: -1 });
+    const pagina9 = { ...formaDoBloco("BZVG", 9, { width: -20 }), cor: "#000000" };
     const resposta = {
       detalhes: [
         {
@@ -119,9 +121,9 @@ suite("Detalhes da nota", () => {
   });
 
   test("o arredondamento do servidor ao medir o gabarito não vira problema", () => {
-    const desafio = criarDesafioPorCodigo("TSQR");
-    const gabarito = formaDoBloco("TSQR", 1, { width: -1, height: -1 });
-    const pagina = formaDoBloco("TSQR", 1);
+    const desafio = criarDesafioPorCodigo("BZVG");
+    const gabarito = formaDoBloco("BZVG", 1, { width: -1, height: -1 });
+    const pagina = formaDoBloco("BZVG", 1);
     const resposta = {
       detalhes: [
         {

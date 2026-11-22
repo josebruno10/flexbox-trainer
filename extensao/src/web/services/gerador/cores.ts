@@ -11,7 +11,9 @@ export function corAleatoria(aleatorio: Aleatorio): Rgb {
 }
 
 // Cor do filho a partir da do pai: soma de 75 a 179 em cada canal e, se os
-// canais ficarem próximos demais, desloca um deles para fugir do cinza. Como
+// canais ficarem próximos demais (menos de 40 entre cada par, para mais ou
+// para menos, como no script desde o commit 162b3d6), desloca um deles para
+// fugir do cinza. Como
 // no original, o canal deslocado depende do canal mais forte do pai: com o
 // vermelho, o verde ou o azul; com o verde, o azul; com o azul, o vermelho ou
 // o verde.
@@ -20,7 +22,11 @@ export function corDerivada(aleatorio: Aleatorio, pai: Rgb): Rgb {
     Math.abs(Math.floor(aleatorio() * 105) + valor + 75) % 255;
   const cor = { r: canal(pai.r), g: canal(pai.g), b: canal(pai.b) };
 
-  if (cor.r - cor.g < 40 && cor.r - cor.b < 40 && cor.g - cor.b < 40) {
+  if (
+    Math.abs(cor.r - cor.g) < 40 &&
+    Math.abs(cor.r - cor.b) < 40 &&
+    Math.abs(cor.g - cor.b) < 40
+  ) {
     const sorteio =
       pai.r >= pai.b && pai.r >= pai.g
         ? aleatorio() * 2 + 1

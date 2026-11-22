@@ -9,12 +9,14 @@ import { ligarEvolucao } from "./barra/evolucao";
 import {
   desenharDesafio,
   desenharEstadoInicial,
+  marcarFormato,
   marcarNivel,
   renderizarMetaDesafio,
 } from "./barra/quadro";
 import { mostrarMensagem } from "./barra/resultado";
 import { renderizarSalvamento } from "./barra/salvamento";
 import { renderizarWorkspace } from "./barra/suaPagina";
+import { ligarTamanhoLivre, marcarTamanhoLivre } from "./barra/tamanhoLivre";
 import type { MensagemDaExtensao } from "./barra/tipos";
 import {
   receberConclusao,
@@ -39,6 +41,12 @@ function receber(mensagem: MensagemDaExtensao): void {
       break;
     case "nivel":
       marcarNivel(mensagem.payload);
+      break;
+    case "formato":
+      marcarFormato(mensagem.payload);
+      break;
+    case "tamanhoLivre":
+      marcarTamanhoLivre(mensagem.payload);
       break;
     case "historicoDesafios":
       receberHistoricoDesafios(mensagem.payload);
@@ -74,6 +82,7 @@ ligarEvolucao();
 ligarAcoes();
 ligarComponentes();
 ligarDica();
+ligarTamanhoLivre();
 window.addEventListener("message", (event: MessageEvent<MensagemDaExtensao>) =>
   receber(event.data),
 );

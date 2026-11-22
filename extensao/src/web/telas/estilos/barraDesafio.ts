@@ -93,12 +93,48 @@ export const ESTILOS_BARRA_DESAFIO = `
     }
 
     .vistas .modo,
-    .niveis .modo {
+    .niveis .modo,
+    .formatos .modo {
       flex: 1 1 0;
     }
 
-    .niveis {
+    .niveis,
+    .formatos {
       display: flex;
+    }
+
+    /* A largura e a altura do formato livre, embaixo dos formatos. */
+    .tamanho-livre {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--fonte-mono);
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+
+    .tamanho-livre[hidden] {
+      display: none;
+    }
+
+    .tamanho-livre label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .tamanho-livre input {
+      flex: 1 1 auto;
+      width: 0;
+      min-width: 52px;
+      padding: 5px 6px;
+      font: inherit;
+      font-size: 12px;
+      color: var(--texto);
+      background: var(--superficie);
+      border: 1px solid var(--linha-forte);
     }
 
     /* Os botões-ícone ao lado de Gabarito / Sua página: abrir o gabarito

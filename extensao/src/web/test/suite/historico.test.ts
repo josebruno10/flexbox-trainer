@@ -108,7 +108,7 @@ suite("Histórico de desafios", () => {
   test("ignora registros incompletos ou com o código de 6 dígitos de antes", () => {
     const historico = new HistoricoDesafios(
       armazenamentoFalso({
-        [`flexboxTrainer.historico2|${ALUNO}`]: [
+        [`flexboxTrainer.historico3|${ALUNO}`]: [
           { codigo: "MESA" },
           null,
           {

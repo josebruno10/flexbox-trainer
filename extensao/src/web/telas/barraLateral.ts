@@ -2,6 +2,13 @@ import * as vscode from "vscode";
 import { dicasDeDigitacao } from "../atalhos/dicas";
 import { teclasDoComando } from "../atalhos/extensao";
 import { Plataforma, plataformaAtual, teclasDaExtensao } from "../atalhos/plataforma";
+import {
+  FORMATOS,
+  TAMANHO_DO_FORMATO,
+  TAMANHO_LIVRE_MAXIMO,
+  TAMANHO_LIVRE_MINIMO,
+  TAMANHO_LIVRE_PADRAO,
+} from "../formatos";
 import { lerTemaCores, NomeTema } from "./temas";
 import { CREDITOS, escapeHtml } from "./comum";
 import { ESTILOS_BARRA_ATALHOS } from "./estilos/barraAtalhos";
@@ -28,6 +35,18 @@ export function obterHtmlWebview(
   const dicaComAtalho = (dica: string, comando: string) =>
     `${dica} · ${teclasDaExtensao(teclasDoComando(`flexbox-trainer.${comando}`), plataforma)}`;
   const dicas = escapeHtml(JSON.stringify(dicasDeDigitacao(plataforma)));
+  // Os formatos da imagem, com o tamanho na dica do mouse. No livre, a
+  // largura e a altura aparecem embaixo, para escolher antes de gerar.
+  const formatos = FORMATOS.map((formato) => {
+    const nome = formato.charAt(0).toUpperCase() + formato.slice(1);
+    const dica =
+      formato === "livre"
+        ? "Desafios novos na largura e na altura que você escolher"
+        : `Desafios novos de ${TAMANHO_DO_FORMATO[formato].largura} × ${TAMANHO_DO_FORMATO[formato].altura} px`;
+    return `<button type="button" class="modo" data-formato="${formato}" aria-pressed="${formato === "quadrado"}" title="${dica}">${nome}</button>`;
+  }).join("\n        ");
+  const campoDoTamanho = (id: string, rotulo: string, valor: number, maximo: number) =>
+    `<label>${rotulo}<input type="number" id="${id}" min="${TAMANHO_LIVRE_MINIMO}" max="${maximo}" step="1" value="${valor}" inputmode="numeric"></label>`;
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "web", "webview", "app.js"),
   );
@@ -92,12 +111,22 @@ export function obterHtmlWebview(
       <div><dt>Tempo</dt><dd class="tempo-desafio"><span id="valorTempo">--:--</span><button type="button" id="botaoEncerrarDesafio" class="encerrar pequeno" title="Encerrar desafio: para o cronômetro" aria-label="Encerrar desafio" disabled hidden>⏹</button><button type="button" id="botaoRefazer" class="encerrar pequeno" title="${dicaComAtalho("Refazer: começa este mesmo desafio de novo, do zero", "refazerDesafio")}" aria-label="Refazer o desafio, do zero" hidden>↻</button></dd></div>
       <div><dt>Fundo</dt><dd><button type="button" id="valorFundo" class="valor-copiavel" title="Copiar a cor do fundo" disabled>--</button></dd></div>
       <div><dt>Componentes</dt><dd id="valorComponentes">--</dd></div>
+      <div><dt>Tamanho</dt><dd id="valorTamanho">--</dd></div>
     </dl>
     <div class="acoes">
       <div class="modos niveis largo" id="niveis" role="group" aria-label="Nível dos desafios novos">
         <button type="button" class="modo" data-nivel="facil" aria-pressed="false" title="Desafios novos com menos componentes">Fácil</button>
         <button type="button" class="modo" data-nivel="medio" aria-pressed="true" title="Desafios novos no nível do meio">Médio</button>
         <button type="button" class="modo" data-nivel="dificil" aria-pressed="false" title="Desafios novos com todos os componentes">Difícil</button>
+      </div>
+      <div class="modos formatos largo" id="formatos" role="group" aria-label="Formato da imagem dos desafios novos">
+        ${formatos}
+      </div>
+      <div class="tamanho-livre largo" id="tamanhoLivre" title="Largura de ${TAMANHO_LIVRE_MINIMO} a ${TAMANHO_LIVRE_MAXIMO.largura} px e altura de ${TAMANHO_LIVRE_MINIMO} a ${TAMANHO_LIVRE_MAXIMO.altura} px. Vale para os desafios novos: o tamanho de um desafio não muda depois de gerado." hidden>
+        ${campoDoTamanho("larguraLivre", "Largura", TAMANHO_LIVRE_PADRAO.largura, TAMANHO_LIVRE_MAXIMO.largura)}
+        <span aria-hidden="true">×</span>
+        ${campoDoTamanho("alturaLivre", "Altura", TAMANHO_LIVRE_PADRAO.altura, TAMANHO_LIVRE_MAXIMO.altura)}
+        <span class="unidade">px</span>
       </div>
       <button id="botaoNovoDesafio" class="largo principal"><span class="simbolo mais" aria-hidden="true">+</span>${comAtalho("Gerar novo desafio", "novoDesafio")}</button>
       <button type="button" id="botaoPorCodigo" class="largo secundario" title="Abrir o desafio de um código de 4 letras, como o que o professor ou um colega passar">Abrir por código</button>

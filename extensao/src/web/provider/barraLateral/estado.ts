@@ -1,7 +1,9 @@
 import { ExtensaoIa } from "../../services/extensoesIa";
 import {
   Desafio,
+  Formato,
   Nivel,
+  Tamanho,
   ResultadoAvaliacao,
   ResultadoNaAba,
   ResumoWorkspace,
@@ -34,6 +36,8 @@ export type EstadoDoSalvamento = {
 export type EstadoDaBarra = {
   extensoesIa: ExtensaoIa[];
   nivel: Nivel;
+  formato: Formato;
+  tamanhoLivre: Tamanho;
   desafio?: Desafio;
   inicioMs: number;
   fimMs?: number;
@@ -55,6 +59,8 @@ export function mensagensDaBarra(
   return [
     { type: "extensoesIa", payload: estado.extensoesIa },
     { type: "nivel", payload: estado.nivel },
+    { type: "formato", payload: estado.formato },
+    { type: "tamanhoLivre", payload: estado.tamanhoLivre },
     ...(desafio
       ? [
           {

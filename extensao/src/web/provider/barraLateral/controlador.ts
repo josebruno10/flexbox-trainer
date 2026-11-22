@@ -43,6 +43,8 @@ export function criarControlador(partes: PartesDoControlador): ControladorDaBarr
       void provedor.atualizarPreviewWorkspace();
     },
     definirNivel: (nivel) => void provedor.definirNivel(nivel),
+    definirFormato: (formato) => void provedor.definirFormato(formato),
+    definirTamanhoLivre: (tamanho) => void provedor.definirTamanhoLivre(tamanho),
     abrirPorCodigo: () => void provedor.abrirDesafioPorCodigo(),
     refazer: (codigo) => void provedor.refazerDesafio(codigo),
     verHistorico: () => void provedor.verHistorico(),

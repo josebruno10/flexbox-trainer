@@ -26,6 +26,12 @@ export const tituloDesafio = document.getElementById(
 export const botoesNivel = Array.from(
   document.querySelectorAll<HTMLButtonElement>("#niveis [data-nivel]"),
 );
+export const botoesFormato = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("#formatos [data-formato]"),
+);
+export const linhaTamanhoLivre = document.getElementById("tamanhoLivre") as HTMLElement;
+export const larguraLivre = document.getElementById("larguraLivre") as HTMLInputElement;
+export const alturaLivre = document.getElementById("alturaLivre") as HTMLInputElement;
 export const canvasAlvo = document.getElementById(
   "canvasAlvo",
 ) as HTMLCanvasElement;
@@ -46,6 +52,7 @@ export const valorFundo = document.getElementById(
 export const valorComponentes = document.getElementById(
   "valorComponentes",
 ) as HTMLElement;
+export const valorTamanho = document.getElementById("valorTamanho") as HTMLElement;
 export const detalheComponente = document.getElementById(
   "detalheComponente",
 ) as HTMLDivElement;

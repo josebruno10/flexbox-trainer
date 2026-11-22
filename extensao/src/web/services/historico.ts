@@ -53,7 +53,7 @@ export class HistoricoDesafios {
       return [];
     }
     const registros = this.armazenamento.get<unknown>(
-      chave(dono, "historico2"),
+      chave(dono, "historico3"),
     );
     return Array.isArray(registros) ? registros.filter(ehRegistro) : [];
   }
@@ -92,7 +92,7 @@ export class HistoricoDesafios {
     };
 
     await this.armazenamento.update(
-      chave(dono, "historico2"),
+      chave(dono, "historico3"),
       [atualizado, ...registros.filter((registro) => registro !== anterior)].slice(
         0,
         LIMITE_REGISTROS,
@@ -143,13 +143,14 @@ export class HistoricoDesafios {
 /** Onde fica tudo o que é do aluno: o histórico e a evolução. */
 export function chavesDoAluno(dono: string): string[] {
   return [
-    chave(dono, "historico2"),
+    chave(dono, "historico3"),
     chave(dono, "evolucao"),
   ];
 }
 
-// "historico2": a 0.5.0 trocou o gerador, e os códigos antigos passaram a dar
-// outras imagens; o histórico recomeça, sem misturar notas de imagens
+// "historico3": o gerador mudou de novo (a 0.5.0 deu o "historico2", e os 8
+// layouts e os formatos, o "historico3"), e os códigos antigos passaram a
+// dar outras imagens; o histórico recomeça, sem misturar notas de imagens
 // diferentes no mesmo código.
 function chave(dono: string, nome: string): string {
   return `flexboxTrainer.${nome}|${dono.trim().toLowerCase()}`;

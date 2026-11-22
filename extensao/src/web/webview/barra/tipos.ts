@@ -1,4 +1,4 @@
-import type { Bloco, DetalhesDaNota, Nivel } from "../../types";
+import type { Bloco, DetalhesDaNota, Formato, Nivel, Tamanho } from "../../types";
 
 // O que a extensão manda para a barra lateral.
 
@@ -95,5 +95,7 @@ export type MensagemDaExtensao =
   | { type: "salvamento"; payload: SalvamentoRecebido }
   | { type: "verificar" }
   | { type: "nivel"; payload: Nivel }
+  | { type: "formato"; payload: Formato }
+  | { type: "tamanhoLivre"; payload: Tamanho }
   | { type: "progressoVerificacao"; payload: VerificacaoRecebida }
   | { type: "verificacaoConcluida"; payload: VerificacaoRecebida };

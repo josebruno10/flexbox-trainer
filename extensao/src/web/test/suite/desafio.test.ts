@@ -1,11 +1,26 @@
 import * as assert from "assert";
 import {
-  ALTURA_GABARITO,
-  criarDesafioGerado,
-  LARGURA_GABARITO,
-} from "../../services/desafio";
+  FORMATOS_FIXOS,
+  TAMANHO_DO_FORMATO,
+  TAMANHO_LIVRE_MAXIMO,
+  TAMANHO_LIVRE_MINIMO,
+} from "../../formatos";
+import { criarDesafioGerado } from "../../services/desafio";
 import { FRACAO_REMOVIDA } from "../../services/gerador/dificuldade";
-import { Bloco } from "../../types";
+import { escolherLayoutPrimario } from "../../services/gerador/layouts";
+import { medidasDaImagem } from "../../services/gerador/medidas";
+import { Bloco, Tamanho } from "../../types";
+
+// Os tamanhos em que o gerador é conferido: os formatos prontos e alguns
+// tamanhos livres, inclusive os extremos.
+const TAMANHOS: readonly Tamanho[] = [
+  ...FORMATOS_FIXOS.map((formato) => TAMANHO_DO_FORMATO[formato]),
+  { largura: 1000, altura: 600 },
+  { largura: TAMANHO_LIVRE_MINIMO, altura: TAMANHO_LIVRE_MINIMO },
+  TAMANHO_LIVRE_MAXIMO,
+  { largura: TAMANHO_LIVRE_MINIMO, altura: TAMANHO_LIVRE_MAXIMO.altura },
+  { largura: TAMANHO_LIVRE_MAXIMO.largura, altura: TAMANHO_LIVRE_MINIMO },
+];
 
 suite("Gerador de desafios", () => {
   test("gera um desafio reproduzível de 800x800 nos testes", () => {
@@ -16,8 +31,9 @@ suite("Gerador de desafios", () => {
       aleatorio: criarAleatorioTeste(123456),
     });
 
-    assert.strictEqual(primeiro.width, LARGURA_GABARITO);
-    assert.strictEqual(primeiro.height, ALTURA_GABARITO);
+    // Sem formato, o quadrado de sempre.
+    assert.strictEqual(primeiro.width, 800);
+    assert.strictEqual(primeiro.height, 800);
     assert.match(primeiro.challengeId, /^challenge-[a-z0-9]+-[a-z0-9]+$/);
     assert.match(primeiro.backgroundColor, /^#[0-9a-f]{6}$/i);
     // Sem nível, o gerador entrega a imagem inteira.
@@ -70,10 +86,83 @@ suite("Gerador de desafios", () => {
     assert.ok(encontrouCirculo, "Nenhum círculo foi gerado.");
   });
 
+  test("a imagem tem o tamanho pedido", () => {
+    for (const tamanho of TAMANHOS) {
+      const desafio = criarDesafioGerado({ aleatorio: criarAleatorioTeste(7), tamanho });
+      assert.deepStrictEqual([desafio.width, desafio.height], [tamanho.largura, tamanho.altura]);
+    }
+    // O servidor não distingue um tamanho do mesmo tamanho virado.
+    const tamanhos = FORMATOS_FIXOS.map((formato) => {
+      const { largura, altura } = TAMANHO_DO_FORMATO[formato];
+      return [largura, altura].sort((a, b) => a - b).join("x");
+    });
+    assert.strictEqual(new Set(tamanhos).size, FORMATOS_FIXOS.length);
+  });
+
+  test("os 8 layouts primários cobrem a imagem inteira, sem sobrar nem sobrepor", () => {
+    for (const { largura, altura } of TAMANHOS) {
+      const formato = `${largura}x${altura}`;
+      const vistos = new Set<string>();
+      for (let layout = 0; layout < 8; layout++) {
+        // O sorteio do layout é o primeiro: (layout + 0,5) / 8 cai nele.
+        const faixas = escolherLayoutPrimario(() => (layout + 0.5) / 8, 0, largura, altura);
+        const areas = faixas.map(({ area }) => area);
+        vistos.add(JSON.stringify(areas));
+        const soma = areas.reduce((total, area) => total + area.width * area.height, 0);
+        assert.ok(Math.abs(soma - largura * altura) < 1e-6, `${formato}, layout ${layout}: não cobre tudo.`);
+        for (const [indice, area] of areas.entries()) {
+          assert.ok(area.x >= 0 && area.y >= 0, `${formato}, layout ${layout}: faixa fora.`);
+          assert.ok(area.x + area.width <= largura + 1e-6, `${formato}, layout ${layout}: faixa fora.`);
+          assert.ok(area.y + area.height <= altura + 1e-6, `${formato}, layout ${layout}: faixa fora.`);
+          for (const outra of areas.slice(indice + 1)) {
+            assert.ok(!retangulosSobrepoem(area, outra), `${formato}, layout ${layout}: faixas sobrepostas.`);
+          }
+        }
+      }
+      assert.strictEqual(vistos.size, 8, `${formato}: layouts repetidos.`);
+    }
+    // No quadrado, as coordenadas do script do Vitor (o rodapé do layout 2
+    // começa em 600).
+    const rodape = escolherLayoutPrimario(() => 2.5 / 8, 0, 800, 800)[2].area;
+    assert.deepStrictEqual(rodape, { x: 0, y: 600, width: 800, height: 200 });
+    // Na paisagem, a altura certa: 3/4 de 720, e não de 1280.
+    const rodapePaisagem = escolherLayoutPrimario(() => 2.5 / 8, 0, 1280, 720)[2].area;
+    assert.deepStrictEqual(rodapePaisagem, { x: 0, y: 540, width: 1280, height: 180 });
+  });
+
+  test("os tamanhos mínimos acompanham a imagem, como no script do Vitor", () => {
+    // No 800x800, os de antes; nos outros, pela média dos dois lados.
+    assert.deepStrictEqual(medidasDaImagem(800, 800), {
+      tamanhoMinimo: 70,
+      margem: 15,
+      diametroMinimo: 20,
+      espacoCirculos: 30,
+    });
+    assert.deepStrictEqual(medidasDaImagem(1280, 720), {
+      tamanhoMinimo: 87.5,
+      margem: 18.75,
+      diametroMinimo: 25,
+      espacoCirculos: 37.5,
+    });
+    // Uma imagem com o dobro dos lados não sai com quatro vezes mais
+    // componentes. Sai com um pouco mais, porque os limites de "cabe um
+    // elemento" e "cabe uma sequência" continuam em px, como no script.
+    const media = (tamanho: Tamanho) => {
+      const quantidades = Array.from({ length: 100 }, (_, caso) =>
+        criarDesafioGerado({ aleatorio: criarAleatorioTeste(caso), tamanho }).blocks.length,
+      );
+      return quantidades.reduce((soma, valor) => soma + valor, 0) / quantidades.length;
+    };
+    const normal = media({ largura: 800, altura: 800 });
+    const dobro = media({ largura: 1600, altura: 1600 });
+    assert.ok(dobro < normal * 2, `800x800: ${normal}; 1600x1600: ${dobro}.`);
+  });
+
   test("os cortes não aparecem: o fundo fica à vista entre os elementos", () => {
-    for (let caso = 0; caso < 100; caso++) {
+    for (const { tamanho, caso } of casosEmCadaTamanho(100)) {
       const desafio = criarDesafioGerado({
         aleatorio: criarAleatorioTeste(caso),
+        tamanho,
       });
       const raiz = desafio.blocks.filter((bloco) => bloco.parentId === undefined);
       const areaTotal = raiz.reduce(
@@ -85,11 +174,12 @@ suite("Gerador de desafios", () => {
         areaTotal < desafio.width * desafio.height * 0.9,
         `Caso ${caso}: os blocos de fora cobrem quase todo o gabarito.`,
       );
-      // Cada elemento fica a 15 px da borda da região: nada encosta na borda
-      // do gabarito.
+      // Cada elemento fica à margem da borda da região (15 px no 800x800):
+      // nada encosta na borda do gabarito.
+      const margem = Math.floor(medidasDaImagem(tamanho.largura, tamanho.altura).margem);
       for (const bloco of raiz.filter((bloco) => bloco.shape === "rectangle")) {
         assert.ok(
-          bloco.x >= 15 && bloco.y >= 15,
+          bloco.x >= margem && bloco.y >= margem,
           `Caso ${caso}: o bloco ${bloco.id} encosta na borda do gabarito.`,
         );
       }
@@ -185,18 +275,20 @@ suite("Gerador de desafios", () => {
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {
-    for (let caso = 0; caso < 300; caso++) {
+    for (const { tamanho, caso } of casosEmCadaTamanho(300)) {
       const desafio = criarDesafioGerado({
         aleatorio: criarAleatorioTeste(caso),
+        tamanho,
       });
       const blocosPorId = new Map<number, Bloco>();
       const filhosPorPai = new Map<number | undefined, Bloco[]>();
 
       assert.ok(desafio.blocks.length >= 3, `Caso ${caso} gerou poucos blocos.`);
-      // O original fica abaixo de 100 blocos; o limite só pega recursão
-      // descontrolada.
+      // O original fica abaixo de 100 blocos no 800x800; o limite, que cresce
+      // com a área, só pega recursão descontrolada.
+      const area = (tamanho.largura * tamanho.altura) / (800 * 800);
       assert.ok(
-        desafio.blocks.length <= 200,
+        desafio.blocks.length <= 200 * Math.max(1, area),
         `Caso ${caso} gerou blocos demais: ${desafio.blocks.length}.`,
       );
 
@@ -248,6 +340,13 @@ suite("Gerador de desafios", () => {
   });
 });
 
+// Os mesmos casos em cada tamanho da imagem.
+function casosEmCadaTamanho(quantidade: number) {
+  return TAMANHOS.flatMap((tamanho) =>
+    Array.from({ length: quantidade }, (_, caso) => ({ tamanho, caso })),
+  );
+}
+
 function assertBlocoContido(filho: Bloco, pai: Bloco, caso: number): void {
   assert.ok(
     filho.x >= pai.x,
@@ -279,7 +378,9 @@ function criarAleatorioTeste(caso: number): () => number {
   };
 }
 
-function retangulosSobrepoem(primeiro: Bloco, segundo: Bloco): boolean {
+type Caixa = { x: number; y: number; width: number; height: number };
+
+function retangulosSobrepoem(primeiro: Caixa, segundo: Caixa): boolean {
   return (
     primeiro.x < segundo.x + segundo.width &&
     primeiro.x + primeiro.width > segundo.x &&
