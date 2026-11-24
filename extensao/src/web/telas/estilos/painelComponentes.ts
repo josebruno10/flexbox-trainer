@@ -1,16 +1,24 @@
 // Aba do gabarito: a lista de componentes com as medidas.
 export const ESTILOS_PAINEL_COMPONENTES = `
+    /* Quebra na largura da imagem, sem alargar a coluna dela. */
     .ajuda {
-      max-width: 640px;
+      width: 0;
+      min-width: 100%;
       font-size: 12px;
       color: var(--texto-suave);
     }
 
+    /* Ao lado da imagem, a lista fica com o resto da largura e vai até o pé
+       da aba (o script calcula a altura), rolando por dentro. Com espaço, os
+       componentes se dividem em colunas, cada um numa linha só, com as
+       medidas e a cor à vista. */
     .lista {
-      flex: 1 1 300px;
-      min-width: 250px;
-      max-width: 340px;
-      max-height: calc(100vh - 35px);
+      flex: 1 1 0;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 370px), 1fr));
+      align-content: start;
+      column-gap: 16px;
       list-style: none;
       margin: 0;
       padding: 0 4px 0 0;
@@ -19,6 +27,9 @@ export const ESTILOS_PAINEL_COMPONENTES = `
     }
 
     .componente {
+      /* Segura o nome escondido para leitores de tela dentro da linha:
+         solto, ele ficava fora da rolagem da lista e alongava a aba. */
+      position: relative;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -123,16 +134,16 @@ export const ESTILOS_PAINEL_COMPONENTES = `
       color: var(--texto-suave);
     }
 
-    /* Em uma aba estreita, a lista vai para baixo da imagem. */
+    /* Numa aba estreita, a lista vai para baixo da imagem e aparece inteira:
+       quem rola é a aba (mesmo limite do script, em aba/modos.ts). */
     @media (max-width: 680px) {
-      .conteudo {
+      .corpo {
         flex-direction: column;
+        align-items: stretch;
       }
 
       .lista {
-        max-width: none;
-        max-height: none;
-        width: 100%;
+        flex: none;
       }
     }
 `;

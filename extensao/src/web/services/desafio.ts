@@ -3,7 +3,7 @@ import { TAMANHO_DO_FORMATO, formatoDoCodigo } from "../formatos";
 import { nivelDoCodigo } from "../niveis";
 import { aleatorioDoCodigo, sortearCodigo } from "./codigoDesafio";
 import { corAleatoria, rgbParaHex } from "./gerador/cores";
-import { FRACAO_REMOVIDA, tirarOsMenores } from "./gerador/dificuldade";
+import { LIMITE_DE_COMPONENTES, tirarOsMenores } from "./gerador/dificuldade";
 import {
   ContextoGeracao,
   Regiao,
@@ -14,11 +14,12 @@ import { medidasDaImagem } from "./gerador/medidas";
 import { Aleatorio } from "./gerador/sorteio";
 
 // Porta do gerador de Vitor Costa (Gerador-de-imagens-para-torneio-de-CSS,
-// commit a9de64e, com os 8 layouts primários e as proporções). As decisões
-// aleatórias seguem o script original; muda a saída, que vira uma lista de
-// blocos com hierarquia em vez de desenho direto no canvas, e o gerador de
-// números, que pode ser injetado nos testes. O script monta os layouts pela
-// proporcaoImagem, que lá é trocada à mão; aqui ela é o tamanho do formato.
+// commit bdc6f9e, com os 8 layouts primários, as proporções e os níveis por
+// quantidade de componentes). As decisões aleatórias seguem o script
+// original; muda a saída, que vira uma lista de blocos com hierarquia em vez
+// de desenho direto no canvas, e o gerador de números, que pode ser injetado
+// nos testes. O script monta os layouts pela proporcaoImagem, que lá é
+// trocada à mão; aqui ela é o tamanho do formato.
 // As partes do gerador ficam em ./gerador; aqui fica a entrada.
 
 export type OpcoesGeracaoDesafio = {
@@ -59,6 +60,22 @@ export function criarDesafioPorCodigo(
 export function criarDesafioGerado(
   opcoes: OpcoesGeracaoDesafio = {},
 ): Desafio {
+  const { desafio, contexto } = gerarImagemCompleta(opcoes);
+  const nivel = opcoes.nivel ?? "dificil";
+  return {
+    ...desafio,
+    blocks: tirarOsMenores(contexto, LIMITE_DE_COMPONENTES[nivel]),
+  };
+}
+
+/**
+ * A imagem antes de o nível tirar componentes, já com o layout do nível (o
+ * fácil sorteia entre menos layouts). Fica separada para os testes
+ * compararem cada nível com a imagem inteira dele.
+ */
+export function gerarImagemCompleta(
+  opcoes: OpcoesGeracaoDesafio = {},
+): { desafio: Desafio; contexto: ContextoGeracao } {
   const aleatorio = opcoes.aleatorio ?? Math.random;
   const nivel = opcoes.nivel ?? "dificil";
   const { largura, altura } = opcoes.tamanho ?? TAMANHO_DO_FORMATO.quadrado;
@@ -73,7 +90,7 @@ export function criarDesafioGerado(
   const corFundo = corAleatoria(aleatorio);
   const direcao = aleatorio() < 0.5 ? 0 : 1;
 
-  for (const faixa of escolherLayoutPrimario(aleatorio, direcao, largura, altura)) {
+  for (const faixa of escolherLayoutPrimario(aleatorio, direcao, largura, altura, nivel)) {
     const regiao: Regiao = {
       area: faixa.area,
       parentId: undefined,
@@ -84,17 +101,15 @@ export function criarDesafioGerado(
     cortarRegiao(contexto, regiao, faixa.direcao);
   }
 
-  return {
+  const desafio: Desafio = {
     challengeId: criarIdDesafio(aleatorio),
     width: largura,
     height: altura,
     backgroundColor: rgbParaHex(corFundo),
     nivel,
-    blocks: tirarOsMenores(
-      contexto,
-      Math.floor(contexto.blocks.length * FRACAO_REMOVIDA[nivel]),
-    ),
+    blocks: contexto.blocks,
   };
+  return { desafio, contexto };
 }
 
 function criarIdDesafio(aleatorio: Aleatorio): string {

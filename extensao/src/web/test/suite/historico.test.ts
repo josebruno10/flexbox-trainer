@@ -108,7 +108,7 @@ suite("Histórico de desafios", () => {
   test("ignora registros incompletos ou com o código de 6 dígitos de antes", () => {
     const historico = new HistoricoDesafios(
       armazenamentoFalso({
-        [`flexboxTrainer.historico3|${ALUNO}`]: [
+        [`flexboxTrainer.historico4|${ALUNO}`]: [
           { codigo: "MESA" },
           null,
           {
@@ -137,6 +137,39 @@ suite("Histórico de desafios", () => {
       historico.listar(ALUNO).map((registro) => registro.codigo),
       ["KTBW"],
     );
+  });
+
+  test("do histórico da 0.9.0 passam só os difíceis, que não mudaram de imagem", async () => {
+    const registro = (codigo: string) => ({
+      codigo,
+      melhor: 70,
+      tempoMelhorMs: 1,
+      verificacoes: 1,
+      vezes: 1,
+      ultimaVez: 1,
+      ultimaTentativa: `challenge-${codigo}-a`,
+    });
+    const armazenamento = armazenamentoFalso({
+      // AAAA é fácil, MESA é médio, AAAC e BOLA são difíceis.
+      [`flexboxTrainer.historico3|${ALUNO}`]: ["AAAA", "AAAC", "MESA", "BOLA"].map(registro),
+    });
+    const historico = new HistoricoDesafios(armazenamento);
+
+    assert.deepStrictEqual(
+      historico.listar(ALUNO).map((item) => item.codigo),
+      ["AAAC", "BOLA"],
+    );
+
+    // A primeira nota grava o histórico novo, com os difíceis de antes.
+    await historico.registrarNota(ALUNO, nota({ codigo: "MESA", precisao: 40 }));
+    assert.deepStrictEqual(
+      armazenamento
+        .get<{ codigo: string; melhor: number }[]>(`flexboxTrainer.historico4|${ALUNO}`)
+        ?.map((item) => [item.codigo, item.melhor]),
+      [["MESA", 40], ["AAAC", 70], ["BOLA", 70]],
+    );
+    // O MESA de antes, de outra imagem, não entrou na nota nova.
+    assert.strictEqual(historico.buscar(ALUNO, "MESA")?.vezes, 1);
   });
 
   test("guarda a melhor nota de cada dia, do dia mais antigo ao mais recente", async () => {

@@ -8,7 +8,7 @@ export const estado: {
   modo: Modo;
   selecionadoId?: number;
   sobMouseId?: number;
-  // Lado a lado, a lista começa escondida para as imagens ficarem maiores.
+  // Lado a lado, a lista começa escondida quando diminuiria bem as imagens.
   listaVisivel: boolean;
   limpezaSelecao?: number;
   // O que corrigir em cada componente, da última nota.

@@ -12,7 +12,19 @@ export const ESTILOS_PAINEL_GABARITO = `
       margin: 0 -16px 16px;
     }
 
-    .conteudo {
+    /* O topo (resumo, Verificar e modos) ocupa a largura toda da aba, e a
+       imagem e a lista ficam embaixo dele. Na coluna da imagem, os botões a
+       alargavam além da imagem e empurravam a lista para fora da aba. */
+    .conteudo,
+    .topo {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* A imagem no tamanho que o script calcula e a lista no resto da
+       largura, ao lado dela (numa aba estreita, embaixo: veja a lista). */
+    .corpo {
       display: flex;
       align-items: flex-start;
       gap: 16px;
@@ -82,9 +94,14 @@ export const ESTILOS_PAINEL_GABARITO = `
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      max-width: 100%;
       font-family: var(--fonte-mono);
       font-size: 11px;
       color: var(--texto-suave);
+    }
+
+    .opacidade span {
+      white-space: nowrap;
     }
 
     .opacidade strong {
@@ -93,8 +110,31 @@ export const ESTILOS_PAINEL_GABARITO = `
       color: var(--texto);
     }
 
+    /* Numa aba estreita, o controle encolhe em vez de passar da borda. */
     .opacidade input {
+      min-width: 48px;
       accent-color: var(--acento);
+    }
+
+    /* Numa aba bem estreita, os quatro modos ficam em duas linhas. */
+    @media (max-width: 500px) {
+      .modos {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+      }
+
+      .modo:nth-child(3) {
+        border-left: 1px solid var(--linha-forte);
+      }
+
+      .modo:nth-child(3)[aria-pressed="true"] {
+        border-left-color: var(--tinta);
+      }
+
+      .modo:nth-child(n + 3) {
+        border-top: 0;
+      }
     }
 
     /* O Verificar e a nota, como na barra lateral, sem trocar de tela. */
@@ -104,10 +144,6 @@ export const ESTILOS_PAINEL_GABARITO = `
       align-items: center;
       gap: 8px 14px;
       margin-bottom: 12px;
-      /* A nota quebra na largura da imagem, sem alargar a coluna e
-         empurrar a lista de componentes para fora da aba. */
-      width: 0;
-      min-width: 100%;
     }
 
     .verificacao-aba button {

@@ -13,16 +13,24 @@ import {
   valorOpacidade,
 } from "./elementos";
 import { estado } from "./estado";
-import type { Modo } from "./tipos";
+import type { GabaritoRecebido, Modo } from "./tipos";
 
 // Os modos da aba (Gabarito, Sobrepor, Comparar e Lado a lado), a lista que aparece ou
-// some e o tamanho das imagens no espaço livre.
+// some e o tamanho das imagens e da lista no espaço livre.
 
-// Espaço reservado para a lista ao lado da imagem; abaixo da largura de uma
-// coluna, a lista vai para baixo (mesmo limite do CSS).
-const LARGURA_LISTA = 300;
-const LARGURA_UMA_COLUNA = 680;
+// Ao lado da imagem, a lista fica com pelo menos um quarto da largura, entre
+// 300 px (as medidas quebram em duas linhas) e 380 px (cada componente cabe
+// numa linha só). Numa aba estreita, ela vai para baixo da imagem (mesmo
+// limite do CSS).
+const LISTA_MINIMA = 300;
+const LISTA_UMA_LINHA = 380;
+const ABA_ESTREITA = "(max-width: 680px)";
 const ESPACO = 16;
+// Numa aba baixa, a imagem e a lista param de diminuir aqui, e a aba rola.
+const ALTURA_MINIMA = 240;
+// Lado a lado, a lista só começa escondida se, com ela, as imagens ficassem
+// com menos de 90% do tamanho que teriam sem ela.
+const ESCALA_ACEITA = 0.9;
 
 // Só os modos Gabarito e Comparar têm uma linha de ajuda; nos outros, ela some.
 const AJUDA: Partial<Record<Modo, string>> = {
@@ -33,9 +41,6 @@ const AJUDA: Partial<Record<Modo, string>> = {
 export function definirModo(novo: Modo): void {
   const mudou = novo !== estado.modo;
   estado.modo = novo;
-  if (mudou) {
-    mostrarLista(novo !== "lado");
-  }
   palco.dataset.modo = novo;
   for (const botao of botoesModo) {
     botao.setAttribute("aria-pressed", String(botao.dataset.modo === novo));
@@ -44,7 +49,13 @@ export function definirModo(novo: Modo): void {
   ajuda.textContent = AJUDA[novo] ?? "";
   ajuda.hidden = !AJUDA[novo];
   aplicarOpacidade();
-  ajustarTamanho();
+  if (mudou) {
+    // Lado a lado, a lista começa escondida quando diminuiria bem as imagens.
+    // Numa aba larga, elas já param na altura da aba, e a lista cabe ao lado.
+    mostrarLista(novo !== "lado" || listaCabeAoLado());
+  } else {
+    ajustarTamanho();
+  }
 }
 
 export function mostrarLista(visivel: boolean): void {
@@ -70,33 +81,77 @@ export function aplicarOpacidade(): void {
   );
 }
 
-// As imagens ocupam o espaço livre da aba, sem passar do tamanho real.
+// As imagens ocupam o espaço livre da aba, sem passar do tamanho real, e a
+// lista ao lado delas vai até o pé da aba.
 export function ajustarTamanho(): void {
   const gabarito = estado.gabarito;
   if (!gabarito) {
     return;
   }
 
-  const umaColuna = window.innerWidth <= LARGURA_UMA_COLUNA;
+  // A lista primeiro: o topo dela não depende da imagem, e uma lista alta
+  // demais por um instante punha a barra de rolagem na conta da largura.
+  const aoLado = !window.matchMedia(ABA_ESTREITA).matches && estado.listaVisivel;
+  lista.style.maxHeight = aoLado
+    ? `${Math.max(ALTURA_MINIMA, alturaAteOPe(lista))}px`
+    : "";
+
+  aplicarEscala(gabarito, escalaDasImagens(gabarito, estado.listaVisivel));
+  // A ajuda quebra na largura da imagem: com a imagem de outro tamanho, ela
+  // pode ganhar ou perder uma linha, e a conta se refaz com a altura nova.
+  aplicarEscala(gabarito, escalaDasImagens(gabarito, estado.listaVisivel));
+  desenharDestaques();
+}
+
+// Cabem na largura livre (ao lado da lista, se ela aparece) e, numa aba
+// larga, também na altura que sobra embaixo do topo.
+function escalaDasImagens(gabarito: GabaritoRecebido, comLista: boolean): number {
+  const estreita = window.matchMedia(ABA_ESTREITA).matches;
   const quadros = estado.modo === "lado" ? 2 : 1;
+  // Sem a barra de rolagem, que ocupa espaço na aba.
+  const larguraConteudo = document.documentElement.clientWidth - ESPACO * 2;
+  const larguraLista = Math.min(
+    LISTA_UMA_LINHA,
+    Math.max(LISTA_MINIMA, larguraConteudo / 4),
+  );
   const larguraLivre =
-    window.innerWidth -
-    ESPACO * 2 -
-    (umaColuna || !estado.listaVisivel ? 0 : LARGURA_LISTA + ESPACO);
+    larguraConteudo - (comLista && !estreita ? larguraLista + ESPACO : 0);
   const larguraPorQuadro = (larguraLivre - (quadros - 1) * ESPACO) / quadros;
-  const topo = palco.getBoundingClientRect().top + window.scrollY;
-  // Legenda dos quadros lado a lado e a linha de ajuda embaixo.
-  const reserva = (estado.modo === "lado" ? 24 : 0) + 56;
-  const alturaLivre = umaColuna ? Infinity : window.innerHeight - topo - reserva;
-  const escala = Math.max(
+  const alturaLivre = estreita
+    ? Infinity
+    : Math.max(ALTURA_MINIMA, alturaAteOPe(telas[0]) - alturaDaAjuda());
+  return Math.max(
     0.05,
     Math.min(1, larguraPorQuadro / gabarito.width, alturaLivre / gabarito.height),
   );
+}
 
+function listaCabeAoLado(): boolean {
+  const gabarito = estado.gabarito;
+  return (
+    gabarito !== undefined &&
+    escalaDasImagens(gabarito, true) >=
+      escalaDasImagens(gabarito, false) * ESCALA_ACEITA
+  );
+}
+
+function aplicarEscala(gabarito: GabaritoRecebido, escala: number): void {
   for (const tela of telas) {
     tela.style.width = `${Math.round(gabarito.width * escala)}px`;
     tela.style.height = `${Math.round(gabarito.height * escala)}px`;
   }
   superficie.style.transform = `scale(${escala})`;
-  desenharDestaques();
+}
+
+// Do topo do elemento até o pé da aba, menos a margem de baixo.
+function alturaAteOPe(elemento: HTMLElement): number {
+  const topo = elemento.getBoundingClientRect().top + window.scrollY;
+  return document.documentElement.clientHeight - topo - ESPACO;
+}
+
+// A linha de ajuda embaixo das imagens, com o espaço até ela.
+function alturaDaAjuda(): number {
+  return ajuda.hidden
+    ? 0
+    : ajuda.getBoundingClientRect().bottom - telas[0].getBoundingClientRect().bottom;
 }

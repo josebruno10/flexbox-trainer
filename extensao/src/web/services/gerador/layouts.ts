@@ -1,3 +1,4 @@
+import { Nivel } from "../../types";
 import { Retangulo } from "./padroes";
 import { Aleatorio, inteiroAleatorio } from "./sorteio";
 
@@ -8,11 +9,16 @@ export type FaixaPrincipal = { area: Retangulo; direcao: 0 | 1 };
 // Os 8 layouts primários do script original, em frações da largura (L) e da
 // altura (A) da imagem, a proporcaoImagem dele. As contas seguem a ordem do
 // script (L * 2 / 3, e não 2 / 3 * L), para dar os mesmos números.
+// No fácil, só os dois primeiros (cabeçalho, conteúdo e rodapé, ou três
+// colunas), como no script desde o commit bdc6f9e.
+const LAYOUTS_DO_FACIL = 2;
+
 export function escolherLayoutPrimario(
   aleatorio: Aleatorio,
   direcao: 0 | 1,
   L: number,
   A: number,
+  nivel: Nivel = "dificil",
 ): FaixaPrincipal[] {
   const faixa = (
     x: number,
@@ -22,7 +28,8 @@ export function escolherLayoutPrimario(
     direcaoDaFaixa: 0 | 1 = direcao,
   ): FaixaPrincipal => ({ area: { x, y, width, height }, direcao: direcaoDaFaixa });
 
-  switch (inteiroAleatorio(aleatorio, 0, 7)) {
+  const quantos = nivel === "facil" ? LAYOUTS_DO_FACIL : 8;
+  switch (inteiroAleatorio(aleatorio, 0, quantos - 1)) {
     case 0:
       // Cabeçalho, conteúdo e rodapé.
       return [

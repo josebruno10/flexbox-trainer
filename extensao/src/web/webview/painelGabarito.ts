@@ -57,6 +57,8 @@ window.addEventListener("message", (evento: MessageEvent<MensagemDaExtensao>) =>
 
   if (mensagem?.type === "resultado") {
     mostrarResultado(mensagem.payload.resultado, mensagem.payload.verificacao);
+    // A nota pode ganhar ou perder uma linha e mudar a altura do topo.
+    ajustarTamanho();
   }
 });
 

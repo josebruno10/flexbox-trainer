@@ -1,49 +1,43 @@
 import { Bloco, Nivel } from "../../types";
 import { ContextoGeracao } from "./regioes";
 
-// A parte dos componentes que sai em cada nível, dos menores para os
-// maiores. O script do Vitor tira 50% no fácil; aqui são 75%, porque com a
-// metade o fácil ainda parecia um médio (mediana de 15 componentes; com 65%,
-// 11; agora 8, com no máximo 14, contra 21 no médio). Com 75%, metade dos
-// fáceis já para no mínimo de 8: tirar mais quase não muda nada.
-export const FRACAO_REMOVIDA: Record<Nivel, number> = {
-  facil: 0.75,
-  medio: 0.3,
-  dificil: 0,
+// Quantos componentes ficam em cada nível, como no script do Vitor desde o
+// commit bdc6f9e: 7 no fácil, 14 no médio e todos no difícil.
+export const LIMITE_DE_COMPONENTES: Record<Nivel, number> = {
+  facil: 7,
+  medio: 14,
+  dificil: Infinity,
 };
-// Nenhum nível tira tanto que sobrem menos componentes que isto.
-const MINIMO_DE_COMPONENTES = 8;
 
-// SelecionaDificuldade do original: tira os componentes menores. Um padrão
-// sai inteiro (sem deixar uma sequência pela metade), dos menores para os
-// maiores, até tirar a quantidade do nível; por isso podem sair alguns a
-// mais. Os filhos são sempre menores que o pai, então saem antes dele. Os
+type Padrao = { tamanho: number; circulo: boolean; ids: number[] };
+
+// SelecionaDificuldade do original: ficam os maiores retângulos, e os
+// círculos só depois de todos os retângulos. Aqui um padrão sai inteiro
+// (sem deixar uma sequência ou uma fileira de círculos pela metade): saem os
+// círculos, dos menores para os maiores, e depois os retângulos, até o
+// limite do nível. Quando o próximo padrão passaria do limite, fica o que
+// chegar mais perto dele (no empate, o padrão fica); por isso o nível pode
+// ter alguns componentes a mais ou a menos. Os filhos são sempre menores que
+// o pai, e os círculos não têm filhos, então nenhum bloco perde o pai. Os
 // que ficam são numerados de novo, para a lista ir de #1 a #N sem buracos.
-export function tirarOsMenores(contexto: ContextoGeracao, quantidade: number): Bloco[] {
-  if (quantidade === 0) {
+export function tirarOsMenores(contexto: ContextoGeracao, limite: number): Bloco[] {
+  let restam = contexto.blocks.length;
+  if (restam <= limite) {
     return contexto.blocks;
   }
 
-  const grupos = new Map<number, { tamanho: number; ids: number[] }>();
-  for (const bloco of contexto.blocks) {
-    const grupo = contexto.grupoDoBloco.get(bloco.id) ?? -bloco.id;
-    const tamanho = (bloco.width + bloco.height) / 2;
-    const atual = grupos.get(grupo) ?? { tamanho, ids: [] };
-    atual.tamanho = Math.max(atual.tamanho, tamanho);
-    atual.ids.push(bloco.id);
-    grupos.set(grupo, atual);
-  }
-
   const removidos = new Set<number>();
-  const limite = contexto.blocks.length - MINIMO_DE_COMPONENTES;
-  for (const grupo of [...grupos.values()].sort((a, b) => a.tamanho - b.tamanho)) {
-    if (
-      removidos.size >= quantidade ||
-      removidos.size + grupo.ids.length > limite
-    ) {
+  for (const padrao of padroesNaOrdemDeSaida(contexto)) {
+    const depois = restam - padrao.ids.length;
+    const passaria = depois < limite;
+    if (passaria && limite - depois >= restam - limite) {
       break;
     }
-    grupo.ids.forEach((id) => removidos.add(id));
+    padrao.ids.forEach((id) => removidos.add(id));
+    restam = depois;
+    if (restam <= limite) {
+      break;
+    }
   }
 
   const ficam = contexto.blocks.filter((bloco) => !removidos.has(bloco.id));
@@ -54,4 +48,24 @@ export function tirarOsMenores(contexto: ContextoGeracao, quantidade: number): B
     parentId:
       bloco.parentId === undefined ? undefined : novoId.get(bloco.parentId),
   }));
+}
+
+// Os círculos antes dos retângulos e, em cada forma, os menores primeiro.
+function padroesNaOrdemDeSaida(contexto: ContextoGeracao): Padrao[] {
+  const padroes = new Map<number, Padrao>();
+  for (const bloco of contexto.blocks) {
+    const grupo = contexto.grupoDoBloco.get(bloco.id) ?? -bloco.id;
+    const tamanho = (bloco.width + bloco.height) / 2;
+    const atual = padroes.get(grupo) ?? {
+      tamanho,
+      circulo: bloco.shape === "circle",
+      ids: [],
+    };
+    atual.tamanho = Math.max(atual.tamanho, tamanho);
+    atual.ids.push(bloco.id);
+    padroes.set(grupo, atual);
+  }
+  return [...padroes.values()].sort((a, b) =>
+    a.circulo !== b.circulo ? (a.circulo ? -1 : 1) : a.tamanho - b.tamanho,
+  );
 }

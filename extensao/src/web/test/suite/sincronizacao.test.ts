@@ -27,7 +27,7 @@ suite("Sincronização entre computadores", () => {
       CHAVE_NIVEL,
       CHAVE_FORMATO,
       CHAVE_TAMANHO_LIVRE,
-      "flexboxTrainer.historico3|aluno@example.com",
+      "flexboxTrainer.historico4|aluno@example.com",
       "flexboxTrainer.evolucao|aluno@example.com",
       "flexboxTrainer.progressos|aluno@example.com",
       "flexboxTrainer.tamanhosLivres|aluno@example.com",

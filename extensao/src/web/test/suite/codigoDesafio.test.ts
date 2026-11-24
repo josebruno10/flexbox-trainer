@@ -133,11 +133,13 @@ suite("Código do desafio", () => {
   });
 });
 
-// Tirada do gerador com os 8 layouts do Vitor, as cores do commit 162b3d6 e
-// os quatro formatos, em que o MESA é paisagem (depois da 0.8.0).
+// Tirada do gerador com os 8 layouts do Vitor, as cores do commit 162b3d6,
+// os quatro formatos, em que o MESA é paisagem (depois da 0.8.0), e os níveis
+// do commit bdc6f9e, em que o médio fica com até 14 componentes (depois da
+// 0.9.0; antes eram 26).
 const ASSINATURA_MESA = {
   fundo: "#6e9fd6",
-  componentes: 26,
+  componentes: 14,
   primeiro: {
     id: 1,
     parentId: undefined,

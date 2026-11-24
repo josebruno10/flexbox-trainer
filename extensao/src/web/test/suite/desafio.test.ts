@@ -5,8 +5,8 @@ import {
   TAMANHO_LIVRE_MAXIMO,
   TAMANHO_LIVRE_MINIMO,
 } from "../../formatos";
-import { criarDesafioGerado } from "../../services/desafio";
-import { FRACAO_REMOVIDA } from "../../services/gerador/dificuldade";
+import { criarDesafioGerado, gerarImagemCompleta } from "../../services/desafio";
+import { LIMITE_DE_COMPONENTES } from "../../services/gerador/dificuldade";
 import { escolherLayoutPrimario } from "../../services/gerador/layouts";
 import { medidasDaImagem } from "../../services/gerador/medidas";
 import { Bloco, Tamanho } from "../../types";
@@ -186,7 +186,7 @@ suite("Gerador de desafios", () => {
     }
   });
 
-  test("nos níveis mais fáceis saem os menores componentes, sem desfazer padrões", () => {
+  test("nos níveis mais fáceis saem os círculos e os menores, sem desfazer padrões", () => {
     const tamanho = (bloco: Bloco) => (bloco.width + bloco.height) / 2;
     // Os números mudam entre os níveis; a posição, o tamanho e a cor, não.
     const chave = (bloco: Bloco) =>
@@ -204,20 +204,20 @@ suite("Gerador de desafios", () => {
     // Os blocos criados juntos têm o mesmo pai, a mesma cor e o mesmo tamanho.
     const padrao = (bloco: Bloco, pai: string) =>
       [pai, bloco.color, bloco.width, bloco.height].join("|");
-    let tirouAPorcentagem = 0;
+    const noLimite = { facil: 0, medio: 0 };
 
     for (let caso = 0; caso < 100; caso++) {
-      const [dificil, medio, facil] = (["dificil", "medio", "facil"] as const).map(
-        (nivel) => criarDesafioGerado({ aleatorio: criarAleatorioTeste(caso), nivel }),
-      );
-      assert.strictEqual(medio.backgroundColor, dificil.backgroundColor);
-      assert.strictEqual(facil.nivel, "facil");
+      // O difícil é a imagem inteira; o médio tira componentes da mesma imagem.
+      const dificil = criarDesafioGerado({ aleatorio: criarAleatorioTeste(caso) });
+      const medioInteiro = gerarImagemCompleta({ aleatorio: criarAleatorioTeste(caso), nivel: "medio" });
+      assert.deepStrictEqual(medioInteiro.desafio.blocks, dificil.blocks);
 
-      for (const [maior, menor] of [
-        [dificil, medio],
-        [medio, facil],
-      ]) {
-        const doMaior = indexar(maior.blocks);
+      for (const nivel of ["medio", "facil"] as const) {
+        const inteiro = gerarImagemCompleta({ aleatorio: criarAleatorioTeste(caso), nivel }).desafio;
+        const menor = criarDesafioGerado({ aleatorio: criarAleatorioTeste(caso), nivel });
+        assert.strictEqual(menor.nivel, nivel);
+        assert.strictEqual(menor.backgroundColor, inteiro.backgroundColor);
+        const doInteiro = indexar(inteiro.blocks);
         const doMenor = indexar(menor.blocks);
         // Numerados de #1 a #N, sem buracos.
         assert.deepStrictEqual(
@@ -226,52 +226,76 @@ suite("Gerador de desafios", () => {
         );
         // Os que ficam são os mesmos blocos, com o mesmo pai.
         for (const [chaveBloco, { bloco, pai, orfao }] of doMenor) {
-          const original = doMaior.get(chaveBloco);
-          assert.ok(original, `Caso ${caso}: o bloco ${bloco.id} não existe no nível acima.`);
-          assert.ok(!orfao, `Caso ${caso}: o bloco ${bloco.id} ficou sem o pai.`);
-          assert.strictEqual(pai, original.pai, `Caso ${caso}: o bloco ${bloco.id} trocou de pai.`);
+          const original = doInteiro.get(chaveBloco);
+          assert.ok(original, `Caso ${caso}, ${nivel}: o bloco ${bloco.id} não existe na imagem inteira.`);
+          assert.ok(!orfao, `Caso ${caso}, ${nivel}: o bloco ${bloco.id} ficou sem o pai.`);
+          assert.strictEqual(pai, original.pai, `Caso ${caso}, ${nivel}: o bloco ${bloco.id} trocou de pai.`);
         }
-        const sairam = [...doMaior.entries()].filter(([chaveBloco]) => !doMenor.has(chaveBloco));
-        // Saem os menores.
-        const menorQueFicou = Math.min(...menor.blocks.map(tamanho));
+        const sairam = [...doInteiro.entries()]
+          .filter(([chaveBloco]) => !doMenor.has(chaveBloco))
+          .map(([, valor]) => valor);
+        // Como no script do Vitor, os círculos saem antes de qualquer retângulo.
+        if (sairam.some(({ bloco }) => bloco.shape !== "circle")) {
+          assert.ok(
+            menor.blocks.every((bloco) => bloco.shape !== "circle"),
+            `Caso ${caso}, ${nivel}: saiu um retângulo e ficou um círculo.`,
+          );
+        }
+        // Em cada forma, saem os menores.
+        for (const forma of ["circle", "rectangle"] as const) {
+          const ficaram = menor.blocks.filter((bloco) => bloco.shape === forma);
+          const menorQueFicou = Math.min(...ficaram.map(tamanho));
+          for (const { bloco } of sairam.filter(({ bloco }) => bloco.shape === forma)) {
+            assert.ok(
+              tamanho(bloco) <= menorQueFicou + 1,
+              `Caso ${caso}, ${nivel}: saiu o bloco ${bloco.id}, maior que um que ficou.`,
+            );
+          }
+        }
         // Um padrão sai inteiro ou fica inteiro.
         const padroesQueFicaram = new Set(
           [...doMenor.values()].map(({ bloco, pai }) => padrao(bloco, pai)),
         );
-        for (const [, { bloco, pai }] of sairam) {
-          assert.ok(
-            tamanho(bloco) <= menorQueFicou + 1,
-            `Caso ${caso}: saiu o bloco ${bloco.id}, maior que um que ficou.`,
-          );
+        for (const { bloco, pai } of sairam) {
           assert.ok(
             !padroesQueFicaram.has(padrao(bloco, pai)),
-            `Caso ${caso}: o padrão do bloco ${bloco.id} ficou pela metade.`,
+            `Caso ${caso}, ${nivel}: o padrão do bloco ${bloco.id} ficou pela metade.`,
           );
         }
-      }
-
-      assert.ok(
-        facil.blocks.length >= Math.min(8, dificil.blocks.length),
-        `Caso ${caso}: o fácil ficou com poucos componentes.`,
-      );
-      const total = dificil.blocks.length;
-      const tirou = (desafio: { blocks: Bloco[] }, nivel: "facil" | "medio") =>
-        total - desafio.blocks.length >= Math.floor(total * FRACAO_REMOVIDA[nivel]);
-      if (tirou(facil, "facil") && tirou(medio, "medio")) {
-        tirouAPorcentagem++;
-      } else {
-        // Quem não tirou a porcentagem parou perto do mínimo de 8: o próximo
-        // padrão inteiro deixaria o desafio com menos.
-        assert.ok(
-          facil.blocks.length <= 12 && medio.blocks.length >= facil.blocks.length,
-          `Caso ${caso}: parou com ${facil.blocks.length} componentes no fácil.`,
-        );
+        // Fica o limite do nível, ou perto dele quando um padrão inteiro
+        // passaria do limite; uma imagem com menos fica inteira.
+        const limite = LIMITE_DE_COMPONENTES[nivel];
+        if (inteiro.blocks.length <= limite) {
+          assert.strictEqual(menor.blocks.length, inteiro.blocks.length);
+        } else {
+          assert.ok(
+            Math.abs(menor.blocks.length - limite) <= 3,
+            `Caso ${caso}, ${nivel}: ficou com ${menor.blocks.length} componentes.`,
+          );
+        }
+        if (menor.blocks.length === Math.min(limite, inteiro.blocks.length)) {
+          noLimite[nivel]++;
+        }
       }
     }
 
-    // O médio quase sempre tira 30%; o fácil tira 75% em metade das imagens
-    // (49 de 100 nestes casos). As outras param no mínimo de 8 componentes.
-    assert.ok(tirouAPorcentagem >= 40, `Só ${tirouAPorcentagem} de 100 tiraram a porcentagem.`);
+    // Na maioria, fica exatamente o limite (uns 80% nos códigos).
+    assert.ok(noLimite.facil >= 65, `Só ${noLimite.facil} de 100 fáceis ficaram com 7.`);
+    assert.ok(noLimite.medio >= 65, `Só ${noLimite.medio} de 100 médios ficaram com 14.`);
+  });
+
+  test("o fácil usa só os dois primeiros layouts, como no script do Vitor", () => {
+    for (const { largura, altura } of TAMANHOS) {
+      const doFacil = new Set<string>();
+      for (let sorteio = 0; sorteio < 8; sorteio++) {
+        const faixas = escolherLayoutPrimario(() => (sorteio + 0.5) / 8, 0, largura, altura, "facil");
+        doFacil.add(JSON.stringify(faixas));
+      }
+      const primeiros = [0, 1].map((layout) =>
+        JSON.stringify(escolherLayoutPrimario(() => (layout + 0.5) / 8, 0, largura, altura)),
+      );
+      assert.deepStrictEqual([...doFacil].sort(), [...primeiros].sort());
+    }
   });
 
   test("mantém todos os blocos dentro do canvas e dos respectivos pais", () => {

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ehNivel } from "../niveis";
+import { ehNivel, nivelDoCodigo } from "../niveis";
 import { Nivel } from "../types";
 import { diaLocal, normalizarCodigo } from "./codigoDesafio";
 
@@ -44,6 +44,14 @@ export type NotaDoDia = {
 const LIMITE_REGISTROS = 30;
 const LIMITE_DIAS = 60;
 
+// Cada vez que o gerador muda, os códigos antigos passam a dar outras imagens,
+// e o histórico vai para outra chave, sem misturar notas de imagens diferentes
+// no mesmo código: a 0.5.0 deu o "historico2", os 8 layouts e os formatos, o
+// "historico3", e os níveis por quantidade de componentes, o "historico4".
+// Desta vez o difícil não mudou, e os registros dele passam para o novo.
+const HISTORICO = "historico4";
+const HISTORICO_ANTERIOR = "historico3";
+
 export class HistoricoDesafios {
   public constructor(private readonly armazenamento: vscode.Memento) {}
 
@@ -52,9 +60,9 @@ export class HistoricoDesafios {
     if (!dono) {
       return [];
     }
-    const registros = this.armazenamento.get<unknown>(
-      chave(dono, "historico3"),
-    );
+    const registros =
+      this.armazenamento.get<unknown>(chave(dono, HISTORICO)) ??
+      this.dificeisDoHistoricoAnterior(dono);
     return Array.isArray(registros) ? registros.filter(ehRegistro) : [];
   }
 
@@ -92,7 +100,7 @@ export class HistoricoDesafios {
     };
 
     await this.armazenamento.update(
-      chave(dono, "historico3"),
+      chave(dono, HISTORICO),
       [atualizado, ...registros.filter((registro) => registro !== anterior)].slice(
         0,
         LIMITE_REGISTROS,
@@ -119,6 +127,20 @@ export class HistoricoDesafios {
     );
   }
 
+  // Até o primeiro registro no histórico novo, valem os difíceis do anterior:
+  // só o fácil e o médio mudaram de imagem.
+  private dificeisDoHistoricoAnterior(dono: string): unknown[] {
+    const anteriores = this.armazenamento.get<unknown>(
+      chave(dono, HISTORICO_ANTERIOR),
+    );
+    return Array.isArray(anteriores)
+      ? anteriores.filter(
+          (registro) =>
+            ehRegistro(registro) && nivelDoCodigo(registro.codigo) === "dificil",
+        )
+      : [];
+  }
+
   // Guarda os últimos LIMITE_DIAS dias de cada nível.
   private async registrarNoDia(dono: string, nota: NotaDoDia): Promise<void> {
     const dias = this.evolucao(dono);
@@ -143,15 +165,12 @@ export class HistoricoDesafios {
 /** Onde fica tudo o que é do aluno: o histórico e a evolução. */
 export function chavesDoAluno(dono: string): string[] {
   return [
-    chave(dono, "historico3"),
+    chave(dono, HISTORICO),
     chave(dono, "evolucao"),
   ];
 }
 
-// "historico3": o gerador mudou de novo (a 0.5.0 deu o "historico2", e os 8
-// layouts e os formatos, o "historico3"), e os códigos antigos passaram a
-// dar outras imagens; o histórico recomeça, sem misturar notas de imagens
-// diferentes no mesmo código.
+
 function chave(dono: string, nome: string): string {
   return `flexboxTrainer.${nome}|${dono.trim().toLowerCase()}`;
 }

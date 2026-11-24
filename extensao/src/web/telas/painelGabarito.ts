@@ -37,7 +37,7 @@ export function obterHtmlPainelGabarito(
   <div class="faixa" aria-hidden="true"></div>
   <div class="vazio" id="vazio">Nenhum desafio. Gere um na barra lateral.</div>
   <div class="conteudo" id="conteudo" hidden>
-    <section class="imagem">
+    <div class="topo">
       <div class="resumo" id="resumo"></div>
       <div class="verificacao-aba">
         <button type="button" id="botaoVerificarAba" class="principal" title="Verificar a sua página, como o botão da barra lateral · ${atalhoVerificar}">Verificar</button>
@@ -58,28 +58,32 @@ export function obterHtmlPainelGabarito(
           <strong id="valorOpacidade">50%</strong>
         </div>
       </div>
-      <div class="palco" id="palco" data-modo="gabarito">
-        <figure class="quadro" id="quadroGabarito">
-          <figcaption class="rotulo">Gabarito</figcaption>
-          <div class="tela" id="telaGabarito">
-            <canvas id="canvasGabarito"></canvas>
-            <canvas id="canvasDestaque"></canvas>
-          </div>
-        </figure>
-        <figure class="quadro" id="quadroAluno">
-          <figcaption class="rotulo">Sua página</figcaption>
-          <div class="tela" id="telaAluno">
-            <div id="superficieAluno"></div>
-            <div class="sem-pagina" id="semPagina" hidden>Sem index.html e style.css.</div>
-          </div>
-        </figure>
-        <div class="linha-comparacao" id="linhaComparacao" role="slider" tabindex="0" aria-label="Linha da comparação: à esquerda o gabarito, à direita a sua página" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div>
-        <span class="lado-comparacao esquerda" aria-hidden="true">Gabarito</span>
-        <span class="lado-comparacao direita" aria-hidden="true">Sua página</span>
-      </div>
-      <div class="ajuda" id="ajuda"></div>
-    </section>
-    <ul class="lista" id="listaComponentes" aria-label="Componentes do gabarito"></ul>
+    </div>
+    <div class="corpo">
+      <section class="imagem">
+        <div class="palco" id="palco" data-modo="gabarito">
+          <figure class="quadro" id="quadroGabarito">
+            <figcaption class="rotulo">Gabarito</figcaption>
+            <div class="tela" id="telaGabarito">
+              <canvas id="canvasGabarito"></canvas>
+              <canvas id="canvasDestaque"></canvas>
+            </div>
+          </figure>
+          <figure class="quadro" id="quadroAluno">
+            <figcaption class="rotulo">Sua página</figcaption>
+            <div class="tela" id="telaAluno">
+              <div id="superficieAluno"></div>
+              <div class="sem-pagina" id="semPagina" hidden>Sem index.html e style.css.</div>
+            </div>
+          </figure>
+          <div class="linha-comparacao" id="linhaComparacao" role="slider" tabindex="0" aria-label="Linha da comparação: à esquerda o gabarito, à direita a sua página" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div>
+          <span class="lado-comparacao esquerda" aria-hidden="true">Gabarito</span>
+          <span class="lado-comparacao direita" aria-hidden="true">Sua página</span>
+        </div>
+        <div class="ajuda" id="ajuda"></div>
+      </section>
+      <ul class="lista" id="listaComponentes" aria-label="Componentes do gabarito"></ul>
+    </div>
   </div>
   <script src="${scriptUri}"></script>
 </body>
