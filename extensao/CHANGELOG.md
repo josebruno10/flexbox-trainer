@@ -2,6 +2,17 @@
 
 As mudanças de cada versão do FlexBox Trainer.
 
+## [0.10.0] - 2026-11-24
+
+### Desafios
+- Gerador atualizado com a versão nova do Vitor: o fácil fica com até 7 componentes e o médio com até 14 (antes saíam 75% e 30% deles), e saem primeiro os círculos, depois os retângulos menores. Como antes, um padrão sai inteiro: quando ele passaria do limite, fica o que chegar mais perto, e alguns desafios ficam com um pouco mais ou menos. O fácil também passa a usar só os layouts mais simples: cabeçalho, conteúdo e rodapé, ou três colunas.
+- Os códigos do fácil e do médio passam a gerar outras imagens, e o histórico deles recomeça. Os do difícil continuam com as mesmas imagens e ficam no histórico; o gráfico da evolução continua.
+
+### Aba do gabarito
+- O topo (resumo, Verificar e modos) ocupa a largura toda, e a imagem e a lista de componentes ficam embaixo. A lista ocupa o resto da largura e, com espaço, se divide em colunas, com as medidas e a cor de cada componente numa linha só; antes, numa tela grande, a cor caía para a linha de baixo e os últimos componentes ficavam escondidos.
+- Numa aba estreita, a lista vai para baixo da imagem, inteira, e quem rola é a aba. Abaixo de 500 px, os modos ficam em duas linhas. Em larguras médias, os botões dos modos não empurram mais a lista para fora da aba.
+- No Lado a lado, a lista só começa escondida quando deixaria as imagens mais de 10% menores; numa tela grande, ela fica à vista.
+
 ## [0.9.0] - 2026-11-22
 
 ### Desafios
